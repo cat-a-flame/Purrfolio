@@ -36,6 +36,12 @@ export function formatDate(iso: string): string {
   });
 }
 
+export function formatDayHeader(iso: string): string {
+  return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric',
+  });
+}
+
 export function todayInputDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
