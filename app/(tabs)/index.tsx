@@ -45,7 +45,7 @@ export default function DashboardScreen() {
         .from('transactions')
         .select('wallet_id, type, amount')
         .eq('user_id', user.id)
-        .limit(100000),
+        .limit(10000),
       // This month — exclude transfers so they don't inflate income/expense
       supabase
         .from('transactions')
