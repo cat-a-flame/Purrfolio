@@ -14,30 +14,42 @@ export default function TransactionRow({ transaction: tx }: Props) {
   const isIncome = tx.type === 'income';
   const currency = tx.wallet?.currency ?? 'HUF';
 
-  const amountColor = isTransfer ? colors.accent : isIncome ? colors.income : colors.expense;
-  const amountPrefix = isTransfer
-    ? (tx.type === 'expense' ? '−' : '+')
-    : (isIncome ? '+' : '−');
+  // Transfers are neutral: no sign, muted colour (contrast ≥ 4.5:1 on surface in both themes)
+  const amountColor = isTransfer ? colors.muted : isIncome ? colors.income : colors.expense;
+  const amountPrefix = isTransfer ? '' : isIncome ? '+' : '−';
 
   const icon = isTransfer ? '↔' : (tx.category?.icon ?? null);
   const label = isTransfer ? 'Transfer' : (tx.category?.name ?? '—');
 
+  // Icon box background: 20% opacity tint of the category colour, or a neutral fallback
+  const iconBg = isTransfer
+    ? colors.muted + '30'
+    : tx.category?.color
+      ? tx.category.color + '30'
+      : colors.border;
+
   return (
     <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <View style={styles.iconCol}>
+      {/* Icon with coloured background */}
+      <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
         {icon ? (
           <Text style={styles.icon}>{icon}</Text>
         ) : (
-          <View style={[styles.iconPlaceholder, { backgroundColor: colors.border }]} />
+          <Text style={[styles.iconFallback, { color: colors.muted }]}>?</Text>
         )}
       </View>
+
       <View style={styles.info}>
         <Text style={[styles.category, { color: colors.text }]}>{label}</Text>
+
+        {/* Wallet: coloured dot + name */}
         {tx.wallet ? (
-          <Text style={[styles.sub, { color: colors.muted }]}>
-            {tx.wallet.icon ? `${tx.wallet.icon} ` : ''}{tx.wallet.name}
-          </Text>
+          <View style={styles.walletRow}>
+            <View style={[styles.walletDot, { backgroundColor: tx.wallet.color || colors.muted }]} />
+            <Text style={[styles.sub, { color: colors.muted }]}>{tx.wallet.name}</Text>
+          </View>
         ) : null}
+
         {tx.notes ? (
           <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={1}>
             {tx.notes}
@@ -56,6 +68,7 @@ export default function TransactionRow({ transaction: tx }: Props) {
           </View>
         )}
       </View>
+
       <View style={styles.amountCol}>
         <Text style={[styles.amount, { color: amountColor }]}>
           {amountPrefix}{formatCurrency(tx.amount, currency)}
@@ -74,17 +87,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
   },
-  iconCol: {
-    paddingTop: 2,
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  icon: {
-    fontSize: 22,
-  },
-  iconPlaceholder: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-  },
+  icon: { fontSize: 20 },
+  iconFallback: { fontSize: 16, fontWeight: '600' },
   info: {
     flex: 1,
     gap: 2,
@@ -92,6 +104,16 @@ const styles = StyleSheet.create({
   category: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  walletRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  walletDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   sub: {
     fontSize: 13,
@@ -114,7 +136,7 @@ const styles = StyleSheet.create({
   amountCol: {
     alignItems: 'flex-end',
     justifyContent: 'flex-start',
-    paddingTop: 2,
+    paddingTop: 10,
   },
   amount: {
     fontSize: 15,
