@@ -16,9 +16,36 @@ import TransactionRow from '@/components/TransactionRow';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Wallet } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
+import { useCountUp } from '@/lib/useCountUp';
 
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getPrevRange(v: PeriodValue): { from: string; to: string } {
+  const f = new Date(v.from + 'T12:00:00');
+  const t = new Date(v.to + 'T12:00:00');
+  if (v.tab === 'weeks') {
+    return {
+      from: isoDate(new Date(f.getTime() - 7 * 86400000)),
+      to: isoDate(new Date(t.getTime() - 7 * 86400000)),
+    };
+  }
+  if (v.tab === 'months') {
+    return {
+      from: isoDate(new Date(f.getFullYear(), f.getMonth() - 1, 1)),
+      to: isoDate(new Date(f.getFullYear(), f.getMonth(), 0)),
+    };
+  }
+  if (v.tab === 'years') {
+    const y = f.getFullYear() - 1;
+    return { from: `${y}-01-01`, to: `${y}-12-31` };
+  }
+  const days = Math.round((t.getTime() - f.getTime()) / 86400000) + 1;
+  return {
+    from: isoDate(new Date(f.getTime() - days * 86400000)),
+    to: isoDate(new Date(f.getTime() - 86400000)),
+  };
 }
 
 function defaultPeriod(): PeriodValue {
@@ -38,13 +65,15 @@ export default function DashboardScreen() {
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [periodTxs, setPeriodTxs] = useState<Transaction[]>([]);
+  const [prevNet, setPrevNet] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: w }, { data: allTxSums }, { data: txs }] = await Promise.all([
+    const prev = getPrevRange(period);
+    const [{ data: w }, { data: allTxSums }, { data: txs }, { data: prevTxs }] = await Promise.all([
       supabase
         .from('wallets')
         .select('*')
@@ -65,6 +94,15 @@ export default function DashboardScreen() {
         .lte('date', period.to)
         .order('date', { ascending: false })
         .limit(10000),
+      // Previous period transactions for vs% (exclude transfers)
+      supabase
+        .from('transactions')
+        .select('type, amount')
+        .eq('user_id', user.id)
+        .gte('date', prev.from)
+        .lte('date', prev.to)
+        .is('transfer_group_id', null)
+        .limit(10000),
     ]);
 
     // Wallet balance: starting_balance + all income − all expenses
@@ -84,6 +122,11 @@ export default function DashboardScreen() {
       labels: (tx.labels ?? []).map((l: any) => l.label).filter(Boolean),
     }));
     setPeriodTxs(normalized);
+
+    const pList = prevTxs ?? [];
+    const pInc = pList.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
+    const pExp = pList.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
+    setPrevNet(pInc - pExp);
   }, [period.from, period.to]);
 
   useEffect(() => { load(); }, [load]);
@@ -108,6 +151,17 @@ export default function DashboardScreen() {
     [nonTransferTxs],
   );
   const net = income - expense;
+  const animatedNet = useCountUp(net);
+  const animatedIncome = useCountUp(income);
+  const animatedExpense = useCountUp(expense);
+
+  const vsPct = prevNet === null || prevNet === 0
+    ? null
+    : Math.round(((net - prevNet) / Math.abs(prevNet)) * 100);
+
+  const total = income + expense;
+  const incomePct = total > 0 ? (income / total) * 100 : 0;
+  const expensePct = total > 0 ? (expense / total) * 100 : 0;
 
   const defaultWallet = wallets.find(w => w.is_default) ?? wallets[0];
   const currency = defaultWallet?.currency ?? 'HUF';
@@ -169,23 +223,52 @@ export default function DashboardScreen() {
 
             {/* Cash Flow card */}
             <View style={[styles.cashFlow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cashFlowTitle, { color: colors.muted }]}>Cash Flow</Text>
-              <Text style={[styles.cashFlowNet, { color: net >= 0 ? colors.income : colors.expense }]}>
-                {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), currency)}
+              {/* Title row + VS badge */}
+              <View style={styles.cashFlowHeader}>
+                <Text style={[styles.cashFlowTitle, { color: colors.muted }]}>Cash Flow</Text>
+                {vsPct !== null && (
+                  <View style={[
+                    styles.vsBadge,
+                    { backgroundColor: vsPct >= 0 ? colors.income + '22' : colors.expense + '22' },
+                  ]}>
+                    <Text style={[
+                      styles.vsText,
+                      { color: vsPct >= 0 ? colors.income : colors.expense },
+                    ]}>
+                      {vsPct >= 0 ? '↑' : '↓'} {Math.abs(vsPct)}% vs prev
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Animated net */}
+              <Text style={[styles.cashFlowNet, { color: animatedNet >= 0 ? colors.income : colors.expense }]}>
+                {animatedNet >= 0 ? '+' : '−'}{formatCurrency(Math.abs(animatedNet), currency)}
               </Text>
-              <View style={styles.cashFlowRow}>
-                <View style={styles.cashFlowItem}>
+
+              {/* Income bar */}
+              <View style={styles.barSection}>
+                <View style={styles.barLabelRow}>
                   <Text style={[styles.cashFlowLabel, { color: colors.muted }]}>Income</Text>
                   <Text style={[styles.cashFlowValue, { color: colors.income }]}>
-                    +{formatCurrency(income, currency)}
+                    +{formatCurrency(animatedIncome, currency)}
                   </Text>
                 </View>
-                <View style={[styles.cashFlowDivider, { backgroundColor: colors.border }]} />
-                <View style={styles.cashFlowItem}>
+                <View style={[styles.barTrack, { backgroundColor: colors.border }]}>
+                  <View style={[styles.barFill, { width: `${incomePct}%` as any, backgroundColor: colors.income }]} />
+                </View>
+              </View>
+
+              {/* Expense bar */}
+              <View style={styles.barSection}>
+                <View style={styles.barLabelRow}>
                   <Text style={[styles.cashFlowLabel, { color: colors.muted }]}>Expenses</Text>
                   <Text style={[styles.cashFlowValue, { color: colors.expense }]}>
-                    −{formatCurrency(expense, currency)}
+                    −{formatCurrency(animatedExpense, currency)}
                   </Text>
+                </View>
+                <View style={[styles.barTrack, { backgroundColor: colors.border }]}>
+                  <View style={[styles.barFill, { width: `${expensePct}%` as any, backgroundColor: colors.expense }]} />
                 </View>
               </View>
             </View>
@@ -242,15 +325,19 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     padding: 16,
-    gap: 8,
+    gap: 10,
   },
+  cashFlowHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cashFlowTitle: { fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   cashFlowNet: { fontSize: 30, fontWeight: '800' },
-  cashFlowRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  cashFlowItem: { flex: 1, gap: 2 },
   cashFlowLabel: { fontSize: 12 },
-  cashFlowValue: { fontSize: 16, fontWeight: '700' },
-  cashFlowDivider: { width: 1, height: 32 },
+  cashFlowValue: { fontSize: 14, fontWeight: '700' },
+  vsBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  vsText: { fontSize: 12, fontWeight: '600' },
+  barSection: { gap: 4 },
+  barLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  barTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  barFill: { height: 6, borderRadius: 3 },
 
   walletRow: { gap: 8, paddingBottom: 4 },
   walletChip: {
