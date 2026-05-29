@@ -43,7 +43,11 @@
       "supabaseAnonKey": "sb_publishable_lcarFtcbX7gk3qCvXS-PIQ_UEJLfGOS",
       "router": {
         "origin": false
+      },
+      "eas": {
+        "projectId": "0e5c9941-5cf2-43ce-ad20-fc8ad6a1562e"
       }
-    }
+    },
+    "owner": "cataflame"
   }
 }
