@@ -6,12 +6,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import AppHeader from '@/components/AppHeader';
 import TransactionRow from '@/components/TransactionRow';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Wallet } from '@/lib/types';
@@ -189,7 +189,8 @@ export default function DashboardScreen() {
   }, [groups]);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
+    <View style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AppHeader />
       <FlatList
         data={flat}
         keyExtractor={(item) =>
@@ -311,7 +312,7 @@ export default function DashboardScreen() {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 

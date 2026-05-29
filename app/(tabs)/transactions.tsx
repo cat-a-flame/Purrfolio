@@ -5,13 +5,13 @@ import {
   FlatList,
   StyleSheet,
   RefreshControl,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import AppHeader from '@/components/AppHeader';
 import TransactionRow from '@/components/TransactionRow';
 import type { Transaction, Wallet, TransactionType } from '@/lib/types';
 import { groupByDate, formatDate } from '@/lib/utils';
@@ -86,7 +86,8 @@ export default function TransactionsScreen() {
   ];
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
+    <View style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AppHeader />
       <FlatList
         data={flat}
         keyExtractor={(item) => item.kind === 'header' ? `h-${item.date}` : item.tx.id}
@@ -177,7 +178,7 @@ export default function TransactionsScreen() {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { useRouter, useSegments } from 'expo-router';
@@ -37,7 +38,7 @@ export default function RootLayout() {
   }, [session, loading, segments]);
 
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -63,6 +64,6 @@ export default function RootLayout() {
           options={{ headerShown: false }}
         />
       </Stack>
-    </>
+    </SafeAreaProvider>
   );
 }

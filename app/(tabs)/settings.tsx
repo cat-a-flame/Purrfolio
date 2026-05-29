@@ -4,13 +4,13 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import AppHeader from '@/components/AppHeader';
 
 type SettingsItem = {
   label: string;
@@ -56,7 +56,8 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
+    <View style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AppHeader />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
 
@@ -92,7 +93,7 @@ export default function SettingsScreen() {
           </View>
         ))}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

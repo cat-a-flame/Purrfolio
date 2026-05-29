@@ -5,10 +5,10 @@ import {
   FlatList,
   StyleSheet,
   RefreshControl,
-  SafeAreaView,
 } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import AppHeader from '@/components/AppHeader';
 import type { RecurringPayment, Wallet, Category } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
@@ -53,7 +53,8 @@ export default function RecurringScreen() {
   }, [load]);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
+    <View style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AppHeader />
       <FlatList
         data={items}
         keyExtractor={(i) => i.id}
@@ -69,7 +70,7 @@ export default function RecurringScreen() {
         }
         ListFooterComponent={<View style={{ height: 32 }} />}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
