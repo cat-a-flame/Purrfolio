@@ -46,11 +46,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="settings"
+        name="stats"
         options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => <TabIcon name="settings" color={color as string} size={size} />,
+          title: 'Stats',
+          tabBarIcon: ({ color, size }) => <TabIcon name="stats" color={color as string} size={size} />,
         }}
+      />
+      {/* settings is accessible from the user menu; hide it from the tab bar */}
+      <Tabs.Screen
+        name="settings"
+        options={{ href: null }}
       />
     </Tabs>
   );
@@ -61,7 +66,7 @@ function TabIcon({ name, color, size }: { name: string; color: string; size: num
     home: '⌂',
     list: '☰',
     repeat: '↻',
-    settings: '⚙',
+    stats: '◎',
   };
   return <Text style={{ fontSize: size - 4, color }}>{icons[name] ?? '●'}</Text>;
 }

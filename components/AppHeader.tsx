@@ -4,6 +4,15 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 
+type NavItem = { label: string; route: string };
+
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Wallets', route: '/settings/wallets' },
+  { label: 'Categories', route: '/settings/categories' },
+  { label: 'Labels', route: '/settings/labels' },
+  { label: 'Templates', route: '/settings/templates' },
+];
+
 export default function AppHeader() {
   const colors = useTheme();
   const router = useRouter();
@@ -23,6 +32,11 @@ export default function AppHeader() {
       setMenuTop(y + h + 6);
       setMenuOpen(true);
     });
+  }
+
+  function navigate(route: string) {
+    setMenuOpen(false);
+    router.push(route as any);
   }
 
   async function handleSignOut() {
@@ -55,10 +69,7 @@ export default function AppHeader() {
         onRequestClose={() => setMenuOpen(false)}
       >
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setMenuOpen(false)}>
-          <View style={[
-            styles.menu,
-            { top: menuTop, backgroundColor: colors.surface, borderColor: colors.border },
-          ]}>
+          <View style={[styles.menu, { top: menuTop, backgroundColor: colors.surface, borderColor: colors.border }]}>
             {email && (
               <Text
                 style={[styles.menuEmail, { color: colors.muted, borderBottomColor: colors.border }]}
@@ -67,6 +78,30 @@ export default function AppHeader() {
                 {email}
               </Text>
             )}
+
+            {/* Settings section label */}
+            <Text style={[styles.menuSection, { color: colors.muted, borderBottomColor: colors.border }]}>
+              Settings
+            </Text>
+
+            {NAV_ITEMS.map((item, i) => (
+              <TouchableOpacity
+                key={item.route}
+                style={[
+                  styles.menuItem,
+                  i < NAV_ITEMS.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                ]}
+                onPress={() => navigate(item.route)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.menuItemText, { color: colors.text }]}>{item.label}</Text>
+                <Text style={[styles.menuChevron, { color: colors.muted }]}>›</Text>
+              </TouchableOpacity>
+            ))}
+
+            {/* Divider before sign out */}
+            <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+
             <TouchableOpacity style={styles.menuItem} onPress={handleSignOut} activeOpacity={0.7}>
               <Text style={[styles.menuItemText, { color: colors.danger }]}>Sign out</Text>
             </TouchableOpacity>
@@ -114,13 +149,28 @@ const styles = StyleSheet.create({
   },
   menuEmail: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 11,
     fontSize: 13,
     borderBottomWidth: 1,
   },
-  menuItem: {
+  menuSection: {
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingTop: 10,
+    paddingBottom: 6,
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  menuItemText: { fontSize: 15, fontWeight: '600' },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  menuItemText: { fontSize: 15, fontWeight: '500' },
+  menuChevron: { fontSize: 18 },
+  menuDivider: { height: StyleSheet.hairlineWidth },
 });
