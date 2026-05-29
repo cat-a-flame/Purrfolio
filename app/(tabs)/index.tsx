@@ -40,11 +40,12 @@ export default function DashboardScreen() {
         .select('*')
         .eq('user_id', user.id)
         .order('is_default', { ascending: false }),
-      // All transactions for computing current wallet balances
+      // All transactions for computing current wallet balances (no row limit)
       supabase
         .from('transactions')
         .select('wallet_id, type, amount')
-        .eq('user_id', user.id),
+        .eq('user_id', user.id)
+        .limit(100000),
       // This month — exclude transfers so they don't inflate income/expense
       supabase
         .from('transactions')

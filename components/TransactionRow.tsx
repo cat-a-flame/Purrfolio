@@ -10,25 +10,33 @@ interface Props {
 
 export default function TransactionRow({ transaction: tx }: Props) {
   const colors = useTheme();
+  const isTransfer = !!tx.transfer_group_id;
   const isIncome = tx.type === 'income';
-  const amountColor = isIncome ? colors.income : colors.expense;
   const currency = tx.wallet?.currency ?? 'HUF';
+
+  const amountColor = isTransfer ? colors.accent : isIncome ? colors.income : colors.expense;
+  const amountPrefix = isTransfer
+    ? (tx.type === 'expense' ? '−' : '+')
+    : (isIncome ? '+' : '−');
+
+  const icon = isTransfer ? '↔' : (tx.category?.icon ?? null);
+  const label = isTransfer ? 'Transfer' : (tx.category?.name ?? '—');
 
   return (
     <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.iconCol}>
-        {tx.category?.icon ? (
-          <Text style={styles.icon}>{tx.category.icon}</Text>
+        {icon ? (
+          <Text style={styles.icon}>{icon}</Text>
         ) : (
           <View style={[styles.iconPlaceholder, { backgroundColor: colors.border }]} />
         )}
       </View>
       <View style={styles.info}>
-        <Text style={[styles.category, { color: colors.text }]}>
-          {tx.category?.name ?? '—'}
-        </Text>
+        <Text style={[styles.category, { color: colors.text }]}>{label}</Text>
         {tx.wallet ? (
-          <Text style={[styles.sub, { color: colors.muted }]}>{tx.wallet.icon ? `${tx.wallet.icon} ` : ''}{tx.wallet.name}</Text>
+          <Text style={[styles.sub, { color: colors.muted }]}>
+            {tx.wallet.icon ? `${tx.wallet.icon} ` : ''}{tx.wallet.name}
+          </Text>
         ) : null}
         {tx.notes ? (
           <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={1}>
@@ -50,7 +58,7 @@ export default function TransactionRow({ transaction: tx }: Props) {
       </View>
       <View style={styles.amountCol}>
         <Text style={[styles.amount, { color: amountColor }]}>
-          {isIncome ? '+' : '-'}{formatCurrency(tx.amount, currency)}
+          {amountPrefix}{formatCurrency(tx.amount, currency)}
         </Text>
       </View>
     </View>
