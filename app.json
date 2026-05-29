@@ -29,6 +29,14 @@
       "expo-router",
       "expo-font",
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "gradleVersion": "8.8"
+          }
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#f7f4ef",
