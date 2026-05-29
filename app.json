@@ -28,14 +28,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "gradleVersion": "8.6"
-          }
-        }
-      ],
+      "expo-build-properties",
       [
         "expo-splash-screen",
         {
