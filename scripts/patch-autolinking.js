@@ -31,7 +31,8 @@ function patch(file, replacements) {
     console.log(`[patch-autolinking] Skipping (not found): ${file}`);
     return;
   }
-  let src = fs.readFileSync(filePath, 'utf8');
+  // Normalise to LF so replacements work on both Windows (CRLF) and Linux
+  let src = fs.readFileSync(filePath, 'utf8').replace(/\r\n/g, '\n');
   let changed = false;
   for (const [from, to] of replacements) {
     if (src.includes(from)) {
