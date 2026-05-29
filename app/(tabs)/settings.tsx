@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -56,9 +57,11 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <View style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AppHeader />
+    <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.headerEscape}>
+          <AppHeader />
+        </View>
         <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
 
         {sections.map((section) => (
@@ -93,13 +96,14 @@ export default function SettingsScreen() {
           </View>
         ))}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  container: { padding: 16, gap: 24 },
+  container: { paddingHorizontal: 16, paddingBottom: 40, gap: 24 },
+  headerEscape: { marginHorizontal: -16 },
   title: { fontSize: 26, fontWeight: '800' },
   section: { gap: 8 },
   sectionTitle: {

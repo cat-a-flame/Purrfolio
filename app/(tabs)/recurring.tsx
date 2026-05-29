@@ -6,6 +6,7 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -53,8 +54,7 @@ export default function RecurringScreen() {
   }, [load]);
 
   return (
-    <View style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AppHeader />
+    <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <FlatList
         data={items}
         keyExtractor={(i) => i.id}
@@ -63,14 +63,19 @@ export default function RecurringScreen() {
         renderItem={({ item }) => <RecurringCard item={item} colors={colors} />}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         ListHeaderComponent={
-          <Text style={[styles.title, { color: colors.text }]}>Recurring</Text>
+          <View>
+            <View style={styles.headerEscape}>
+              <AppHeader />
+            </View>
+            <Text style={[styles.title, { color: colors.text }]}>Recurring</Text>
+          </View>
         }
         ListEmptyComponent={
           <Text style={[styles.empty, { color: colors.muted }]}>No recurring payments.</Text>
         }
         ListFooterComponent={<View style={{ height: 32 }} />}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -132,8 +137,9 @@ function RecurringCard({ item, colors }: { item: RecurringPayment; colors: any }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  list: { padding: 16 },
-  title: { fontSize: 26, fontWeight: '800', marginBottom: 16 },
+  list: { paddingHorizontal: 16 },
+  headerEscape: { marginHorizontal: -16 },
+  title: { fontSize: 26, fontWeight: '800', marginTop: 16, marginBottom: 16 },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
   card: {
     borderRadius: 14,

@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -189,8 +190,7 @@ export default function DashboardScreen() {
   }, [groups]);
 
   return (
-    <View style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AppHeader />
+    <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <FlatList
         data={flat}
         keyExtractor={(item) =>
@@ -217,6 +217,10 @@ export default function DashboardScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
         ListHeaderComponent={
           <View style={styles.header}>
+            <View style={styles.headerEscape}>
+              <AppHeader />
+            </View>
+
             <Text style={[styles.title, { color: colors.text }]}>Dashboard</Text>
 
             {/* Period picker */}
@@ -312,14 +316,15 @@ export default function DashboardScreen() {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  list: { padding: 16, paddingBottom: 80 },
+  list: { paddingHorizontal: 16, paddingBottom: 80 },
   header: { gap: 12, marginBottom: 8 },
+  headerEscape: { marginHorizontal: -16 },
   title: { fontSize: 26, fontWeight: '800' },
 
   cashFlow: {

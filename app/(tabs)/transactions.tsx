@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -86,8 +87,7 @@ export default function TransactionsScreen() {
   ];
 
   return (
-    <View style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AppHeader />
+    <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <FlatList
         data={flat}
         keyExtractor={(item) => item.kind === 'header' ? `h-${item.date}` : item.tx.id}
@@ -106,6 +106,9 @@ export default function TransactionsScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
         ListHeaderComponent={
           <View style={styles.headerBlock}>
+            <View style={styles.headerEscape}>
+              <AppHeader />
+            </View>
             <Text style={[styles.title, { color: colors.text }]}>Transactions</Text>
 
             {/* Type filter */}
@@ -178,14 +181,15 @@ export default function TransactionsScreen() {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  list: { padding: 16 },
+  list: { paddingHorizontal: 16 },
   headerBlock: { gap: 10, marginBottom: 12 },
+  headerEscape: { marginHorizontal: -16 },
   title: { fontSize: 26, fontWeight: '800' },
   filterRow: {
     flexDirection: 'row',

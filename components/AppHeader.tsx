@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 
 export default function AppHeader() {
   const colors = useTheme();
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuTop, setMenuTop] = useState(0);
   const [email, setEmail] = useState<string | null>(null);
+  const btnRef = useRef<TouchableOpacity>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -18,32 +18,30 @@ export default function AppHeader() {
     });
   }, []);
 
+  function openMenu() {
+    btnRef.current?.measureInWindow((_x, y, _w, h) => {
+      setMenuTop(y + h + 6);
+      setMenuOpen(true);
+    });
+  }
+
   async function handleSignOut() {
     setMenuOpen(false);
     await supabase.auth.signOut();
     router.replace('/(auth)/login');
   }
 
-  // Total header height: status bar + 56px content area
-  const dropdownTop = insets.top + 56 + 6;
-
   return (
     <>
-      <View style={[
-        styles.bar,
-        {
-          paddingTop: insets.top + 10,
-          backgroundColor: colors.surface,
-          borderBottomColor: colors.border,
-        },
-      ]}>
+      <View style={[styles.bar, { borderBottomColor: colors.border }]}>
         <View style={styles.logoRow}>
-          <Text style={styles.logoEmoji}>🐾</Text>
+          <Image source={require('@/assets/images/logo.png')} style={styles.logo} />
           <Text style={[styles.logoName, { color: colors.text }]}>Purrfolio</Text>
         </View>
         <TouchableOpacity
+          ref={btnRef}
           style={[styles.avatarBtn, { backgroundColor: colors.accent + '22', borderColor: colors.accent + '55' }]}
-          onPress={() => setMenuOpen(true)}
+          onPress={openMenu}
           activeOpacity={0.7}
         >
           <Text style={[styles.avatarIcon, { color: colors.accent }]}>👤</Text>
@@ -59,7 +57,7 @@ export default function AppHeader() {
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setMenuOpen(false)}>
           <View style={[
             styles.menu,
-            { top: dropdownTop, backgroundColor: colors.surface, borderColor: colors.border },
+            { top: menuTop, backgroundColor: colors.surface, borderColor: colors.border },
           ]}>
             {email && (
               <Text
@@ -85,16 +83,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
   },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logoEmoji: { fontSize: 24 },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logo: { width: 32, height: 32, borderRadius: 8 },
   logoName: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
   avatarBtn: {
     width: 36,
