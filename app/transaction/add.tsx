@@ -6,13 +6,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
+import BottomModal from '@/components/BottomModal';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { todayInputDate } from '@/lib/utils';
 
@@ -47,6 +47,9 @@ export default function AddTransactionScreen() {
   const [labels, setLabels] = useState<Label[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showLabelModal, setShowLabelModal] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -139,6 +142,10 @@ export default function AddTransactionScreen() {
     (c) => c.type === 'both' || c.type === form.type
   );
 
+  const selectedWallet = wallets.find((w) => w.id === form.wallet_id);
+  const selectedCategory = categories.find((c) => c.id === form.category_id);
+  const selectedLabels = labels.filter((l) => form.labelIds.includes(l.id));
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
       <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
@@ -163,14 +170,9 @@ export default function AddTransactionScreen() {
                   backgroundColor: t === 'income' ? colors.income : colors.expense,
                 },
               ]}
-              onPress={() => setField('type', t)}
+              onPress={() => { setField('type', t); setField('category_id', ''); }}
             >
-              <Text
-                style={[
-                  styles.typeBtnText,
-                  { color: form.type === t ? '#fff' : colors.muted },
-                ]}
-              >
+              <Text style={[styles.typeBtnText, { color: form.type === t ? '#fff' : colors.muted }]}>
                 {t.charAt(0).toUpperCase() + t.slice(1)}
               </Text>
             </TouchableOpacity>
@@ -208,7 +210,7 @@ export default function AddTransactionScreen() {
                 ]}
                 onPress={() => setField('wallet_id', w.id)}
               >
-                <Text>{w.icon} </Text>
+                {w.icon ? <Text>{w.icon} </Text> : null}
                 <Text style={[styles.chipText, { color: form.wallet_id === w.id ? colors.accent : colors.text }]}>
                   {w.name}
                 </Text>
@@ -217,67 +219,46 @@ export default function AddTransactionScreen() {
           </View>
         </View>
 
-        {/* Category */}
+        {/* Category — picker button */}
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: colors.muted }]}>Category</Text>
-          <View style={styles.chips}>
-            <TouchableOpacity
-              style={[
-                styles.chip,
-                { borderColor: colors.border, backgroundColor: colors.surface },
-                !form.category_id && { borderColor: colors.accent, backgroundColor: colors.accent + '22' },
-              ]}
-              onPress={() => setField('category_id', '')}
-            >
-              <Text style={[styles.chipText, { color: !form.category_id ? colors.accent : colors.text }]}>
-                None
-              </Text>
-            </TouchableOpacity>
-            {filteredCategories.map((c) => (
-              <TouchableOpacity
-                key={c.id}
-                style={[
-                  styles.chip,
-                  { borderColor: colors.border, backgroundColor: colors.surface },
-                  form.category_id === c.id && { borderColor: colors.accent, backgroundColor: colors.accent + '22' },
-                ]}
-                onPress={() => setField('category_id', c.id)}
-              >
-                <Text>{c.icon} </Text>
-                <Text style={[styles.chipText, { color: form.category_id === c.id ? colors.accent : colors.text }]}>
-                  {c.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity
+            style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            onPress={() => setShowCategoryModal(true)}
+          >
+            <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]}>
+              {selectedCategory
+                ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
+                : 'Select category…'}
+            </Text>
+            <Text style={{ color: colors.muted }}>›</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Labels */}
+        {/* Labels — multi-select picker */}
         {labels.length > 0 && (
           <View style={styles.fieldGroup}>
             <Text style={[styles.fieldLabel, { color: colors.muted }]}>Labels</Text>
-            <View style={styles.chips}>
-              {labels.map((l) => {
-                const selected = form.labelIds.includes(l.id);
-                return (
-                  <TouchableOpacity
-                    key={l.id}
-                    style={[
-                      styles.chip,
-                      {
-                        borderColor: selected ? l.color : colors.border,
-                        backgroundColor: selected ? l.color + '33' : colors.surface,
-                      },
-                    ]}
-                    onPress={() => toggleLabel(l.id)}
-                  >
-                    <Text style={[styles.chipText, { color: selected ? l.color : colors.text }]}>
-                      {l.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <TouchableOpacity
+              style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+              onPress={() => setShowLabelModal(true)}
+            >
+              <Text style={[styles.pickerBtnText, { color: selectedLabels.length ? colors.text : colors.muted }]}>
+                {selectedLabels.length > 0
+                  ? selectedLabels.map((l) => l.name).join(', ')
+                  : 'Select labels…'}
+              </Text>
+              <Text style={{ color: colors.muted }}>›</Text>
+            </TouchableOpacity>
+            {selectedLabels.length > 0 && (
+              <View style={styles.chips}>
+                {selectedLabels.map((l) => (
+                  <View key={l.id} style={[styles.chip, { borderColor: l.color, backgroundColor: l.color + '22' }]}>
+                    <Text style={[styles.chipText, { color: l.color }]}>{l.name}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -306,6 +287,49 @@ export default function AddTransactionScreen() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      {/* Category picker modal */}
+      <BottomModal visible={showCategoryModal} onClose={() => setShowCategoryModal(false)} title="Select category">
+        <TouchableOpacity
+          style={[styles.modalRow, { borderBottomColor: colors.border }, !form.category_id && { backgroundColor: colors.accent + '11' }]}
+          onPress={() => { setField('category_id', ''); setShowCategoryModal(false); }}
+        >
+          <Text style={[styles.modalRowText, { color: !form.category_id ? colors.accent : colors.text }]}>— None</Text>
+          {!form.category_id && <Text style={{ color: colors.accent }}>✓</Text>}
+        </TouchableOpacity>
+        {filteredCategories.map((c) => (
+          <TouchableOpacity
+            key={c.id}
+            style={[styles.modalRow, { borderBottomColor: colors.border }, form.category_id === c.id && { backgroundColor: colors.accent + '11' }]}
+            onPress={() => { setField('category_id', c.id); setShowCategoryModal(false); }}
+          >
+            {c.icon ? <Text style={styles.modalRowIcon}>{c.icon}</Text> : <View style={{ width: 28 }} />}
+            <Text style={[styles.modalRowText, { color: form.category_id === c.id ? colors.accent : colors.text }]}>{c.name}</Text>
+            {form.category_id === c.id && <Text style={{ color: colors.accent }}>✓</Text>}
+          </TouchableOpacity>
+        ))}
+      </BottomModal>
+
+      {/* Labels picker modal */}
+      <BottomModal visible={showLabelModal} onClose={() => setShowLabelModal(false)} title="Select labels">
+        {labels.map((l) => {
+          const selected = form.labelIds.includes(l.id);
+          return (
+            <TouchableOpacity
+              key={l.id}
+              style={[styles.modalRow, { borderBottomColor: colors.border }, selected && { backgroundColor: l.color + '11' }]}
+              onPress={() => toggleLabel(l.id)}
+            >
+              <View style={[styles.labelDot, { backgroundColor: l.color }]} />
+              <Text style={[styles.modalRowText, { color: selected ? l.color : colors.text }]}>{l.name}</Text>
+              {selected && <Text style={{ color: l.color }}>✓</Text>}
+            </TouchableOpacity>
+          );
+        })}
+        <View style={{ marginTop: 8 }}>
+          <AppButton onPress={() => setShowLabelModal(false)} fullWidth>Done</AppButton>
+        </View>
+      </BottomModal>
     </SafeAreaView>
   );
 }
@@ -351,4 +375,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   chipText: { fontSize: 14, fontWeight: '500' },
+  pickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  pickerBtnText: { fontSize: 15, flex: 1 },
+  modalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 10,
+  },
+  modalRowIcon: { fontSize: 20, width: 28, textAlign: 'center' },
+  modalRowText: { flex: 1, fontSize: 15 },
+  labelDot: { width: 12, height: 12, borderRadius: 6 },
 });

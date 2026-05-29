@@ -16,17 +16,27 @@ export default function TransactionRow({ transaction: tx }: Props) {
 
   return (
     <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={styles.iconCol}>
+        {tx.category?.icon ? (
+          <Text style={styles.icon}>{tx.category.icon}</Text>
+        ) : (
+          <View style={[styles.iconPlaceholder, { backgroundColor: colors.border }]} />
+        )}
+      </View>
       <View style={styles.info}>
         <Text style={[styles.category, { color: colors.text }]}>
           {tx.category?.name ?? '—'}
         </Text>
+        {tx.wallet ? (
+          <Text style={[styles.sub, { color: colors.muted }]}>{tx.wallet.icon ? `${tx.wallet.icon} ` : ''}{tx.wallet.name}</Text>
+        ) : null}
         {tx.notes ? (
-          <Text style={[styles.notes, { color: colors.muted }]} numberOfLines={1}>
+          <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={1}>
             {tx.notes}
           </Text>
         ) : null}
         {tx.payer ? (
-          <Text style={[styles.notes, { color: colors.muted }]}>{tx.payer}</Text>
+          <Text style={[styles.sub, { color: colors.muted }]}>{tx.payer}</Text>
         ) : null}
         {tx.labels && tx.labels.length > 0 && (
           <View style={styles.labels}>
@@ -40,10 +50,7 @@ export default function TransactionRow({ transaction: tx }: Props) {
       </View>
       <View style={styles.amountCol}>
         <Text style={[styles.amount, { color: amountColor }]}>
-          {isIncome ? '+' : '-'} {formatCurrency(tx.amount, currency)}
-        </Text>
-        <Text style={[styles.wallet, { color: colors.muted }]}>
-          {tx.wallet?.name ?? ''}
+          {isIncome ? '+' : '-'}{formatCurrency(tx.amount, currency)}
         </Text>
       </View>
     </View>
@@ -54,11 +61,21 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    gap: 8,
+    gap: 10,
+  },
+  iconCol: {
+    paddingTop: 2,
+  },
+  icon: {
+    fontSize: 22,
+  },
+  iconPlaceholder: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
   },
   info: {
     flex: 1,
@@ -68,7 +85,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  notes: {
+  sub: {
     fontSize: 13,
   },
   labels: {
@@ -88,13 +105,11 @@ const styles = StyleSheet.create({
   },
   amountCol: {
     alignItems: 'flex-end',
-    gap: 2,
+    justifyContent: 'flex-start',
+    paddingTop: 2,
   },
   amount: {
     fontSize: 15,
     fontWeight: '700',
-  },
-  wallet: {
-    fontSize: 12,
   },
 });

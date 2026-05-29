@@ -1,15 +1,19 @@
 import type { Currency } from './types';
 
 export function formatCurrency(amount: number, currency: Currency): string {
-  const locale = currency === 'HUF' ? 'hu-HU' : 'en-US';
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: currency === 'HUF' ? 0 : 2,
-  })
-    .formatToParts(amount)
-    .map((p) => (p.type === 'group' ? ' ' : p.value))
-    .join('');
+  try {
+    const locale = currency === 'HUF' ? 'hu-HU' : 'en-US';
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: currency === 'HUF' ? 0 : 2,
+    }).format(amount);
+  } catch {
+    const n = Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    if (currency === 'HUF') return `${n} Ft`;
+    if (currency === 'EUR') return `€${n}`;
+    return `$${n}`;
+  }
 }
 
 export function formatHUF(amount: number): string {
@@ -17,10 +21,11 @@ export function formatHUF(amount: number): string {
 }
 
 export function formatNumber(amount: number): string {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
-    .formatToParts(amount)
-    .map((p) => (p.type === 'group' ? ' ' : p.value))
-    .join('');
+  try {
+    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount);
+  } catch {
+    return amount.toString();
+  }
 }
 
 export function formatDate(iso: string): string {

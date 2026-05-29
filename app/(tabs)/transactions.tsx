@@ -7,31 +7,46 @@ import {
   RefreshControl,
   SafeAreaView,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import TransactionRow from '@/components/TransactionRow';
-import type { Transaction } from '@/lib/types';
+import type { Transaction, Wallet, TransactionType } from '@/lib/types';
 import { groupByDate, formatDate } from '@/lib/utils';
+
+type TypeFilter = 'all' | TransactionType;
 
 export default function TransactionsScreen() {
   const colors = useTheme();
   const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const [walletFilter, setWalletFilter] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase
-      .from('transactions')
-      .select('*, wallet:wallets(*), category:categories(*), labels:transaction_labels(label:labels(*))')
-      .eq('user_id', user.id)
-      .order('date', { ascending: false })
-      .limit(200);
 
-    const normalized = (data ?? []).map((tx: any) => ({
+    const [{ data: w }, { data: t }] = await Promise.all([
+      supabase
+        .from('wallets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('is_default', { ascending: false }),
+      supabase
+        .from('transactions')
+        .select('*, wallet:wallets(*), category:categories(*), labels:transaction_labels(label:labels(*))')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .limit(500),
+    ]);
+
+    setWallets(w ?? []);
+    const normalized = (t ?? []).map((tx: any) => ({
       ...tx,
       labels: (tx.labels ?? []).map((l: any) => l.label).filter(Boolean),
     }));
@@ -46,7 +61,13 @@ export default function TransactionsScreen() {
     setRefreshing(false);
   }, [load]);
 
-  const groups = groupByDate(transactions);
+  const filtered = transactions.filter((tx) => {
+    if (typeFilter !== 'all' && tx.type !== typeFilter) return false;
+    if (walletFilter && tx.wallet_id !== walletFilter) return false;
+    return true;
+  });
+
+  const groups = groupByDate(filtered);
 
   type ListItem =
     | { kind: 'header'; date: string }
@@ -57,6 +78,12 @@ export default function TransactionsScreen() {
     flat.push({ kind: 'header', date: g.date });
     for (const tx of g.items) flat.push({ kind: 'tx', tx });
   }
+
+  const typeFilters: { key: TypeFilter; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'expense', label: 'Expenses' },
+    { key: 'income', label: 'Income' },
+  ];
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -77,10 +104,69 @@ export default function TransactionsScreen() {
         }}
         ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
         ListHeaderComponent={
-          <Text style={[styles.title, { color: colors.text }]}>Transactions</Text>
+          <View style={styles.headerBlock}>
+            <Text style={[styles.title, { color: colors.text }]}>Transactions</Text>
+
+            {/* Type filter */}
+            <View style={[styles.filterRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {typeFilters.map((f) => (
+                <TouchableOpacity
+                  key={f.key}
+                  style={[
+                    styles.filterBtn,
+                    typeFilter === f.key && {
+                      backgroundColor: f.key === 'income' ? colors.income : f.key === 'expense' ? colors.expense : colors.accent,
+                    },
+                  ]}
+                  onPress={() => setTypeFilter(f.key)}
+                >
+                  <Text style={[
+                    styles.filterBtnText,
+                    { color: typeFilter === f.key ? '#fff' : colors.muted },
+                  ]}>
+                    {f.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Wallet filter */}
+            {wallets.length > 1 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.walletChips}>
+                <TouchableOpacity
+                  style={[
+                    styles.walletChip,
+                    { borderColor: colors.border, backgroundColor: colors.surface },
+                    !walletFilter && { borderColor: colors.accent, backgroundColor: colors.accent + '22' },
+                  ]}
+                  onPress={() => setWalletFilter('')}
+                >
+                  <Text style={[styles.walletChipText, { color: !walletFilter ? colors.accent : colors.text }]}>
+                    All wallets
+                  </Text>
+                </TouchableOpacity>
+                {wallets.map((w) => (
+                  <TouchableOpacity
+                    key={w.id}
+                    style={[
+                      styles.walletChip,
+                      { borderColor: colors.border, backgroundColor: colors.surface },
+                      walletFilter === w.id && { borderColor: colors.accent, backgroundColor: colors.accent + '22' },
+                    ]}
+                    onPress={() => setWalletFilter(walletFilter === w.id ? '' : w.id)}
+                  >
+                    {w.icon ? <Text style={{ fontSize: 14 }}>{w.icon} </Text> : null}
+                    <Text style={[styles.walletChipText, { color: walletFilter === w.id ? colors.accent : colors.text }]}>
+                      {w.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
         }
         ListEmptyComponent={
-          <Text style={[styles.empty, { color: colors.muted }]}>No transactions yet.</Text>
+          <Text style={[styles.empty, { color: colors.muted }]}>No transactions found.</Text>
         }
         ListFooterComponent={<View style={{ height: 80 }} />}
       />
@@ -98,7 +184,33 @@ export default function TransactionsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   list: { padding: 16 },
-  title: { fontSize: 26, fontWeight: '800', marginBottom: 16 },
+  headerBlock: { gap: 10, marginBottom: 12 },
+  title: { fontSize: 26, fontWeight: '800' },
+  filterRow: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+    padding: 4,
+    gap: 4,
+  },
+  filterBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  filterBtnText: { fontSize: 14, fontWeight: '600' },
+  walletChips: { gap: 8, paddingBottom: 2 },
+  walletChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  walletChipText: { fontSize: 13, fontWeight: '500' },
   dateHeader: {
     fontSize: 13,
     fontWeight: '600',

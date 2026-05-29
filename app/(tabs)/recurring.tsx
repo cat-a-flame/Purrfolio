@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
-import type { RecurringPayment } from '@/lib/types';
+import type { RecurringPayment, Wallet, Category } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 export default function RecurringScreen() {
@@ -20,12 +20,28 @@ export default function RecurringScreen() {
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase
-      .from('recurring_payments')
-      .select('*, wallet:wallets(*), category:categories(*)')
-      .eq('user_id', user.id)
-      .order('next_due_date', { ascending: true });
-    setItems(data ?? []);
+
+    // Fetch base recurring payments without joins (avoids FK dependency issues)
+    const [{ data: recurring }, { data: wallets }, { data: categories }] = await Promise.all([
+      supabase
+        .from('recurring_payments')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('next_due_date', { ascending: true, nullsFirst: false }),
+      supabase.from('wallets').select('*').eq('user_id', user.id),
+      supabase.from('categories').select('*').eq('user_id', user.id),
+    ]);
+
+    const walletMap = new Map<string, Wallet>((wallets ?? []).map((w: Wallet) => [w.id, w]));
+    const categoryMap = new Map<string, Category>((categories ?? []).map((c: Category) => [c.id, c]));
+
+    const resolved = (recurring ?? []).map((r: any) => ({
+      ...r,
+      wallet: r.wallet_id ? walletMap.get(r.wallet_id) ?? null : null,
+      category: r.category_id ? categoryMap.get(r.category_id) ?? null : null,
+    }));
+
+    setItems(resolved);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -67,33 +83,46 @@ function RecurringCard({ item, colors }: { item: RecurringPayment; colors: any }
     : false;
 
   const statusColor = isOverdue ? colors.danger : isDueSoon ? '#f59e0b' : colors.muted;
+  const statusLabel = isOverdue ? 'Overdue' : isDueSoon ? 'Due soon' : 'Due';
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: isOverdue ? colors.danger + '66' : colors.border }]}>
       <View style={styles.cardMain}>
-        <View style={styles.cardInfo}>
-          <Text style={[styles.cardName, { color: colors.text }]}>{item.name}</Text>
-          {item.category && (
-            <Text style={[styles.cardSub, { color: colors.muted }]}>{item.category.name}</Text>
-          )}
-          {item.notes && (
-            <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
-              {item.notes}
-            </Text>
-          )}
+        <View style={styles.cardLeft}>
+          {item.category?.icon ? (
+            <Text style={styles.categoryIcon}>{item.category.icon}</Text>
+          ) : null}
+          <View style={styles.cardInfo}>
+            <Text style={[styles.cardName, { color: colors.text }]}>{item.name}</Text>
+            {item.category && (
+              <Text style={[styles.cardSub, { color: colors.muted }]}>{item.category.name}</Text>
+            )}
+            {item.wallet && (
+              <Text style={[styles.cardSub, { color: colors.muted }]}>
+                {item.wallet.icon ? `${item.wallet.icon} ` : ''}{item.wallet.name}
+              </Text>
+            )}
+            {item.notes ? (
+              <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>
+                {item.notes}
+              </Text>
+            ) : null}
+          </View>
         </View>
         <View style={styles.cardRight}>
           <Text style={[styles.cardAmount, { color: colors.expense }]}>
-            {formatCurrency(item.amount, currency)}
+            -{formatCurrency(item.amount, currency)}
           </Text>
           <Text style={[styles.cardFreq, { color: colors.muted }]}>{item.frequency}</Text>
         </View>
       </View>
       {item.next_due_date && (
         <View style={[styles.dueRow, { borderTopColor: colors.border }]}>
-          <Text style={[styles.dueText, { color: statusColor }]}>
-            {isOverdue ? 'Overdue' : 'Due'}: {formatDate(item.next_due_date)}
-          </Text>
+          <View style={[styles.dueBadge, { backgroundColor: statusColor + '22' }]}>
+            <Text style={[styles.dueText, { color: statusColor }]}>
+              {statusLabel}: {formatDate(item.next_due_date)}
+            </Text>
+          </View>
         </View>
       )}
     </View>
@@ -114,7 +143,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 14,
-    gap: 8,
+    gap: 10,
+  },
+  cardLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  categoryIcon: {
+    fontSize: 22,
+    paddingTop: 2,
   },
   cardInfo: { flex: 1, gap: 2 },
   cardName: { fontSize: 15, fontWeight: '600' },
@@ -126,6 +165,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderTopWidth: 1,
+  },
+  dueBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   dueText: { fontSize: 13, fontWeight: '500' },
 });
