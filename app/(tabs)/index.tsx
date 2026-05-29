@@ -34,19 +34,25 @@ export default function DashboardScreen() {
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const monthEnd = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
 
-    const [{ data: w }, { data: monthly }, { data: recent }] = await Promise.all([
+    const [{ data: w }, { data: allTxSums }, { data: monthly }, { data: recent }] = await Promise.all([
       supabase
         .from('wallets')
         .select('*')
         .eq('user_id', user.id)
         .order('is_default', { ascending: false }),
-      // Full month — only need type + amount for totals
+      // All transactions for computing current wallet balances
+      supabase
+        .from('transactions')
+        .select('wallet_id, type, amount')
+        .eq('user_id', user.id),
+      // This month — exclude transfers so they don't inflate income/expense
       supabase
         .from('transactions')
         .select('type, amount')
         .eq('user_id', user.id)
         .gte('date', monthStart)
-        .lt('date', monthEnd),
+        .lt('date', monthEnd)
+        .is('transfer_group_id', null),
       // Recent 10 for the list — with joins for display
       supabase
         .from('transactions')
@@ -56,7 +62,18 @@ export default function DashboardScreen() {
         .limit(10),
     ]);
 
-    setWallets(w ?? []);
+    // Compute current balance per wallet: starting_balance + income - expenses
+    const walletList = w ?? [];
+    const txSums = allTxSums ?? [];
+    const walletBalanceMap = new Map<string, number>();
+    for (const wallet of walletList) {
+      const wTxs = txSums.filter((t: any) => t.wallet_id === wallet.id);
+      const inc = wTxs.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
+      const exp = wTxs.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
+      walletBalanceMap.set(wallet.id, (wallet.starting_balance ?? 0) + inc - exp);
+    }
+
+    setWallets(walletList.map(w => ({ ...w, _balance: walletBalanceMap.get(w.id) ?? w.starting_balance ?? 0 })));
 
     const mo = monthly ?? [];
     setMonthlyIncome(mo.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0));
@@ -78,8 +95,12 @@ export default function DashboardScreen() {
   }, [load]);
 
   const defaultWallet = wallets.find((w) => w.is_default) ?? wallets[0];
-  const totalBalance = wallets.reduce((s, w) => s + (w.starting_balance ?? 0), 0);
   const currency = defaultWallet?.currency ?? 'HUF';
+  // Sum wallet balances; only meaningful if all wallets share the same currency
+  const allSameCurrency = wallets.every(w => w.currency === currency);
+  const totalBalance = allSameCurrency
+    ? wallets.reduce((s, w) => s + ((w as any)._balance ?? 0), 0)
+    : null;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -99,7 +120,7 @@ export default function DashboardScreen() {
               <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Text style={[styles.cardLabel, { color: colors.muted }]}>Total balance</Text>
                 <Text style={[styles.cardValue, { color: colors.text }]}>
-                  {formatCurrency(totalBalance, currency)}
+                  {totalBalance !== null ? formatCurrency(totalBalance, currency) : 'Multiple currencies'}
                 </Text>
               </View>
               <View style={[styles.cardRow]}>
@@ -134,7 +155,7 @@ export default function DashboardScreen() {
                       <View>
                         <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
                         <Text style={[styles.walletBalance, { color: colors.muted }]}>
-                          {formatCurrency(w.starting_balance ?? 0, w.currency)}
+                          {formatCurrency((w as any)._balance ?? w.starting_balance ?? 0, w.currency)}
                         </Text>
                       </View>
                     </View>
