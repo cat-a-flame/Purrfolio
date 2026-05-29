@@ -105,12 +105,23 @@ patch(path.join(maxSdkBase, 'ExpoMaxSdkOverridePlugin.kt'), [
   ],
 ]);
 
-// FindPermissionsToOverride.kt — top-level file, inject logger alongside import replacement
+// FindPermissionsToOverride.kt — top-level file (no class), logger must go AFTER all imports
 patch(path.join(maxSdkBase, 'FindPermissionsToOverride.kt'), [
   [
-    // Anchor is the import line itself — gone after replacement, so idempotent
-    'import org.gradle.internal.cc.base.logger\n',
-    'import org.gradle.api.logging.Logging\n\nprivate val logger = Logging.getLogger("expo.modules.plugin.FindPermissionsToOverride")\n',
+    // Step 0: repair broken state from earlier bad patch run (logger was placed mid-imports)
+    'private val logger = Logging.getLogger("expo.modules.plugin.FindPermissionsToOverride")\nimport java.io.File',
+    'import java.io.File',
+  ],
+  [
+    // Step 1: replace internal import with public API
+    'import org.gradle.internal.cc.base.logger',
+    'import org.gradle.api.logging.Logging',
+  ],
+  [
+    // Step 2: insert logger after all imports, before the doc comment block
+    // Anchor disappears after patching (logger now sits between DocumentBuilderFactory and /**)
+    'import javax.xml.parsers.DocumentBuilderFactory\n\n/**',
+    'import javax.xml.parsers.DocumentBuilderFactory\n\nprivate val logger = Logging.getLogger("expo.modules.plugin.FindPermissionsToOverride")\n\n/**',
   ],
 ]);
 
