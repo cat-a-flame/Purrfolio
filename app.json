@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Purrfolio",
+    "slug": "purrfolio",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "purrfolio",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.purrfolio.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#f7f4ef",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.purrfolio.app",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#f7f4ef"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "supabaseUrl": "YOUR_SUPABASE_URL",
+      "supabaseAnonKey": "YOUR_SUPABASE_ANON_KEY",
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}
