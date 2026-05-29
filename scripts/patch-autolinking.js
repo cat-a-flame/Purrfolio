@@ -56,9 +56,9 @@ patch('ExpoAutolinkingSettingsPlugin.kt', [
     'import org.gradle.api.logging.Logging',
   ],
   [
-    // The class-level usage of `logger` becomes an explicit Logging call
-    `open class ExpoAutolinkingSettingsPlugin : Plugin<Settings> {`,
-    `open class ExpoAutolinkingSettingsPlugin : Plugin<Settings> {\n  private val logger = Logging.getLogger(ExpoAutolinkingSettingsPlugin::class.java)`,
+    // Only matches BEFORE the logger is inserted (includes the next line as anchor)
+    `open class ExpoAutolinkingSettingsPlugin : Plugin<Settings> {\n  override fun apply(settings: Settings) {`,
+    `open class ExpoAutolinkingSettingsPlugin : Plugin<Settings> {\n  private val logger = Logging.getLogger(ExpoAutolinkingSettingsPlugin::class.java)\n\n  override fun apply(settings: Settings) {`,
   ],
 ]);
 
