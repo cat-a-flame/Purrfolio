@@ -114,7 +114,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   }
 
   return (
-    <View style={{ height: containerHeight, backgroundColor: colors.bg }}>
+    <View style={[styles.container, { height: containerHeight }]} pointerEvents="box-none">
 
       {/* SVG bar fills the lower barHeight portion */}
       <View style={[styles.svgContainer, { height: barHeight }]}>
@@ -152,6 +152,13 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    // no backgroundColor — only the SVG fill and the FAB button draw anything
+  },
   svgContainer: {
     position: 'absolute',
     bottom: 0,
