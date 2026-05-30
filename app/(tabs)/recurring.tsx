@@ -48,6 +48,7 @@ export default function RecurringScreen() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [debugInfo, setDebugInfo] = useState('');
 
   const [editing, setEditing] = useState<RecurringPayment | null>(null);
   const [form, setForm] = useState<EditForm>(EMPTY_FORM);
@@ -59,11 +60,21 @@ export default function RecurringScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: planned }, { data: w }, { data: c }] = await Promise.all([
-      supabase.from('planned').select('*').eq('user_id', user.id).order('name'),
+    const { data: planned, error: plannedErr } = await supabase
+      .from('planned')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('name');
+
+    const [{ data: w }, { data: c }] = await Promise.all([
       supabase.from('wallets').select('*').eq('user_id', user.id),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
     ]);
+
+    setDebugInfo(plannedErr
+      ? `Error: ${plannedErr.message} (code: ${plannedErr.code})`
+      : `${planned?.length ?? 0} rows | user: ${user.id.slice(0, 8)}`
+    );
 
     const walletMap = new Map((w ?? []).map((x: Wallet) => [x.id, x]));
     const categoryMap = new Map((c ?? []).map((x: Category) => [x.id, x]));
@@ -172,7 +183,10 @@ export default function RecurringScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         ListHeaderComponent={null}
         ListEmptyComponent={
-          <Text style={[styles.empty, { color: colors.muted }]}>No planned payments.</Text>
+          <View>
+            <Text style={[styles.empty, { color: colors.muted }]}>No planned payments.</Text>
+            {!!debugInfo && <Text style={[styles.empty, { color: colors.muted, fontSize: 11, marginTop: 8 }]}>{debugInfo}</Text>}
+          </View>
         }
         ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />
