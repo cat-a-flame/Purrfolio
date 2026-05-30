@@ -9,21 +9,22 @@ import { lightColors, darkColors } from '@/lib/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const FAB_R = 28;              // FAB radius  (diameter 56)
-const BAR_H = 60;              // visual bar height
-const NOTCH_R = 44;            // horizontal half-width of notch at bar top
-const NOTCH_SH = 14;           // shoulder: extra horizontal lead-in / lead-out
-const NOTCH_D = FAB_R + 16;   // depth notch dips into the bar (44px)
+const FAB_R = 28;           // FAB radius (diameter 56)
+const BAR_H = 56;           // visual bar height (excludes safe-area inset)
+const NOTCH_R = 28;         // half-width of notch at bar top — matches FAB radius for tight hug
+const NOTCH_SH = 10;        // shoulder: short horizontal lead-in before the curve
+const NOTCH_D = FAB_R + 16; // depth curve dips into bar (44 px)
 
-// Two symmetric cubic bezier curves carving a smooth U-notch.
-// The control points at 0.6× create a wide enough cavity for the FAB.
+// Bezier control points tuned so the curve follows the FAB's circular edge.
+// CP1 drops 40% toward NOTCH_D at the same x as the notch edge (steep start).
+// CP2 is close to center (20% of NOTCH_R) at full depth (tangent ≈ horizontal).
 function buildPath(w: number, h: number): string {
   const cx = w / 2;
   return [
     `M 0 0`,
     `L ${cx - NOTCH_R - NOTCH_SH} 0`,
-    `C ${cx - NOTCH_R} 0, ${cx - NOTCH_R * 0.6} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
-    `C ${cx + NOTCH_R * 0.6} ${NOTCH_D}, ${cx + NOTCH_R} 0, ${cx + NOTCH_R + NOTCH_SH} 0`,
+    `C ${cx - NOTCH_R} ${NOTCH_D * 0.4}, ${cx - NOTCH_R * 0.2} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
+    `C ${cx + NOTCH_R * 0.2} ${NOTCH_D}, ${cx + NOTCH_R} ${NOTCH_D * 0.4}, ${cx + NOTCH_R + NOTCH_SH} 0`,
     `L ${w} 0`,
     `L ${w} ${h}`,
     `L 0 ${h}`,
@@ -31,14 +32,13 @@ function buildPath(w: number, h: number): string {
   ].join(' ');
 }
 
-// Stroke-only path along the top edge (mirrors the fill path's upper boundary)
 function buildTopEdge(w: number): string {
   const cx = w / 2;
   return [
     `M 0 0`,
     `L ${cx - NOTCH_R - NOTCH_SH} 0`,
-    `C ${cx - NOTCH_R} 0, ${cx - NOTCH_R * 0.6} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
-    `C ${cx + NOTCH_R * 0.6} ${NOTCH_D}, ${cx + NOTCH_R} 0, ${cx + NOTCH_R + NOTCH_SH} 0`,
+    `C ${cx - NOTCH_R} ${NOTCH_D * 0.4}, ${cx - NOTCH_R * 0.2} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
+    `C ${cx + NOTCH_R * 0.2} ${NOTCH_D}, ${cx + NOTCH_R} ${NOTCH_D * 0.4}, ${cx + NOTCH_R + NOTCH_SH} 0`,
     `L ${w} 0`,
   ].join(' ');
 }
@@ -50,7 +50,6 @@ const TAB_ICONS: Record<string, string> = {
   stats: 'bar-chart-outline',
 };
 
-// Spacer width = full notch mouth width so icons don't crowd under the curve
 const NOTCH_MOUTH = (NOTCH_R + NOTCH_SH) * 2;
 
 export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
@@ -60,8 +59,6 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const router = useRouter();
 
   const barHeight = BAR_H + bottom;
-  // Container is taller than the bar so the FAB's top half is visible above.
-  // The area above the SVG has no background — screen content shows through.
   const containerHeight = barHeight + FAB_R;
 
   const visibleRoutes = state.routes.filter((r) => r.name !== 'settings');
@@ -97,16 +94,10 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   return (
     <View style={{ height: containerHeight, backgroundColor: 'transparent' }}>
 
-      {/* SVG bar — fills only the lower barHeight portion */}
+      {/* SVG bar fills the lower barHeight portion */}
       <View style={[styles.svgContainer, { height: barHeight }]}>
-        <Svg
-          width={SCREEN_WIDTH}
-          height={barHeight}
-          style={StyleSheet.absoluteFill}
-        >
-          {/* Bar body with notch */}
+        <Svg width={SCREEN_WIDTH} height={barHeight} style={StyleSheet.absoluteFill}>
           <Path d={buildPath(SCREEN_WIDTH, barHeight)} fill={colors.surface} />
-          {/* Subtle top-edge border that follows the curve */}
           <Path
             d={buildTopEdge(SCREEN_WIDTH)}
             fill="none"
@@ -115,15 +106,15 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
           />
         </Svg>
 
-        {/* Tab icon rows sit inside the bar */}
-        <View style={[styles.tabRow, { height: BAR_H, paddingBottom: 20 }]}>
+        {/* Tab icons — anchored above the safe-area inset so they stay in the visual bar */}
+        <View style={[styles.tabRow, { height: BAR_H, bottom: bottom }]}>
           <View style={styles.side}>{leftTabs.map(renderTab)}</View>
           <View style={{ width: NOTCH_MOUTH }} />
           <View style={styles.side}>{rightTabs.map(renderTab)}</View>
         </View>
       </View>
 
-      {/* FAB — sits mostly inside the notch */}
+      {/* FAB sits 20 px below bar top, inside the notch */}
       <View style={[styles.fabWrap, { bottom: barHeight - FAB_R - 20 }]}>
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: '#7c3aed' }]}
@@ -147,7 +138,6 @@ const styles = StyleSheet.create({
   },
   tabRow: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
     flexDirection: 'row',
