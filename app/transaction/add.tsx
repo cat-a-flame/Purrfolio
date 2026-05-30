@@ -15,6 +15,7 @@ import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
 import BottomModal from '@/components/BottomModal';
 import DatePickerModal from '@/components/DatePickerModal';
+import CategoryPickerModal from '@/components/CategoryPickerModal';
 import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { todayInputDate } from '@/lib/utils';
@@ -437,26 +438,13 @@ export default function AddTransactionScreen() {
       </BottomModal>
 
       {/* Category picker modal */}
-      <BottomModal visible={showCategoryModal} onClose={() => setShowCategoryModal(false)} title="Select category">
-        <TouchableOpacity
-          style={[styles.modalRow, { borderBottomColor: colors.border }, !form.category_id && { backgroundColor: colors.accent + '11' }]}
-          onPress={() => { setField('category_id', ''); setShowCategoryModal(false); }}
-        >
-          <Text style={[styles.modalRowText, { color: !form.category_id ? colors.accent : colors.text }]}>— None</Text>
-          {!form.category_id && <Text style={{ color: colors.accent }}>✓</Text>}
-        </TouchableOpacity>
-        {filteredCategories.map((c) => (
-          <TouchableOpacity
-            key={c.id}
-            style={[styles.modalRow, { borderBottomColor: colors.border }, form.category_id === c.id && { backgroundColor: colors.accent + '11' }]}
-            onPress={() => { setField('category_id', c.id); setShowCategoryModal(false); }}
-          >
-            {c.icon ? <Text style={styles.modalRowIcon}>{c.icon}</Text> : <View style={{ width: 28 }} />}
-            <Text style={[styles.modalRowText, { color: form.category_id === c.id ? colors.accent : colors.text }]}>{c.name}</Text>
-            {form.category_id === c.id && <Text style={{ color: colors.accent }}>✓</Text>}
-          </TouchableOpacity>
-        ))}
-      </BottomModal>
+      <CategoryPickerModal
+        visible={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        categories={filteredCategories}
+        selectedId={form.category_id}
+        onSelect={(id) => setField('category_id', id)}
+      />
 
       {/* Labels picker modal */}
       <BottomModal visible={showLabelModal} onClose={() => setShowLabelModal(false)} title="Select labels">
