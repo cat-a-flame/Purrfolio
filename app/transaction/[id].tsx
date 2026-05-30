@@ -5,10 +5,11 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -16,6 +17,7 @@ import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
 import BottomModal from '@/components/BottomModal';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 
 type Form = {
@@ -28,6 +30,18 @@ type Form = {
   payer: string;
   labelIds: string[];
 };
+
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function toIsoDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 export default function EditTransactionScreen() {
   const colors = useTheme();
@@ -55,6 +69,8 @@ export default function EditTransactionScreen() {
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showLabelModal, setShowLabelModal] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -178,20 +194,20 @@ export default function EditTransactionScreen() {
 
   if (fetching) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
         <ActivityIndicator style={{ flex: 1 }} color={colors.accent} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
+    <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={[styles.cancel, { color: colors.muted }]}>Cancel</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Edit transaction</Text>
-        <TouchableOpacity onPress={handleDelete}>
+        <TouchableOpacity onPress={handleDelete} style={styles.headerBtnRight}>
           <Ionicons name="trash-outline" size={20} color={colors.danger} />
         </TouchableOpacity>
       </View>
@@ -229,34 +245,46 @@ export default function EditTransactionScreen() {
           placeholder="0.00"
         />
 
-        <AppInput
-          label="Date (YYYY-MM-DD)"
-          value={form.date}
-          onChangeText={(v) => setField('date', v)}
-          placeholder="2024-01-01"
-        />
+        {/* Date */}
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Date</Text>
+          <TouchableOpacity
+            style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={[styles.pickerBtnText, { color: form.date ? colors.text : colors.muted }]}>
+              {form.date || 'Select date…'}
+            </Text>
+            <Ionicons name="calendar-outline" size={18} color={colors.muted} />
+          </TouchableOpacity>
+        </View>
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={parseLocalDate(form.date || toIsoDate(new Date()))}
+            mode="date"
+            display={Platform.OS === 'android' ? 'default' : 'spinner'}
+            onChange={(_, selectedDate) => {
+              setShowDatePicker(false);
+              if (selectedDate) setField('date', toIsoDate(selectedDate));
+            }}
+          />
+        )}
 
         {/* Wallet */}
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: colors.muted }]}>Wallet</Text>
-          <View style={styles.chips}>
-            {wallets.map((w) => (
-              <TouchableOpacity
-                key={w.id}
-                style={[
-                  styles.chip,
-                  { borderColor: colors.border, backgroundColor: colors.surface },
-                  form.wallet_id === w.id && { borderColor: colors.accent, backgroundColor: colors.accent + '22' },
-                ]}
-                onPress={() => setField('wallet_id', w.id)}
-              >
-                {w.icon ? <Text>{w.icon} </Text> : null}
-                <Text style={[styles.chipText, { color: form.wallet_id === w.id ? colors.accent : colors.text }]}>
-                  {w.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity
+            style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            onPress={() => setShowWalletModal(true)}
+          >
+            <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
+              {selectedWallet
+                ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
+                : 'Select wallet…'}
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </TouchableOpacity>
         </View>
 
         {/* Category */}
@@ -326,6 +354,21 @@ export default function EditTransactionScreen() {
         <View style={{ height: 32 }} />
       </ScrollView>
 
+      {/* Wallet picker modal */}
+      <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title="Select wallet">
+        {wallets.map((w) => (
+          <TouchableOpacity
+            key={w.id}
+            style={[styles.modalRow, { borderBottomColor: colors.border }, form.wallet_id === w.id && { backgroundColor: colors.accent + '11' }]}
+            onPress={() => { setField('wallet_id', w.id); setShowWalletModal(false); }}
+          >
+            {w.icon ? <Text style={styles.modalRowIcon}>{w.icon}</Text> : <View style={{ width: 28 }} />}
+            <Text style={[styles.modalRowText, { color: form.wallet_id === w.id ? colors.accent : colors.text }]}>{w.name}</Text>
+            {form.wallet_id === w.id && <Text style={{ color: colors.accent }}>✓</Text>}
+          </TouchableOpacity>
+        ))}
+      </BottomModal>
+
       <BottomModal visible={showCategoryModal} onClose={() => setShowCategoryModal(false)} title="Select category">
         <TouchableOpacity
           style={[styles.modalRow, { borderBottomColor: colors.border }, !form.category_id && { backgroundColor: colors.accent + '11' }]}
@@ -380,8 +423,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
+  headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
+  headerBtnRight: { width: 40, alignItems: 'flex-end', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '600' },
-  cancel: { fontSize: 16 },
   form: { padding: 16, gap: 16 },
   error: { fontSize: 14, textAlign: 'center' },
   typeToggle: {
