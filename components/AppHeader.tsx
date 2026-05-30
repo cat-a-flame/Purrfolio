@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -58,7 +59,7 @@ export default function AppHeader() {
           onPress={openMenu}
           activeOpacity={0.7}
         >
-          <Text style={[styles.avatarIcon, { color: colors.accent }]}>👤</Text>
+          <MaterialCommunityIcons name="account-circle-outline" size={20} color={colors.accent} />
         </TouchableOpacity>
       </View>
 
@@ -95,7 +96,7 @@ export default function AppHeader() {
                 activeOpacity={0.7}
               >
                 <Text style={[styles.menuItemText, { color: colors.text }]}>{item.label}</Text>
-                <Text style={[styles.menuChevron, { color: colors.muted }]}>›</Text>
+                <MaterialCommunityIcons name="chevron-right" size={18} color={colors.muted} />
               </TouchableOpacity>
             ))}
 
@@ -132,7 +133,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
   },
-  avatarIcon: { fontSize: 17 },
   overlay: { flex: 1 },
   menu: {
     position: 'absolute',

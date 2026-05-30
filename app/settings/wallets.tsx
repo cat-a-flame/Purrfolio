@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Wallet, Currency } from '@/lib/types';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
@@ -130,11 +131,17 @@ export default function WalletsScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={[styles.back, { color: colors.accent }]}>‹ Back</Text>
+          <View style={styles.backRow}>
+            <MaterialCommunityIcons name="arrow-left" size={18} color={colors.accent} />
+            <Text style={[styles.back, { color: colors.accent }]}>Back</Text>
+          </View>
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Wallets</Text>
         <TouchableOpacity onPress={openAdd}>
-          <Text style={[styles.add, { color: colors.accent }]}>+ Add</Text>
+          <View style={styles.addRow}>
+            <MaterialCommunityIcons name="plus" size={16} color={colors.accent} />
+            <Text style={[styles.add, { color: colors.accent }]}>Add</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -261,9 +268,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
   },
-  back: { fontSize: 16 },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  back: { fontSize: 15 },
   title: { fontSize: 18, fontWeight: '700' },
-  add: { fontSize: 16 },
+  addRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  add: { fontSize: 15 },
   list: { padding: 16 },
   row: {
     flexDirection: 'row',

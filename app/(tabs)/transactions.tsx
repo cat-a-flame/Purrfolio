@@ -16,6 +16,7 @@ import AppHeader from '@/components/AppHeader';
 import TransactionRow from '@/components/TransactionRow';
 import type { Transaction, Wallet, TransactionType } from '@/lib/types';
 import { groupByDate, formatDate } from '@/lib/utils';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 type TypeFilter = 'all' | TransactionType;
 
@@ -179,7 +180,7 @@ export default function TransactionsScreen() {
         onPress={() => router.push('/transaction/add')}
         activeOpacity={0.8}
       >
-        <Text style={styles.fabIcon}>+</Text>
+        <MaterialCommunityIcons name="plus" size={30} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -240,5 +241,4 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 6,
   },
-  fabIcon: { color: '#fff', fontSize: 28, lineHeight: 32 },
 });

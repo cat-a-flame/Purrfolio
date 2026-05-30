@@ -1,7 +1,7 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useColorScheme } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { lightColors, darkColors } from '@/lib/theme';
 
 export default function TabsLayout() {
@@ -28,45 +28,34 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => <TabIcon name="home" color={color as string} size={size} />,
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="view-dashboard-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="transactions"
         options={{
           title: 'Transactions',
-          tabBarIcon: ({ color, size }) => <TabIcon name="list" color={color as string} size={size} />,
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="format-list-bulleted" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="recurring"
         options={{
           title: 'Recurring',
-          tabBarIcon: ({ color, size }) => <TabIcon name="repeat" color={color as string} size={size} />,
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="repeat" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="stats"
         options={{
           title: 'Stats',
-          tabBarIcon: ({ color, size }) => <TabIcon name="stats" color={color as string} size={size} />,
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="chart-bar" size={size} color={color} />,
         }}
       />
-      {/* settings is accessible from the user menu; hide it from the tab bar */}
       <Tabs.Screen
         name="settings"
         options={{ href: null }}
       />
     </Tabs>
   );
-}
-
-function TabIcon({ name, color, size }: { name: string; color: string; size: number }) {
-  const icons: Record<string, string> = {
-    home: '⌂',
-    list: '☰',
-    repeat: '↻',
-    stats: '◎',
-  };
-  return <Text style={{ fontSize: size - 4, color }}>{icons[name] ?? '●'}</Text>;
 }

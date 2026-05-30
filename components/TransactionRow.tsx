@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/lib/theme';
 import type { Transaction } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
@@ -18,7 +19,7 @@ export default function TransactionRow({ transaction: tx }: Props) {
   const amountColor = isTransfer ? colors.muted : isIncome ? colors.income : colors.expense;
   const amountPrefix = isTransfer ? '' : isIncome ? '+' : '−';
 
-  const icon = isTransfer ? '↔' : (tx.category?.icon ?? null);
+  const icon = isTransfer ? null : (tx.category?.icon ?? null);
   const label = isTransfer ? 'Transfer' : (tx.category?.name ?? '—');
 
   // Icon box background: 20% opacity tint of the category colour, or a neutral fallback
@@ -32,7 +33,9 @@ export default function TransactionRow({ transaction: tx }: Props) {
     <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {/* Icon with coloured background */}
       <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
-        {icon ? (
+        {isTransfer ? (
+          <MaterialCommunityIcons name="swap-horizontal" size={20} color={colors.muted} />
+        ) : icon ? (
           <Text style={styles.icon}>{icon}</Text>
         ) : (
           <Text style={[styles.iconFallback, { color: colors.muted }]}>?</Text>
