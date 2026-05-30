@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -59,7 +59,7 @@ export default function AppHeader() {
           onPress={openMenu}
           activeOpacity={0.7}
         >
-          <MaterialCommunityIcons name="account-circle-outline" size={20} color={colors.accent} />
+          <Ionicons name="person-circle-outline" size={20} color={colors.accent} />
         </TouchableOpacity>
       </View>
 
@@ -96,7 +96,7 @@ export default function AppHeader() {
                 activeOpacity={0.7}
               >
                 <Text style={[styles.menuItemText, { color: colors.text }]}>{item.label}</Text>
-                <MaterialCommunityIcons name="chevron-right" size={18} color={colors.muted} />
+                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
               </TouchableOpacity>
             ))}
 

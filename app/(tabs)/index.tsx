@@ -18,7 +18,7 @@ import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Wallet } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
 import { useCountUp } from '@/lib/useCountUp';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -315,7 +315,7 @@ export default function DashboardScreen() {
         onPress={() => router.push('/transaction/add')}
         activeOpacity={0.8}
       >
-        <MaterialCommunityIcons name="plus" size={30} color="#fff" />
+        <Ionicons name="add" size={30} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>
   );

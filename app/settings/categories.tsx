@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import type { Category, TransactionType } from '@/lib/types';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
@@ -146,14 +146,14 @@ export default function CategoriesScreen() {
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
           <View style={styles.backRow}>
-            <MaterialCommunityIcons name="arrow-left" size={18} color={colors.accent} />
+            <Ionicons name="arrow-back" size={18} color={colors.accent} />
             <Text style={[styles.back, { color: colors.accent }]}>Back</Text>
           </View>
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Categories</Text>
         <TouchableOpacity onPress={openAdd}>
           <View style={styles.addRow}>
-            <MaterialCommunityIcons name="plus" size={16} color={colors.accent} />
+            <Ionicons name="add" size={16} color={colors.accent} />
             <Text style={[styles.add, { color: colors.accent }]}>Add</Text>
           </View>
         </TouchableOpacity>

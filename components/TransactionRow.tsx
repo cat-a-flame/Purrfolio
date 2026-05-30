@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/lib/theme';
 import type { Transaction } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
@@ -34,7 +34,7 @@ export default function TransactionRow({ transaction: tx }: Props) {
       {/* Icon with coloured background */}
       <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
         {isTransfer ? (
-          <MaterialCommunityIcons name="swap-horizontal" size={20} color={colors.muted} />
+          <Ionicons name="swap-horizontal-outline" size={20} color={colors.muted} />
         ) : icon ? (
           <Text style={styles.icon}>{icon}</Text>
         ) : (

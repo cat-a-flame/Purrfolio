@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import AppHeader from '@/components/AppHeader';
 
 type SettingsItem = {
@@ -88,7 +88,7 @@ export default function SettingsScreen() {
                       {item.label}
                     </Text>
                     {!item.danger && (
-                      <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+                      <Ionicons name="chevron-forward" size={20} color={colors.muted} />
                     )}
                   </TouchableOpacity>
                 </React.Fragment>

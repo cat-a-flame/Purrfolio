@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, Modal, StyleSheet,
   ScrollView, TextInput, SafeAreaView, Pressable,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/lib/theme';
 
 export type PeriodTab = 'months' | 'weeks' | 'years' | 'custom';
@@ -137,16 +137,16 @@ export default function PeriodPicker({ value, onChange }: Props) {
       {/* Trigger row */}
       <View style={s.trigger}>
         <TouchableOpacity onPress={() => navigate(-1)} style={s.navBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <MaterialCommunityIcons name="chevron-left" size={22} color={colors.text} />
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => setOpen(true)} style={s.labelBtn}>
           <Text style={s.labelText}>{value.label}</Text>
-          <MaterialCommunityIcons name="chevron-down" size={16} color={colors.muted} style={{ marginLeft: 2 }} />
+          <Ionicons name="chevron-down" size={16} color={colors.muted} style={{ marginLeft: 2 }} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigate(1)} style={s.navBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.text} />
+          <Ionicons name="chevron-forward" size={22} color={colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -175,11 +175,11 @@ export default function PeriodPicker({ value, onChange }: Props) {
               <View style={s.panel}>
                 <View style={s.panelNav}>
                   <TouchableOpacity onPress={() => setViewYear(y => y - 1)}>
-                    <MaterialCommunityIcons name="chevron-left" size={22} color={colors.text} />
+                    <Ionicons name="chevron-back" size={22} color={colors.text} />
                   </TouchableOpacity>
                   <Text style={[s.panelNavLabel, { color: colors.text }]}>{viewYear}</Text>
                   <TouchableOpacity onPress={() => setViewYear(y => y + 1)}>
-                    <MaterialCommunityIcons name="chevron-right" size={22} color={colors.text} />
+                    <Ionicons name="chevron-forward" size={22} color={colors.text} />
                   </TouchableOpacity>
                 </View>
                 <View style={s.grid}>
@@ -213,7 +213,7 @@ export default function PeriodPicker({ value, onChange }: Props) {
                     if (m < 0) { m = 11; y--; }
                     setWkMonth(m); setWkYear(y);
                   }}>
-                    <MaterialCommunityIcons name="chevron-left" size={22} color={colors.text} />
+                    <Ionicons name="chevron-back" size={22} color={colors.text} />
                   </TouchableOpacity>
                   <Text style={[s.panelNavLabel, { color: colors.text }]}>{MONTH_SHORT[wkMonth]} {wkYear}</Text>
                   <TouchableOpacity onPress={() => {
@@ -221,7 +221,7 @@ export default function PeriodPicker({ value, onChange }: Props) {
                     if (m > 11) { m = 0; y++; }
                     setWkMonth(m); setWkYear(y);
                   }}>
-                    <MaterialCommunityIcons name="chevron-right" size={22} color={colors.text} />
+                    <Ionicons name="chevron-forward" size={22} color={colors.text} />
                   </TouchableOpacity>
                 </View>
                 <View style={s.weekDayHeaders}>
@@ -264,11 +264,11 @@ export default function PeriodPicker({ value, onChange }: Props) {
               <View style={s.panel}>
                 <View style={s.panelNav}>
                   <TouchableOpacity onPress={() => setDecadeStart(d => d - 12)}>
-                    <MaterialCommunityIcons name="chevron-left" size={22} color={colors.text} />
+                    <Ionicons name="chevron-back" size={22} color={colors.text} />
                   </TouchableOpacity>
                   <Text style={[s.panelNavLabel, { color: colors.text }]}>{decadeStart}–{decadeStart + 11}</Text>
                   <TouchableOpacity onPress={() => setDecadeStart(d => d + 12)}>
-                    <MaterialCommunityIcons name="chevron-right" size={22} color={colors.text} />
+                    <Ionicons name="chevron-forward" size={22} color={colors.text} />
                   </TouchableOpacity>
                 </View>
                 <View style={s.grid}>

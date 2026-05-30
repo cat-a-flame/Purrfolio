@@ -13,7 +13,7 @@ import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
 import BottomModal from '@/components/BottomModal';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { todayInputDate } from '@/lib/utils';
 
@@ -232,7 +232,7 @@ export default function AddTransactionScreen() {
                 ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
                 : 'Select category…'}
             </Text>
-            <MaterialCommunityIcons name="chevron-right" size={18} color={colors.muted} />
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
           </TouchableOpacity>
         </View>
 
@@ -249,7 +249,7 @@ export default function AddTransactionScreen() {
                   ? selectedLabels.map((l) => l.name).join(', ')
                   : 'Select labels…'}
               </Text>
-              <MaterialCommunityIcons name="chevron-right" size={18} color={colors.muted} />
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
             </TouchableOpacity>
             {selectedLabels.length > 0 && (
               <View style={styles.chips}>
