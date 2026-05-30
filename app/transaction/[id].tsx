@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -46,6 +47,7 @@ export default function EditTransactionScreen() {
     labelIds: [],
   });
 
+  const amountRef = useRef<TextInput>(null);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
@@ -227,19 +229,25 @@ export default function EditTransactionScreen() {
 
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
-          <View style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-            {currency ? (
-              <Text style={[styles.currencyLabel, { color: colors.muted }]}>{currency}</Text>
-            ) : null}
-            <AppInput
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            onPress={() => amountRef.current?.focus()}
+          >
+            <TextInput
+              ref={amountRef}
               value={form.amount}
               onChangeText={(v) => setField('amount', v)}
               keyboardType="decimal-pad"
               placeholder="0.00"
-              style={styles.amountInput}
+              placeholderTextColor={colors.placeholder}
+              style={[styles.amountInput, { color: colors.text }]}
               textAlign="right"
             />
-          </View>
+            {currency ? (
+              <Text style={[styles.currencyLabel, { color: colors.accent }]}>{currency}</Text>
+            ) : null}
+          </TouchableOpacity>
         </View>
 
         {/* Date */}
@@ -443,20 +451,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 12,
-    minHeight: 42,
-  },
-  currencyLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginRight: 8,
+    minHeight: 46,
   },
   amountInput: {
     flex: 1,
-    borderWidth: 0,
-    borderRadius: 0,
-    paddingHorizontal: 0,
-    backgroundColor: 'transparent',
-    minHeight: 42,
+    fontSize: 16,
+    paddingVertical: 10,
+  },
+  currencyLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginLeft: 10,
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
