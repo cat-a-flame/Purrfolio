@@ -106,7 +106,8 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         accessibilityRole="button"
         accessibilityState={isFocused ? { selected: true } : {}}
       >
-        <View style={[styles.iconWrap, isFocused && { backgroundColor: '#f3ebfe'}]}>
+        <View style={styles.iconWrap}>
+          {isFocused && <View style={styles.iconActiveBg} />}
           <Ionicons name={iconName as any} size={22} color={color} />
         </View>
       </TouchableOpacity>
@@ -184,10 +185,17 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 42,
     height: 42,
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
+  },
+  iconActiveBg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
+    backgroundColor: '#f3ebfe',
   },
   fabWrap: {
     position: 'absolute',
