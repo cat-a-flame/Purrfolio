@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   },
   side: { width: 36 },
   sideRight: { alignItems: 'flex-end' },
-  barTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '700' },
+  barTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontFamily: 'Lora_600SemiBold' },
 
   drawerRow: { flex: 1, flexDirection: 'row' },
   drawer: {
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
 
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Comfortaa_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     paddingHorizontal: 16,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
-  rowText: { flex: 1, fontSize: 15, fontWeight: '500' },
+  rowText: { flex: 1, fontSize: 15, fontFamily: 'Comfortaa_500Medium' },
 
   darkRow: {
     flexDirection: 'row',

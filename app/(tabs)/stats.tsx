@@ -303,8 +303,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  summaryValue: { fontSize: 17, fontWeight: '800' },
-  summaryLabel: { fontSize: 12, fontWeight: '600', paddingHorizontal: 14, paddingVertical: 8 },
+  summaryValue: { fontSize: 17, fontFamily: 'Comfortaa_700Bold' },
+  summaryLabel: { fontSize: 12, fontFamily: 'Comfortaa_600SemiBold', paddingHorizontal: 14, paddingVertical: 8 },
 
   card: {
     borderRadius: 14,
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Comfortaa_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     paddingHorizontal: 14,
@@ -341,12 +341,12 @@ const styles = StyleSheet.create({
   catDot: { width: 10, height: 10, borderRadius: 5 },
   catInfo: { flex: 1, gap: 5 },
   catTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 },
-  catName: { fontSize: 14, fontWeight: '600', flex: 1 },
-  catAmount: { fontSize: 13, fontWeight: '700', flexShrink: 0 },
+  catName: { fontSize: 14, fontFamily: 'Comfortaa_600SemiBold', flex: 1 },
+  catAmount: { fontSize: 13, fontFamily: 'Comfortaa_700Bold', flexShrink: 0 },
   catBarRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   barTrack: { height: 5, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 5, borderRadius: 3 },
-  catPct: { fontSize: 11, fontWeight: '600', width: 32, textAlign: 'right' },
+  catPct: { fontSize: 11, fontFamily: 'Comfortaa_600SemiBold', width: 32, textAlign: 'right' },
 
   walletRow: { gap: 10, paddingVertical: 4 },
   walletChip: {
@@ -360,6 +360,6 @@ const styles = StyleSheet.create({
     minWidth: 140,
   },
   walletIcon: { fontSize: 20 },
-  walletName: { fontSize: 13, fontWeight: '600' },
+  walletName: { fontSize: 13, fontFamily: 'Comfortaa_600SemiBold' },
   walletBalance: { fontSize: 12, marginTop: 1 },
 });

@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   section: { gap: 8 },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Comfortaa_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     paddingHorizontal: 4,

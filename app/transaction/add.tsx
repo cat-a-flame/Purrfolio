@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '600' },
+  headerTitle: { fontSize: 17, fontFamily: 'Comfortaa_600SemiBold' },
   form: { padding: 16, gap: 16, flexGrow: 1 },
   stickyFooter: {
     paddingHorizontal: 16,
@@ -632,9 +632,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
   },
-  typeBtnText: { fontSize: 15, fontWeight: '600' },
+  typeBtnText: { fontSize: 15, fontFamily: 'Comfortaa_600SemiBold' },
   fieldGroup: { gap: 8 },
-  fieldLabel: { fontSize: 13, fontWeight: '500' },
+  fieldLabel: { fontSize: 13, fontFamily: 'Comfortaa_500Medium' },
   amountRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
   },
   currencyLabel: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Comfortaa_700Bold',
     marginLeft: 10,
   },
   moreToggle: {
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: 'dashed',
   },
-  moreToggleText: { fontSize: 14, fontWeight: '500' },
+  moreToggleText: { fontSize: 14, fontFamily: 'Comfortaa_500Medium' },
   pickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',

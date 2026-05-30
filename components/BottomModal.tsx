@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Comfortaa_700Bold',
     marginBottom: 16,
   },
   content: {

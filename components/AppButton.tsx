@@ -92,6 +92,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Comfortaa_600SemiBold',
   },
 });

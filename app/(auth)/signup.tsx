@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 36,
-    fontWeight: '800',
+    fontFamily: 'Comfortaa_700Bold',
   },
   subtitle: {
     fontSize: 15,
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Comfortaa_700Bold',
     textAlign: 'center',
   },
   successBody: {

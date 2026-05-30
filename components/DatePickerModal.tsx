@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   itemTextSelected: {
-    fontWeight: '700',
+    fontFamily: 'Comfortaa_700Bold',
     fontSize: 17,
   },
   confirmBtn: {
@@ -171,6 +171,6 @@ const styles = StyleSheet.create({
   confirmText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Comfortaa_700Bold',
   },
 });

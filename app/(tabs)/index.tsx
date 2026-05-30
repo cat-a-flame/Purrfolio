@@ -294,18 +294,18 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   cashFlowHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cashFlowTitle: { fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  cashFlowNet: { fontSize: 30, fontWeight: '800' },
+  cashFlowTitle: { fontSize: 13, fontFamily: 'Comfortaa_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.5 },
+  cashFlowNet: { fontSize: 30, fontFamily: 'Comfortaa_700Bold' },
   cashFlowLabel: { fontSize: 12 },
-  cashFlowValue: { fontSize: 14, fontWeight: '700' },
+  cashFlowValue: { fontSize: 14, fontFamily: 'Comfortaa_700Bold' },
   vsBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  vsText: { fontSize: 12, fontWeight: '600' },
+  vsText: { fontSize: 12, fontFamily: 'Comfortaa_600SemiBold' },
   barSection: { gap: 4 },
   barLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   barTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 6, borderRadius: 3 },
 
-  sectionTitle: { fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionTitle: { fontSize: 13, fontFamily: 'Comfortaa_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   dayHeader: {
     flexDirection: 'row',
@@ -315,8 +315,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     paddingHorizontal: 2,
   },
-  dayDate: { fontSize: 13, fontWeight: '600' },
-  dayNet: { fontSize: 13, fontWeight: '700' },
+  dayDate: { fontSize: 13, fontFamily: 'Comfortaa_600SemiBold' },
+  dayNet: { fontSize: 13, fontFamily: 'Comfortaa_700Bold' },
 
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
 });

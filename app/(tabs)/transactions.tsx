@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   headerBlock: { gap: 10, marginBottom: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  resetBtnText: { fontSize: 13, fontWeight: '500' },
+  resetBtnText: { fontSize: 13, fontFamily: 'Comfortaa_500Medium' },
 
   searchBox: {
     flexDirection: 'row',
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
 
   dateHeader: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Comfortaa_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginTop: 12,

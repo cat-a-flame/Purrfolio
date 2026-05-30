@@ -11,10 +11,10 @@ export default function ThemedText({ variant = 'body', style, ...props }: Props)
 
   const variantStyle = {
     body: { color: colors.text, fontSize: 15 },
-    heading: { color: colors.text, fontSize: 20, fontWeight: '700' as const },
+    heading: { color: colors.text, fontSize: 20, fontFamily: 'Comfortaa_700Bold' },
     caption: { color: colors.muted, fontSize: 12 },
     muted: { color: colors.muted, fontSize: 14 },
-    label: { color: colors.muted, fontSize: 13, fontWeight: '500' as const },
+    label: { color: colors.muted, fontSize: 13, fontFamily: 'Comfortaa_500Medium' },
   }[variant];
 
   return <Text style={[variantStyle, style]} {...props} />;

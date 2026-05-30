@@ -239,7 +239,7 @@ function WalletForm({
               ]}
               onPress={() => setField('currency', c)}
             >
-              <Text style={{ color: form.currency === c ? colors.accent : colors.text, fontWeight: '600' }}>
+              <Text style={{ color: form.currency === c ? colors.accent : colors.text, fontFamily: 'Comfortaa_600SemiBold' }}>
                 {c}
               </Text>
             </TouchableOpacity>
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   back: { fontSize: 15 },
-  title: { fontSize: 18, fontWeight: '700' },
+  title: { fontSize: 18, fontFamily: 'Comfortaa_700Bold' },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   add: { fontSize: 15 },
   list: { padding: 16 },
@@ -282,10 +282,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  rowName: { fontSize: 15, fontWeight: '600' },
+  rowName: { fontSize: 15, fontFamily: 'Comfortaa_600SemiBold' },
   rowSub: { fontSize: 13 },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  badgeText: { fontSize: 12, fontWeight: '600' },
+  badgeText: { fontSize: 12, fontFamily: 'Comfortaa_600SemiBold' },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   chips: { flexDirection: 'row', gap: 8 },
