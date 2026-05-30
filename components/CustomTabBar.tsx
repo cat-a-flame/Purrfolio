@@ -18,8 +18,9 @@ export const TAB_BAR_HEIGHT = BAR_H + FAB_R; // 84 px
 
 // ── Notch tuning knobs ──────────────────────
 const NOTCH_R  = 36; // circle radius — increase for more clearance around FAB
-const NOTCH_Y  = 20; // FAB centre depth below bar top — smaller = FAB sits higher
+const NOTCH_Y  = 20; // notch depth: how far the arc dips below the bar top
 const CORNER_R = 12; // radius of the fillet where the arc meets the bar top edge
+const FAB_EXTRA_Y = 0; // extra px to push the FAB down independently of the notch
 // ────────────────────────────────────────────
 
 // Horizontal distance from centre to where the raw circle crosses y=0
@@ -136,7 +137,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
       </View>
 
       {/* FAB sits 20 px below bar top, inside the notch */}
-      <View style={[styles.fabWrap, { bottom: barHeight - FAB_R - NOTCH_Y }]}>
+      <View style={[styles.fabWrap, { bottom: barHeight - FAB_R - NOTCH_Y - FAB_EXTRA_Y }]}>
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: '#7c3aed' }]}
           onPress={() => router.push('/transaction/add')}
