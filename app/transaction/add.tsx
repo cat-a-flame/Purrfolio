@@ -7,7 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -58,6 +58,7 @@ function typeColor(t: Form['type'], colors: any): string {
 export default function AddTransactionScreen() {
   const colors = useTheme();
   const router = useRouter();
+  const { bottom } = useSafeAreaInsets();
 
   const [form, setForm] = useState<Form>({
     type: 'expense',
@@ -235,7 +236,7 @@ export default function AddTransactionScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 24 }]} keyboardShouldPersistTaps="handled">
         {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
 
         {/* Type toggle */}
@@ -410,12 +411,13 @@ export default function AddTransactionScreen() {
           </>
         )}
 
+      </ScrollView>
+
+      <View style={[styles.stickyFooter, { paddingBottom: bottom + 16, borderTopColor: colors.border }]}>
         <AppButton onPress={handleSave} loading={loading} fullWidth>
           Save transaction
         </AppButton>
-
-        <View style={{ height: 32 }} />
-      </ScrollView>
+      </View>
 
       {/* From wallet picker modal */}
       <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title={isTransfer ? 'From wallet' : 'Select wallet'}>
@@ -492,7 +494,12 @@ const styles = StyleSheet.create({
   },
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '600' },
-  form: { padding: 16, gap: 16 },
+  form: { padding: 16, gap: 16, flexGrow: 1 },
+  stickyFooter: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   error: { fontSize: 14, textAlign: 'center' },
   typeToggle: {
     flexDirection: 'row',

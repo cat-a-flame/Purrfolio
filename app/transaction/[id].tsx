@@ -9,7 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -46,6 +46,7 @@ type Form = {
 export default function EditTransactionScreen() {
   const colors = useTheme();
   const router = useRouter();
+  const { bottom } = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [form, setForm] = useState<Form>({
@@ -215,7 +216,7 @@ export default function EditTransactionScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 24 }]} keyboardShouldPersistTaps="handled">
         {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
 
         {/* Type toggle — hidden for transfers */}
@@ -370,12 +371,13 @@ export default function EditTransactionScreen() {
           </>
         )}
 
+      </ScrollView>
+
+      <View style={[styles.stickyFooter, { paddingBottom: bottom + 16, borderTopColor: colors.border }]}>
         <AppButton onPress={handleSave} loading={loading} fullWidth>
           Save changes
         </AppButton>
-
-        <View style={{ height: 32 }} />
-      </ScrollView>
+      </View>
 
       {/* Wallet picker modal */}
       <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title="Select wallet">
@@ -437,7 +439,12 @@ const styles = StyleSheet.create({
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
   headerBtnRight: { width: 40, alignItems: 'flex-end', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '600' },
-  form: { padding: 16, gap: 16 },
+  form: { padding: 16, gap: 16, flexGrow: 1 },
+  stickyFooter: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   error: { fontSize: 14, textAlign: 'center' },
   typeToggle: {
     flexDirection: 'row',
