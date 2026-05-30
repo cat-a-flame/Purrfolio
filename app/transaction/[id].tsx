@@ -20,6 +20,17 @@ import DatePickerModal from '@/components/DatePickerModal';
 import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 
+function formatAmountDisplay(raw: string): string {
+  if (!raw) return '';
+  const [intPart, decPart] = raw.split('.');
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return decPart !== undefined ? `${grouped}.${decPart}` : grouped;
+}
+
+function parseAmountInput(text: string): string {
+  return text.replace(/\s/g, '');
+}
+
 type Form = {
   type: TransactionType;
   amount: string;
@@ -236,10 +247,10 @@ export default function EditTransactionScreen() {
           >
             <TextInput
               ref={amountRef}
-              value={form.amount}
-              onChangeText={(v) => setField('amount', v)}
+              value={formatAmountDisplay(form.amount)}
+              onChangeText={(v) => setField('amount', parseAmountInput(v))}
               keyboardType="decimal-pad"
-              placeholder="0.00"
+              placeholder="0"
               placeholderTextColor={colors.placeholder}
               style={[styles.amountInput, { color: colors.text }]}
               textAlign="right"
