@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet, useColorScheme, Dimensions } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import Svg, { Path, Defs, Filter, FeDropShadow } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +11,6 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const FAB_R = 28;           // FAB radius (diameter 56)
 const BAR_H = 56;           // visual bar height (excludes safe-area inset)
-const SHADOW_PAD = 20;      // extra space above bar so upward shadow isn't clipped
 
 // Screens should add TAB_BAR_HEIGHT + useSafeAreaInsets().bottom as bottom padding
 // so content isn't hidden behind the floating tab bar.
@@ -83,7 +82,6 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 
   const barHeight = BAR_H + bottom;
   const containerHeight = barHeight + FAB_R;
-  const shadowHeight = barHeight + SHADOW_PAD;
 
   const visibleRoutes = state.routes.filter((r) => r.name !== 'settings');
   const leftTabs = visibleRoutes.slice(0, 2);
@@ -118,27 +116,15 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   return (
     <View style={[styles.container, { height: containerHeight }]} pointerEvents="box-none">
 
-      {/* SVG bar fills the lower barHeight portion; container is taller by SHADOW_PAD so upward shadow isn't clipped */}
-      <View style={[styles.svgContainer, { height: shadowHeight }]}>
-        <Svg width={SCREEN_WIDTH} height={shadowHeight} style={StyleSheet.absoluteFill}>
-          <Defs>
-            <Filter id="barShadow" x="-5%" y="-100%" width="110%" height="300%">
-              <FeDropShadow
-                dx="0"
-                dy="-3"
-                stdDeviation="6"
-                floodColor="#000"
-                floodOpacity={scheme === 'dark' ? 0.45 : 0.12}
-              />
-            </Filter>
-          </Defs>
-          <Path d={buildPath(SCREEN_WIDTH, barHeight)} fill={colors.surface} filter="url(#barShadow)" transform={`translate(0,${SHADOW_PAD})`} />
+      {/* SVG bar fills the lower barHeight portion */}
+      <View style={[styles.svgContainer, { height: barHeight }]}>
+        <Svg width={SCREEN_WIDTH} height={barHeight} style={StyleSheet.absoluteFill}>
+          <Path d={buildPath(SCREEN_WIDTH, barHeight)} fill={colors.surface} />
           <Path
             d={buildTopEdge(SCREEN_WIDTH)}
             fill="none"
             stroke={colors.border}
             strokeWidth={1}
-            transform={`translate(0,${SHADOW_PAD})`}
           />
         </Svg>
 
