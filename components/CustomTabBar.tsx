@@ -15,28 +15,23 @@ const BAR_H = 56;           // visual bar height (excludes safe-area inset)
 // Screens should add TAB_BAR_HEIGHT + useSafeAreaInsets().bottom as bottom padding
 // so content isn't hidden behind the floating tab bar.
 export const TAB_BAR_HEIGHT = BAR_H + FAB_R; // 84 px
-const NOTCH_R = 42;         // half-width of notch — wider = rounder U shape
-const NOTCH_SH = 10;        // shoulder: short horizontal lead-in before the curve
-const NOTCH_D = FAB_R + 28; // depth curve dips into bar (56 px)
-const NOTCH_BR = 20;        // bottom corner radius — drives the quarter-circle arcs
 
-// 4-segment path: shoulder → steep descent → quarter-circle arc → mirror.
-// The two arc segments use k=0.552 (cubic bezier quarter-circle approximation)
-// so the bottom is a true circular curve, not a V meeting point.
+// ── Notch tuning knobs ──────────────────────
+const NOTCH_R = 36;  // circle radius — increase for more clearance around FAB
+const NOTCH_Y = 20;  // FAB centre depth below bar top — smaller = FAB sits higher
+// ────────────────────────────────────────────
+
+// Horizontal distance from centre to where the circle crosses y=0
+const NOTCH_DX = Math.sqrt(Math.max(0, NOTCH_R * NOTCH_R - NOTCH_Y * NOTCH_Y));
+const NOTCH_MOUTH = NOTCH_DX * 2 + 16; // gap reserved in tab row
+
+// Single circular-arc notch using SVG "A" (large-arc=1, sweep=0 → dips downward)
 function buildPath(w: number, h: number): string {
   const cx = w / 2;
-  const br = NOTCH_BR;
   return [
     `M 0 0`,
-    `L ${cx - NOTCH_R - NOTCH_SH} 0`,
-    // Left descent: steep fall, arrives at arc tangentially (downward)
-    `C ${cx - NOTCH_R} ${NOTCH_D * 0.4}, ${cx - br} ${NOTCH_D * 0.5}, ${cx - br} ${NOTCH_D - br}`,
-    // Left quarter-circle arc (k=0.552)
-    `C ${cx - br} ${NOTCH_D - br * 0.448}, ${cx - br * 0.552} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
-    // Right quarter-circle arc (mirror)
-    `C ${cx + br * 0.552} ${NOTCH_D}, ${cx + br} ${NOTCH_D - br * 0.448}, ${cx + br} ${NOTCH_D - br}`,
-    // Right ascent: mirror of left descent
-    `C ${cx + br} ${NOTCH_D * 0.5}, ${cx + NOTCH_R} ${NOTCH_D * 0.4}, ${cx + NOTCH_R + NOTCH_SH} 0`,
+    `L ${cx - NOTCH_DX} 0`,
+    `A ${NOTCH_R} ${NOTCH_R} 0 1 0 ${cx + NOTCH_DX} 0`,
     `L ${w} 0`,
     `L ${w} ${h}`,
     `L 0 ${h}`,
@@ -46,14 +41,10 @@ function buildPath(w: number, h: number): string {
 
 function buildTopEdge(w: number): string {
   const cx = w / 2;
-  const br = NOTCH_BR;
   return [
     `M 0 0`,
-    `L ${cx - NOTCH_R - NOTCH_SH} 0`,
-    `C ${cx - NOTCH_R} ${NOTCH_D * 0.4}, ${cx - br} ${NOTCH_D * 0.5}, ${cx - br} ${NOTCH_D - br}`,
-    `C ${cx - br} ${NOTCH_D - br * 0.448}, ${cx - br * 0.552} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
-    `C ${cx + br * 0.552} ${NOTCH_D}, ${cx + br} ${NOTCH_D - br * 0.448}, ${cx + br} ${NOTCH_D - br}`,
-    `C ${cx + br} ${NOTCH_D * 0.5}, ${cx + NOTCH_R} ${NOTCH_D * 0.4}, ${cx + NOTCH_R + NOTCH_SH} 0`,
+    `L ${cx - NOTCH_DX} 0`,
+    `A ${NOTCH_R} ${NOTCH_R} 0 1 0 ${cx + NOTCH_DX} 0`,
     `L ${w} 0`,
   ].join(' ');
 }
@@ -65,7 +56,6 @@ const TAB_ICONS: Record<string, string> = {
   stats: 'bar-chart-outline',
 };
 
-const NOTCH_MOUTH = (NOTCH_R + NOTCH_SH) * 2;
 
 export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const scheme = useColorScheme();
@@ -130,7 +120,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
       </View>
 
       {/* FAB sits 20 px below bar top, inside the notch */}
-      <View style={[styles.fabWrap, { bottom: barHeight - FAB_R - 20 }]}>
+      <View style={[styles.fabWrap, { bottom: barHeight - FAB_R - NOTCH_Y }]}>
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: '#7c3aed' }]}
           onPress={() => router.push('/transaction/add')}
