@@ -101,7 +101,7 @@ export default function TransactionsScreen() {
   const [walletFilter, setWalletFilter] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [labelFilter, setLabelFilter] = useState<string>('');
-  const [period, setPeriod] = useState<PeriodValue | null>(null);
+  const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
 
   const [openModal, setOpenModal] = useState<ModalKind>(null);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
@@ -146,10 +146,10 @@ export default function TransactionsScreen() {
     setWalletFilter('');
     setCategoryFilter('');
     setLabelFilter('');
-    setPeriod(null);
+    setPeriod(defaultPeriod());
   }
 
-  const hasActiveFilters = !!(search || typeFilter !== 'all' || walletFilter || categoryFilter || labelFilter || period);
+  const hasActiveFilters = !!(search || typeFilter !== 'all' || walletFilter || categoryFilter || labelFilter);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -269,24 +269,7 @@ export default function TransactionsScreen() {
             </View>
 
             {/* Date range */}
-            {period ? (
-              <View style={styles.periodRow}>
-                <View style={{ flex: 1 }}>
-                  <PeriodPicker value={period} onChange={setPeriod} />
-                </View>
-                <TouchableOpacity onPress={() => setPeriod(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="close-circle" size={22} color={colors.muted} />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <DropBtn
-                label="All dates"
-                active={false}
-                onPress={() => setPeriod(defaultPeriod())}
-                onClear={() => {}}
-                colors={colors}
-              />
-            )}
+            <PeriodPicker value={period} onChange={setPeriod} />
           </View>
         }
         ListEmptyComponent={
@@ -388,7 +371,6 @@ const styles = StyleSheet.create({
   },
   dropBtnText: { flex: 1, fontSize: 13 },
 
-  periodRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
   modalRow: {
     flexDirection: 'row',
