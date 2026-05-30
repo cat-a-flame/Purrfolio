@@ -62,3 +62,9 @@ export function frequencyLabel(frequency: RecurrenceFrequency): string {
 export function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
+
+export function monthBounds(year: number, month: number): [Date, Date] {
+  const from = new Date(year, month, 1);
+  const to = new Date(year, month + 1, 0, 23, 59, 59, 999);
+  return [from, to];
+}

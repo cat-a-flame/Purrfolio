@@ -18,6 +18,7 @@ import { useTheme, useDarkMode } from '@/lib/theme';
 
 interface Props {
   title: string;
+  leftAction?: React.ReactNode;
 }
 
 const DRAWER_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);
@@ -31,7 +32,7 @@ const SETTINGS_ITEMS: NavItem[] = [
   { label: 'Templates',  route: '/settings/templates',  icon: 'copy-outline'     },
 ];
 
-export default function AppHeader({ title }: Props) {
+export default function AppHeader({ title, leftAction }: Props) {
   const colors = useTheme();
   const { isDark, setIsDark } = useDarkMode();
   const router = useRouter();
@@ -73,7 +74,9 @@ export default function AppHeader({ title }: Props) {
     <>
       {/* ── Fixed top bar ────────────────────────────────────────────── */}
       <View style={[styles.bar, { backgroundColor: colors.bg }]}>
-        <View style={styles.side} />
+        <View style={styles.side}>
+          {leftAction ?? null}
+        </View>
         <Text style={[styles.barTitle, { color: colors.text }]}>{title}</Text>
         <View style={[styles.side, styles.sideRight]}>
           <TouchableOpacity onPress={openDrawer} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
