@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -16,8 +15,8 @@ import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
 import BottomModal from '@/components/BottomModal';
+import DatePickerModal from '@/components/DatePickerModal';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 
 type Form = {
@@ -30,18 +29,6 @@ type Form = {
   payer: string;
   labelIds: string[];
 };
-
-function parseLocalDate(dateStr: string): Date {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-function toIsoDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
 export default function EditTransactionScreen() {
   const colors = useTheme();
@@ -259,17 +246,12 @@ export default function EditTransactionScreen() {
           </TouchableOpacity>
         </View>
 
-        {showDatePicker && (
-          <DateTimePicker
-            value={parseLocalDate(form.date || toIsoDate(new Date()))}
-            mode="date"
-            display={Platform.OS === 'android' ? 'default' : 'spinner'}
-            onChange={(_, selectedDate) => {
-              setShowDatePicker(false);
-              if (selectedDate) setField('date', toIsoDate(selectedDate));
-            }}
-          />
-        )}
+        <DatePickerModal
+          visible={showDatePicker}
+          value={form.date}
+          onConfirm={(d) => setField('date', d)}
+          onClose={() => setShowDatePicker(false)}
+        />
 
         {/* Wallet */}
         <View style={styles.fieldGroup}>
