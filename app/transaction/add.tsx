@@ -36,6 +36,7 @@ function parseAmountInput(text: string): string {
 type Form = {
   type: TransactionType | 'transfer';
   amount: string;
+  to_amount: string;
   wallet_id: string;
   to_wallet_id: string;
   category_id: string;
@@ -65,6 +66,7 @@ export default function AddTransactionScreen() {
   const [form, setForm] = useState<Form>({
     type: 'expense',
     amount: '',
+    to_amount: '',
     wallet_id: '',
     to_wallet_id: '',
     category_id: '',
@@ -73,6 +75,8 @@ export default function AddTransactionScreen() {
     payer: '',
     labelIds: [],
   });
+
+  const toAmountRef = useRef<TextInput>(null);
 
   const amountRef = useRef<TextInput>(null);
   const [wallets, setWallets] = useState<Wallet[]>([]);
@@ -124,6 +128,37 @@ export default function AddTransactionScreen() {
     }));
   }
 
+  const selectedWalletForCurrency = wallets.find((w) => w.id === form.wallet_id);
+  const selectedToWalletForCurrency = wallets.find((w) => w.id === form.to_wallet_id);
+  const sameCurrency = !!(
+    selectedWalletForCurrency && selectedToWalletForCurrency &&
+    selectedWalletForCurrency.currency === selectedToWalletForCurrency.currency
+  );
+
+  function handleFromAmountChange(raw: string) {
+    setForm((f) => ({ ...f, amount: raw, ...(sameCurrency ? { to_amount: raw } : {}) }));
+  }
+
+  function handleFromWalletSelect(id: string) {
+    const from = wallets.find((w) => w.id === id);
+    const to = wallets.find((w) => w.id === form.to_wallet_id);
+    setForm((f) => ({
+      ...f,
+      wallet_id: id,
+      ...(from && to && from.currency === to.currency ? { to_amount: f.amount } : {}),
+    }));
+  }
+
+  function handleToWalletSelect(id: string) {
+    const from = wallets.find((w) => w.id === form.wallet_id);
+    const to = wallets.find((w) => w.id === id);
+    setForm((f) => ({
+      ...f,
+      to_wallet_id: id,
+      ...(from && to && from.currency === to.currency ? { to_amount: f.amount } : {}),
+    }));
+  }
+
   async function handleSave() {
     if (!form.amount || isNaN(Number(form.amount))) {
       setError('Please enter a valid amount.');
@@ -140,6 +175,13 @@ export default function AddTransactionScreen() {
     if (form.type === 'transfer' && form.wallet_id === form.to_wallet_id) {
       setError('Source and destination wallet must be different.');
       return;
+    }
+    if (form.type === 'transfer' && !sameCurrency) {
+      const toAmt = Number(form.to_amount);
+      if (!form.to_amount || isNaN(toAmt) || toAmt <= 0) {
+        setError('Please enter a valid amount received.');
+        return;
+      }
     }
     if (!form.date) {
       setError('Please select a date.');
@@ -169,7 +211,7 @@ export default function AddTransactionScreen() {
         {
           user_id: user.id,
           type: 'income',
-          amount: parseFloat(form.amount),
+          amount: sameCurrency ? parseFloat(form.amount) : parseFloat(form.to_amount),
           wallet_id: form.to_wallet_id,
           category_id: null,
           date: form.date,
@@ -221,8 +263,8 @@ export default function AddTransactionScreen() {
     (c) => c.type === 'both' || c.type === form.type
   );
 
-  const selectedWallet = wallets.find((w) => w.id === form.wallet_id);
-  const selectedToWallet = wallets.find((w) => w.id === form.to_wallet_id);
+  const selectedWallet = selectedWalletForCurrency;
+  const selectedToWallet = selectedToWalletForCurrency;
   const selectedCategory = categories.find((c) => c.id === form.category_id);
   const selectedLabels = labels.filter((l) => form.labelIds.includes(l.id));
   const currency = selectedWallet?.currency ?? '';
@@ -279,27 +321,39 @@ export default function AddTransactionScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* To Wallet — transfer only */}
+        {/* Transfer layout: From wallet → arrow → To wallet */}
         {isTransfer && (
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>To wallet</Text>
-            <TouchableOpacity
-              style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-              onPress={() => setShowToWalletModal(true)}
-            >
-              <Text style={[styles.pickerBtnText, { color: selectedToWallet ? colors.text : colors.muted }]}>
-                {selectedToWallet
-                  ? `${selectedToWallet.icon ? selectedToWallet.icon + ' ' : ''}${selectedToWallet.name}`
-                  : 'Select wallet…'}
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-            </TouchableOpacity>
-          </View>
+          <>
+            {/* Arrow divider */}
+            <View style={styles.arrowRow}>
+              <View style={[styles.arrowLine, { backgroundColor: colors.border }]} />
+              <View style={[styles.arrowCircle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Ionicons name="arrow-down" size={16} color={colors.accent} />
+              </View>
+              <View style={[styles.arrowLine, { backgroundColor: colors.border }]} />
+            </View>
+
+            {/* To wallet */}
+            <View style={styles.fieldGroup}>
+              <Text style={[styles.fieldLabel, { color: colors.muted }]}>To wallet</Text>
+              <TouchableOpacity
+                style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                onPress={() => setShowToWalletModal(true)}
+              >
+                <Text style={[styles.pickerBtnText, { color: selectedToWallet ? colors.text : colors.muted }]}>
+                  {selectedToWallet
+                    ? `${selectedToWallet.icon ? selectedToWallet.icon + ' ' : ''}${selectedToWallet.name}`
+                    : 'Select wallet…'}
+                </Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+          </>
         )}
 
-        {/* Amount with currency */}
+        {/* Amount sent */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>{isTransfer ? 'Amount sent' : 'Amount'}</Text>
           <TouchableOpacity
             activeOpacity={1}
             style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
@@ -308,7 +362,7 @@ export default function AddTransactionScreen() {
             <TextInput
               ref={amountRef}
               value={formatAmountDisplay(form.amount)}
-              onChangeText={(v) => setField('amount', parseAmountInput(v))}
+              onChangeText={(v) => handleFromAmountChange(parseAmountInput(v))}
               keyboardType="decimal-pad"
               placeholder="0"
               placeholderTextColor={colors.placeholder}
@@ -320,6 +374,37 @@ export default function AddTransactionScreen() {
             ) : null}
           </TouchableOpacity>
         </View>
+
+        {/* Amount received — transfer, cross-currency only */}
+        {isTransfer && !sameCurrency && (
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount received</Text>
+            <TouchableOpacity
+              activeOpacity={1}
+              style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
+              onPress={() => toAmountRef.current?.focus()}
+            >
+              <TextInput
+                ref={toAmountRef}
+                value={formatAmountDisplay(form.to_amount)}
+                onChangeText={(v) => setField('to_amount', parseAmountInput(v))}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor={colors.placeholder}
+                style={[styles.amountInput, { color: colors.text }]}
+                textAlign="right"
+              />
+              {selectedToWallet?.currency ? (
+                <Text style={[styles.currencyLabel, { color: colors.accent }]}>{selectedToWallet.currency}</Text>
+              ) : null}
+            </TouchableOpacity>
+          </View>
+        )}
+        {isTransfer && sameCurrency && (
+          <Text style={[styles.sameHint, { color: colors.muted }]}>
+            Same currency — amount auto-matched
+          </Text>
+        )}
 
         {/* Date */}
         <View style={styles.fieldGroup}>
@@ -432,7 +517,7 @@ export default function AddTransactionScreen() {
           <TouchableOpacity
             key={w.id}
             style={[styles.modalRow, { borderBottomColor: colors.border }, form.wallet_id === w.id && { backgroundColor: colors.accent + '11' }]}
-            onPress={() => { setField('wallet_id', w.id); setShowWalletModal(false); }}
+            onPress={() => { handleFromWalletSelect(w.id); setShowWalletModal(false); }}
           >
             {w.icon ? <Text style={styles.modalRowIcon}>{w.icon}</Text> : <View style={{ width: 28 }} />}
             <Text style={[styles.modalRowText, { color: form.wallet_id === w.id ? colors.accent : colors.text }]}>{w.name}</Text>
@@ -441,13 +526,13 @@ export default function AddTransactionScreen() {
         ))}
       </BottomModal>
 
-      {/* To wallet picker modal */}
+      {/* To wallet picker modal — source wallet excluded */}
       <BottomModal visible={showToWalletModal} onClose={() => setShowToWalletModal(false)} title="To wallet">
-        {wallets.map((w) => (
+        {wallets.filter((w) => w.id !== form.wallet_id).map((w) => (
           <TouchableOpacity
             key={w.id}
             style={[styles.modalRow, { borderBottomColor: colors.border }, form.to_wallet_id === w.id && { backgroundColor: colors.accent + '11' }]}
-            onPress={() => { setField('to_wallet_id', w.id); setShowToWalletModal(false); }}
+            onPress={() => { handleToWalletSelect(w.id); setShowToWalletModal(false); }}
           >
             {w.icon ? <Text style={styles.modalRowIcon}>{w.icon}</Text> : <View style={{ width: 28 }} />}
             <Text style={[styles.modalRowText, { color: form.to_wallet_id === w.id ? colors.accent : colors.text }]}>{w.name}</Text>
@@ -575,4 +660,11 @@ const styles = StyleSheet.create({
   modalRowIcon: { fontSize: 20, width: 28, textAlign: 'center' },
   modalRowText: { flex: 1, fontSize: 15 },
   labelDot: { width: 12, height: 12, borderRadius: 6 },
+  arrowRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  arrowLine: { flex: 1, height: 1 },
+  arrowCircle: {
+    width: 32, height: 32, borderRadius: 16, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sameHint: { fontSize: 13, textAlign: 'center', marginTop: -8 },
 });
