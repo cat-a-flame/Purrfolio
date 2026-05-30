@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet, useColorScheme, Dimensions } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Svg, { Path } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -116,6 +117,15 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   return (
     <View style={[styles.container, { height: containerHeight }]} pointerEvents="box-none">
 
+      {/* Soft shadow gradient above the bar */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0)', scheme === 'dark' ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.10)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={[styles.shadowGradient, { top: FAB_R - 28 }]}
+        pointerEvents="none"
+      />
+
       {/* SVG bar fills the lower barHeight portion */}
       <View style={[styles.svgContainer, { height: barHeight }]}>
         <Svg width={SCREEN_WIDTH} height={barHeight} style={StyleSheet.absoluteFill}>
@@ -163,6 +173,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    elevation: 20,
+  },
+  shadowGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 28,
   },
   tabRow: {
     position: 'absolute',
