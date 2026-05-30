@@ -18,9 +18,9 @@ export const TAB_BAR_HEIGHT = BAR_H + FAB_R; // 84 px
 
 // ── Notch tuning knobs ──────────────────────
 const NOTCH_R  = 36; // circle radius — increase for more clearance around FAB
-const NOTCH_Y  = 20; // notch depth: how far the arc dips below the bar top
+const NOTCH_Y  = 0; // notch depth: how far the arc dips below the bar top
 const CORNER_R = 12; // radius of the fillet where the arc meets the bar top edge
-const FAB_EXTRA_Y = 0; // extra px to push the FAB down independently of the notch
+const FAB_EXTRA_Y = 12; // extra px to push the FAB down independently of the notch
 // ────────────────────────────────────────────
 
 // Horizontal distance from centre to where the raw circle crosses y=0
