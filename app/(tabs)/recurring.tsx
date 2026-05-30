@@ -48,7 +48,6 @@ export default function RecurringScreen() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [debugInfo, setDebugInfo] = useState('');
 
   const [editing, setEditing] = useState<RecurringPayment | null>(null);
   const [form, setForm] = useState<EditForm>(EMPTY_FORM);
@@ -60,8 +59,8 @@ export default function RecurringScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: planned, error: plannedErr } = await supabase
-      .from('planned')
+    const { data: planned } = await supabase
+      .from('recurring_payments')
       .select('*')
       .eq('user_id', user.id)
       .order('name');
@@ -70,11 +69,6 @@ export default function RecurringScreen() {
       supabase.from('wallets').select('*').eq('user_id', user.id),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
     ]);
-
-    setDebugInfo(plannedErr
-      ? `Error: ${plannedErr.message} (code: ${plannedErr.code})`
-      : `${planned?.length ?? 0} rows | user: ${user.id.slice(0, 8)}`
-    );
 
     const walletMap = new Map((w ?? []).map((x: Wallet) => [x.id, x]));
     const categoryMap = new Map((c ?? []).map((x: Category) => [x.id, x]));
@@ -125,7 +119,7 @@ export default function RecurringScreen() {
     setFormError('');
 
     const { error } = await supabase
-      .from('planned')
+      .from('recurring_payments')
       .update({
         name: form.name.trim(),
         type: form.type,
@@ -152,7 +146,7 @@ export default function RecurringScreen() {
       {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
-          await supabase.from('planned').delete().eq('id', editing!.id);
+          await supabase.from('recurring_payments').delete().eq('id', editing!.id);
           setEditing(null);
           load();
         },
@@ -162,7 +156,7 @@ export default function RecurringScreen() {
 
   async function handleToggleActive() {
     if (!editing) return;
-    await supabase.from('planned').update({ is_active: !editing.is_active }).eq('id', editing.id);
+    await supabase.from('recurring_payments').update({ is_active: !editing.is_active }).eq('id', editing.id);
     setEditing(null);
     load();
   }
@@ -183,10 +177,7 @@ export default function RecurringScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         ListHeaderComponent={null}
         ListEmptyComponent={
-          <View>
-            <Text style={[styles.empty, { color: colors.muted }]}>No planned payments.</Text>
-            {!!debugInfo && <Text style={[styles.empty, { color: colors.muted, fontSize: 11, marginTop: 8 }]}>{debugInfo}</Text>}
-          </View>
+          <Text style={[styles.empty, { color: colors.muted }]}>No planned payments.</Text>
         }
         ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />
