@@ -19,6 +19,7 @@ import type { Transaction, Wallet } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
 import { useCountUp } from '@/lib/useCountUp';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -233,56 +234,65 @@ export default function DashboardScreen() {
             <PeriodPicker value={period} onChange={setPeriod} />
 
             {/* Cash Flow card */}
-            <View style={[styles.cashFlow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <LinearGradient
+                colors={[
+                  '#4D7BE7',
+                  '#C064BC',
+                  '#F78162',
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cashFlow}
+>
               {/* Title row + VS badge */}
               <View style={styles.cashFlowHeader}>
-                <Text style={[styles.cashFlowTitle, { color: colors.muted }]}>Cash Flow</Text>
+                <Text style={[styles.cashFlowTitle, { color: '#fff' }]}>Cash Flow</Text>
                 {vsPct !== null && (
                   <View style={[
                     styles.vsBadge,
-                    { backgroundColor: vsPct >= 0 ? colors.income + '22' : colors.expense + '22' },
+                    { backgroundColor: '#ffffff33' },
                   ]}>
                     <Text style={[
                       styles.vsText,
-                      { color: vsPct >= 0 ? colors.income : colors.expense },
+                      { color: '#fff' },
                     ]}>
-                      {vsPct >= 0 ? '↑' : '↓'} {Math.abs(vsPct)}% vs prev
+                      {vsPct >= 0 ? '↑' : '↓'} {Math.abs(vsPct)}%
                     </Text>
                   </View>
                 )}
               </View>
 
               {/* Animated net */}
-              <Text style={[styles.cashFlowNet, { color: animatedNet >= 0 ? colors.income : colors.expense }]}>
+              <Text style={[styles.cashFlowNet, { color: animatedNet >= 0 ? '#fff' : '#ffcaca' }]}>
                 {animatedNet >= 0 ? '+' : '−'}{formatCurrency(Math.abs(animatedNet), currency)}
               </Text>
 
               {/* Income bar */}
               <View style={styles.barSection}>
                 <View style={styles.barLabelRow}>
-                  <Text style={[styles.cashFlowLabel, { color: colors.muted }]}>Income</Text>
-                  <Text style={[styles.cashFlowValue, { color: colors.income }]}>
+                  <Text style={[styles.cashFlowLabel, { color: '#fff' }]}>Income</Text>
+                  <Text style={[styles.cashFlowValue, { color: '#fff' }]}>
                     +{formatCurrency(animatedIncome, currency)}
                   </Text>
                 </View>
-                <View style={[styles.barTrack, { backgroundColor: colors.border }]}>
-                  <View style={[styles.barFill, { width: `${incomePct}%` as any, backgroundColor: colors.income }]} />
+                <View style={[styles.barTrack, { backgroundColor: '#ffffff94' }]}>
+                  <View style={[styles.barFill, { width: `${incomePct}%` as any, backgroundColor: '#449f90' }]} />
                 </View>
               </View>
 
               {/* Expense bar */}
               <View style={styles.barSection}>
                 <View style={styles.barLabelRow}>
-                  <Text style={[styles.cashFlowLabel, { color: colors.muted }]}>Expenses</Text>
-                  <Text style={[styles.cashFlowValue, { color: colors.expense }]}>
+                  <Text style={[styles.cashFlowLabel, { color: '#fff' }]}>Expenses</Text>
+                  <Text style={[styles.cashFlowValue, { color: '#fee5e5' }]}>
                     −{formatCurrency(animatedExpense, currency)}
                   </Text>
                 </View>
-                <View style={[styles.barTrack, { backgroundColor: colors.border }]}>
-                  <View style={[styles.barFill, { width: `${expensePct}%` as any, backgroundColor: colors.expense }]} />
+                <View style={[styles.barTrack, { backgroundColor: '#ffffff94' }]}>
+                  <View style={[styles.barFill, { width: `${expensePct}%` as any, backgroundColor: '#f44c4c' }]} />
                 </View>
               </View>
-            </View>
+            </LinearGradient>
 
             {/* Wallet chips */}
             {wallets.length > 0 && (
@@ -324,13 +334,15 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: 16, paddingBottom: 16 },
   header: { gap: 12, marginBottom: 8 },
   headerEscape: { marginHorizontal: -16 },
-  title: { fontSize: 26, fontWeight: '800' },
+  title: { fontSize: 26, fontWeight: '800', textAlign: 'center', marginBottom: 10 },
 
   cashFlow: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 16,
+    borderRadius: 10,
+    borderWidth: 0,
+    padding: 20,
     gap: 10,
+    marginBottom: 8,
+    marginTop: 6,
   },
   cashFlowHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cashFlowTitle: { fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
@@ -347,12 +359,14 @@ const styles = StyleSheet.create({
   walletRow: { gap: 8, paddingBottom: 4 },
   walletChip: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
+    flexBasis: '50%',
   },
   walletName: { fontSize: 13, fontWeight: '600' },
   walletBalance: { fontSize: 12 },

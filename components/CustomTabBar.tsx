@@ -96,7 +96,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   function renderTab(route: (typeof state.routes)[number]) {
     const isFocused = state.routes[state.index].key === route.key;
     const iconName = TAB_ICONS[route.name] ?? 'ellipse-outline';
-    const color = isFocused ? colors.accent : colors.muted;
+    const color = isFocused ? '#692f7c' : '#998aa7';
     return (
       <TouchableOpacity
         key={route.key}
@@ -106,7 +106,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         accessibilityRole="button"
         accessibilityState={isFocused ? { selected: true } : {}}
       >
-        <View style={[styles.iconWrap, isFocused && { backgroundColor: colors.accent + '22' }]}>
+        <View style={[styles.iconWrap, isFocused && { backgroundColor: '#f3ebfe'}]}>
           <Ionicons name={iconName as any} size={22} color={color} />
         </View>
       </TouchableOpacity>
@@ -139,7 +139,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
       {/* FAB sits 20 px below bar top, inside the notch */}
       <View style={[styles.fabWrap, { bottom: barHeight - FAB_R - NOTCH_Y - FAB_EXTRA_Y }]}>
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: '#7c3aed' }]}
+          style={[styles.fab, { backgroundColor: '#692f7c' }]}
           onPress={() => router.push('/transaction/add')}
           activeOpacity={0.85}
         >
@@ -157,7 +157,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    // no backgroundColor — only the SVG fill and the FAB button draw anything
   },
   svgContainer: {
     position: 'absolute',
@@ -183,9 +182,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   iconWrap: {
-    width: 48,
-    height: 32,
-    borderRadius: 16,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -201,10 +200,10 @@ const styles = StyleSheet.create({
     borderRadius: FAB_R,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28,
+    elevation: 5,
+    shadowColor: '#692f7c',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
     shadowRadius: 10,
   },
 });
