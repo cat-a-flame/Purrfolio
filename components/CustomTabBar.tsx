@@ -126,7 +126,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
       {/* FAB — sits mostly inside the notch */}
       <View style={[styles.fabWrap, { bottom: barHeight - FAB_R - 20 }]}>
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: colors.accent }]}
+          style={[styles.fab, { backgroundColor: '#7c3aed' }]}
           onPress={() => router.push('/transaction/add')}
           activeOpacity={0.85}
         >
