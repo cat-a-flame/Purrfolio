@@ -7,7 +7,6 @@ import {
   RefreshControl,
   TouchableOpacity,
   Alert,
-  Switch,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
@@ -18,19 +17,28 @@ import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
 import BottomModal from '@/components/BottomModal';
 import { Ionicons } from '@expo/vector-icons';
-import type { RecurringPayment, Wallet, Category } from '@/lib/types';
+import type { RecurringPayment, Wallet, Category, RecurrenceFrequency } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { nextDueDate, frequencyLabel, isoDate } from '@/lib/recurringUtils';
 
-const FREQUENCIES = ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'];
+const FREQUENCIES: RecurrenceFrequency[] = ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'];
 
 type EditForm = {
   name: string;
+  type: 'income' | 'expense';
   amount: string;
   wallet_id: string;
   category_id: string;
-  frequency: string;
-  next_due_date: string;
+  frequency: RecurrenceFrequency;
+  start_date: string;
+  end_date: string;
+  payer: string;
   notes: string;
+};
+
+const EMPTY_FORM: EditForm = {
+  name: '', type: 'expense', amount: '', wallet_id: '', category_id: '',
+  frequency: 'monthly', start_date: isoDate(new Date()), end_date: '', payer: '', notes: '',
 };
 
 export default function RecurringScreen() {
@@ -42,7 +50,7 @@ export default function RecurringScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const [editing, setEditing] = useState<RecurringPayment | null>(null);
-  const [form, setForm] = useState<EditForm>({ name: '', amount: '', wallet_id: '', category_id: '', frequency: 'monthly', next_due_date: '', notes: '' });
+  const [form, setForm] = useState<EditForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -51,22 +59,19 @@ export default function RecurringScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: recurring }, { data: w }, { data: c }] = await Promise.all([
-      supabase.from('recurring_payments').select('*').eq('user_id', user.id).order('next_due_date', { ascending: true, nullsFirst: false }),
+    const [{ data: planned }, { data: w }, { data: c }] = await Promise.all([
+      supabase
+        .from('planned')
+        .select('*, wallet:wallets(*), category:categories(*)')
+        .eq('user_id', user.id)
+        .order('name'),
       supabase.from('wallets').select('*').eq('user_id', user.id),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
     ]);
 
-    const walletMap = new Map<string, Wallet>((w ?? []).map((x: Wallet) => [x.id, x]));
-    const categoryMap = new Map<string, Category>((c ?? []).map((x: Category) => [x.id, x]));
-
     setWallets(w ?? []);
     setCategories(c ?? []);
-    setItems((recurring ?? []).map((r: any) => ({
-      ...r,
-      wallet: r.wallet_id ? walletMap.get(r.wallet_id) ?? null : null,
-      category: r.category_id ? categoryMap.get(r.category_id) ?? null : null,
-    })));
+    setItems(planned ?? []);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -80,11 +85,14 @@ export default function RecurringScreen() {
   function openEdit(item: RecurringPayment) {
     setForm({
       name: item.name,
+      type: item.type,
       amount: String(item.amount),
       wallet_id: item.wallet_id ?? '',
       category_id: item.category_id ?? '',
       frequency: item.frequency,
-      next_due_date: item.next_due_date ?? '',
+      start_date: item.start_date,
+      end_date: item.end_date ?? '',
+      payer: item.payer ?? '',
       notes: item.notes ?? '',
     });
     setFormError('');
@@ -103,14 +111,17 @@ export default function RecurringScreen() {
     setFormError('');
 
     const { error } = await supabase
-      .from('recurring_payments')
+      .from('planned')
       .update({
         name: form.name.trim(),
+        type: form.type,
         amount: parseFloat(form.amount),
         wallet_id: form.wallet_id || null,
         category_id: form.category_id || null,
         frequency: form.frequency,
-        next_due_date: form.next_due_date || null,
+        start_date: form.start_date,
+        end_date: form.end_date || null,
+        payer: form.payer.trim() || null,
         notes: form.notes || null,
       })
       .eq('id', editing!.id);
@@ -122,12 +133,12 @@ export default function RecurringScreen() {
   }
 
   function handleDelete() {
-    Alert.alert('Delete recurring payment', 'This cannot be undone.', [
+    Alert.alert('Delete planned payment', 'This cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
-          await supabase.from('recurring_payments').delete().eq('id', editing!.id);
+          await supabase.from('planned').delete().eq('id', editing!.id);
           setEditing(null);
           load();
         },
@@ -135,11 +146,18 @@ export default function RecurringScreen() {
     ]);
   }
 
+  async function handleToggleActive() {
+    if (!editing) return;
+    await supabase.from('planned').update({ is_active: !editing.is_active }).eq('id', editing.id);
+    setEditing(null);
+    load();
+  }
+
   const selectedCategory = categories.find((c) => c.id === form.category_id);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AppHeader title="Recurring" />
+      <AppHeader title="Planned" />
       <FlatList
         data={items}
         keyExtractor={(i) => i.id}
@@ -151,7 +169,7 @@ export default function RecurringScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         ListHeaderComponent={null}
         ListEmptyComponent={
-          <Text style={[styles.empty, { color: colors.muted }]}>No recurring payments.</Text>
+          <Text style={[styles.empty, { color: colors.muted }]}>No planned payments.</Text>
         }
         ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />
@@ -160,14 +178,34 @@ export default function RecurringScreen() {
       <BottomModal
         visible={!!editing}
         onClose={() => setEditing(null)}
-        title="Edit recurring payment"
+        title="Edit planned payment"
       >
         <View style={styles.modalForm}>
           {formError ? <Text style={[styles.formError, { color: colors.danger }]}>{formError}</Text> : null}
 
+          {/* Type chips */}
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Type</Text>
+            <View style={styles.chips}>
+              {(['expense', 'income'] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.surface },
+                    form.type === t && { borderColor: colors.accent, backgroundColor: colors.accent + '22' }]}
+                  onPress={() => setField('type', t)}
+                >
+                  <Text style={[styles.chipText, { color: form.type === t ? colors.accent : colors.text }]}>
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           <AppInput label="Name" value={form.name} onChangeText={(v) => setField('name', v)} placeholder="e.g. Netflix" />
           <AppInput label="Amount" value={form.amount} onChangeText={(v) => setField('amount', v)} keyboardType="decimal-pad" placeholder="0.00" />
-          <AppInput label="Next due date (YYYY-MM-DD)" value={form.next_due_date} onChangeText={(v) => setField('next_due_date', v)} placeholder="2024-01-01" />
+          <AppInput label="Start date (YYYY-MM-DD)" value={form.start_date} onChangeText={(v) => setField('start_date', v)} placeholder="2024-01-01" />
+          <AppInput label="End date (optional)" value={form.end_date} onChangeText={(v) => setField('end_date', v)} placeholder="2025-12-31" />
 
           {/* Frequency chips */}
           <View style={styles.fieldGroup}>
@@ -181,7 +219,7 @@ export default function RecurringScreen() {
                   onPress={() => setField('frequency', f)}
                 >
                   <Text style={[styles.chipText, { color: form.frequency === f ? colors.accent : colors.text }]}>
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                    {frequencyLabel(f)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -224,9 +262,17 @@ export default function RecurringScreen() {
             </TouchableOpacity>
           </View>
 
+          <AppInput label="Payer / payee (optional)" value={form.payer} onChangeText={(v) => setField('payer', v)} placeholder="e.g. OTP Bank" />
           <AppInput label="Notes (optional)" value={form.notes} onChangeText={(v) => setField('notes', v)} placeholder="Add a note…" multiline numberOfLines={2} style={{ minHeight: 60, textAlignVertical: 'top' }} />
 
           <AppButton onPress={handleSave} loading={saving} fullWidth>Save changes</AppButton>
+
+          <TouchableOpacity style={styles.secondaryBtn} onPress={handleToggleActive}>
+            <Ionicons name={editing?.is_active ? 'pause-outline' : 'play-outline'} size={16} color={colors.muted} />
+            <Text style={[styles.secondaryBtnText, { color: colors.muted }]}>
+              {editing?.is_active ? 'Pause' : 'Resume'}
+            </Text>
+          </TouchableOpacity>
 
           <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
             <Ionicons name="trash-outline" size={16} color={colors.danger} />
@@ -262,18 +308,21 @@ export default function RecurringScreen() {
 
 function RecurringCard({ item, colors, onPress }: { item: RecurringPayment; colors: any; onPress: () => void }) {
   const currency = item.wallet?.currency ?? 'HUF';
+  const next = nextDueDate(item);
   const now = new Date();
-  const dueDate = item.next_due_date ? new Date(item.next_due_date) : null;
-  const isOverdue = dueDate ? dueDate < now : false;
-  const isDueSoon = dueDate ? !isOverdue && dueDate.getTime() - now.getTime() < 7 * 24 * 3600 * 1000 : false;
-  const statusColor = isOverdue ? colors.danger : isDueSoon ? '#f59e0b' : colors.muted;
-  const statusLabel = isOverdue ? 'Overdue' : isDueSoon ? 'Due soon' : 'Due';
+  const isOverdue = next ? next < now : false;
+  const isDueSoon = next ? !isOverdue && next.getTime() - now.getTime() < 7 * 24 * 3600 * 1000 : false;
+  const statusColor = !item.is_active ? colors.muted : isOverdue ? colors.danger : isDueSoon ? '#f59e0b' : colors.muted;
 
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
-      style={[styles.card, { backgroundColor: colors.surface, borderColor: isOverdue ? colors.danger + '66' : colors.border }]}
+      style={[
+        styles.card,
+        { backgroundColor: colors.surface, borderColor: isOverdue && item.is_active ? colors.danger + '66' : colors.border },
+        !item.is_active && { opacity: 0.55 },
+      ]}
     >
       <View style={styles.cardMain}>
         <View style={styles.cardLeft}>
@@ -286,21 +335,30 @@ function RecurringCard({ item, colors, onPress }: { item: RecurringPayment; colo
                 {item.wallet.icon ? `${item.wallet.icon} ` : ''}{item.wallet.name}
               </Text>
             )}
-            {item.notes ? <Text style={[styles.cardSub, { color: colors.muted }]} numberOfLines={1}>{item.notes}</Text> : null}
           </View>
         </View>
         <View style={styles.cardRight}>
-          <Text style={[styles.cardAmount, { color: colors.expense }]}>-{formatCurrency(item.amount, currency)}</Text>
-          <Text style={[styles.cardFreq, { color: colors.muted }]}>{item.frequency}</Text>
+          <Text style={[styles.cardAmount, { color: item.type === 'income' ? colors.income : colors.expense }]}>
+            {item.type === 'income' ? '+' : '−'}{formatCurrency(item.amount, currency)}
+          </Text>
+          <Text style={[styles.cardFreq, { color: colors.muted }]}>{frequencyLabel(item.frequency)}</Text>
         </View>
       </View>
-      {item.next_due_date && (
+      {!item.is_active ? (
         <View style={[styles.dueRow, { borderTopColor: colors.border }]}>
-          <View style={[styles.dueBadge, { backgroundColor: statusColor + '22' }]}>
-            <Text style={[styles.dueText, { color: statusColor }]}>{statusLabel}: {formatDate(item.next_due_date)}</Text>
+          <View style={[styles.dueBadge, { backgroundColor: colors.muted + '22' }]}>
+            <Text style={[styles.dueText, { color: colors.muted }]}>Paused</Text>
           </View>
         </View>
-      )}
+      ) : next ? (
+        <View style={[styles.dueRow, { borderTopColor: colors.border }]}>
+          <View style={[styles.dueBadge, { backgroundColor: statusColor + '22' }]}>
+            <Text style={[styles.dueText, { color: statusColor }]}>
+              {isOverdue ? 'Overdue' : isDueSoon ? 'Due soon' : 'Next'}: {formatDate(isoDate(next))}
+            </Text>
+          </View>
+        </View>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -318,7 +376,7 @@ const styles = StyleSheet.create({
   cardSub: { fontSize: 13 },
   cardRight: { alignItems: 'flex-end', gap: 2 },
   cardAmount: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
-  cardFreq: { fontSize: 12, textTransform: 'capitalize' },
+  cardFreq: { fontSize: 12 },
   dueRow: { paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: 1 },
   dueBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   dueText: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
@@ -335,6 +393,8 @@ const styles = StyleSheet.create({
   modalRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4, borderBottomWidth: StyleSheet.hairlineWidth, gap: 10 },
   modalRowIcon: { fontSize: 20, width: 28, textAlign: 'center' },
   modalRowText: { flex: 1, fontSize: 15 },
+  secondaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8 },
+  secondaryBtnText: { fontSize: 15, fontFamily: 'Figtree_500Medium' },
   deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10 },
   deleteBtnText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
 });
