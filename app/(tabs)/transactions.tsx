@@ -186,6 +186,7 @@ export default function TransactionsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AppHeader title="Transactions" />
       <FlatList
         data={flat}
         keyExtractor={(item) => item.kind === 'header' ? `h-${item.date}` : item.tx.id}
@@ -205,10 +206,7 @@ export default function TransactionsScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
         ListHeaderComponent={
           <View style={styles.headerBlock}>
-            <View style={styles.headerEscape}><AppHeader /></View>
-
             <View style={styles.titleRow}>
-              <Text style={[styles.title, { color: colors.text }]}>Transactions</Text>
               {hasActiveFilters && (
                 <TouchableOpacity onPress={resetFilters} style={[styles.resetBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}>
                   <Ionicons name="close-circle-outline" size={14} color={colors.muted} />
@@ -341,9 +339,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   list: { paddingHorizontal: 16 },
   headerBlock: { gap: 10, marginBottom: 12 },
-  headerEscape: { marginHorizontal: -16 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  title: { fontSize: 26, fontWeight: '800' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   resetBtnText: { fontSize: 13, fontWeight: '500' },
 

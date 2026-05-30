@@ -59,11 +59,8 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AppHeader title="Settings" />
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.headerEscape}>
-          <AppHeader />
-        </View>
-        <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
 
         {sections.map((section) => (
           <View key={section.title} style={styles.section}>
@@ -104,8 +101,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: { paddingHorizontal: 16, paddingBottom: 40, gap: 24 },
-  headerEscape: { marginHorizontal: -16 },
-  title: { fontSize: 26, fontWeight: '800' },
   section: { gap: 8 },
   sectionTitle: {
     fontSize: 13,

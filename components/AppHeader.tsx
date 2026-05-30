@@ -1,113 +1,164 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  Animated,
+  Dimensions,
+  Switch,
+  ScrollView,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { useTheme, useDarkMode } from '@/lib/theme';
 
-type NavItem = { label: string; route: string };
+interface Props {
+  title: string;
+}
 
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Wallets', route: '/settings/wallets' },
-  { label: 'Categories', route: '/settings/categories' },
-  { label: 'Labels', route: '/settings/labels' },
-  { label: 'Templates', route: '/settings/templates' },
+const DRAWER_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);
+
+type NavItem = { label: string; route: string; icon: string };
+
+const SETTINGS_ITEMS: NavItem[] = [
+  { label: 'Wallets',    route: '/settings/wallets',    icon: 'wallet-outline'   },
+  { label: 'Categories', route: '/settings/categories', icon: 'grid-outline'     },
+  { label: 'Labels',     route: '/settings/labels',     icon: 'pricetag-outline' },
+  { label: 'Templates',  route: '/settings/templates',  icon: 'copy-outline'     },
 ];
 
-export default function AppHeader() {
+export default function AppHeader({ title }: Props) {
   const colors = useTheme();
+  const { isDark, setIsDark } = useDarkMode();
   const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuTop, setMenuTop] = useState(0);
+  const { top, bottom } = useSafeAreaInsets();
+  const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
-  const btnRef = useRef<TouchableOpacity>(null);
+  const slideAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setEmail(user?.email ?? null);
-    });
+    supabase.auth.getUser().then(({ data: { user } }) => setEmail(user?.email ?? null));
   }, []);
 
-  function openMenu() {
-    btnRef.current?.measureInWindow((_x, y, _w, h) => {
-      setMenuTop(y + h + 6);
-      setMenuOpen(true);
-    });
+  function openDrawer() {
+    setOpen(true);
+    Animated.parallel([
+      Animated.timing(slideAnim, { toValue: 0, duration: 260, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 260, useNativeDriver: true }),
+    ]).start();
   }
 
-  function navigate(route: string) {
-    setMenuOpen(false);
-    router.push(route as any);
+  function closeDrawer(cb?: () => void) {
+    Animated.parallel([
+      Animated.timing(slideAnim, { toValue: DRAWER_WIDTH, duration: 220, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 0,            duration: 220, useNativeDriver: true }),
+    ]).start(() => { setOpen(false); cb?.(); });
   }
+
+  function navigate(route: string) { closeDrawer(() => router.push(route as any)); }
 
   async function handleSignOut() {
-    setMenuOpen(false);
-    await supabase.auth.signOut();
-    router.replace('/(auth)/login');
+    closeDrawer(async () => {
+      await supabase.auth.signOut();
+      router.replace('/(auth)/login');
+    });
   }
 
   return (
     <>
-      <View style={[styles.bar, { borderBottomColor: colors.border }]}>
-        <View style={styles.logoRow}>
-          <Image source={require('@/assets/images/logo.png')} style={styles.logo} />
-          <Text style={[styles.logoName, { color: colors.text }]}>Purrfolio</Text>
+      {/* ── Fixed top bar ────────────────────────────────────────────── */}
+      <View style={[styles.bar, { backgroundColor: colors.bg }]}>
+        <View style={styles.side} />
+        <Text style={[styles.barTitle, { color: colors.text }]}>{title}</Text>
+        <View style={[styles.side, styles.sideRight]}>
+          <TouchableOpacity onPress={openDrawer} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="menu-outline" size={26} color={colors.text} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          ref={btnRef}
-          style={[styles.avatarBtn, { backgroundColor: colors.accent + '22', borderColor: colors.accent + '55' }]}
-          onPress={openMenu}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="person-circle-outline" size={20} color={colors.accent} />
-        </TouchableOpacity>
       </View>
 
-      <Modal
-        visible={menuOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMenuOpen(false)}
-      >
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setMenuOpen(false)}>
-          <View style={[styles.menu, { top: menuTop, backgroundColor: colors.surface, borderColor: colors.border }]}>
-            {email && (
-              <Text
-                style={[styles.menuEmail, { color: colors.muted, borderBottomColor: colors.border }]}
-                numberOfLines={1}
-              >
-                {email}
-              </Text>
-            )}
+      {/* ── Slide-in drawer ──────────────────────────────────────────── */}
+      <Modal visible={open} transparent animationType="none" onRequestClose={() => closeDrawer()}>
+        {/* Backdrop */}
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { backgroundColor: colors.overlay, opacity: fadeAnim }]}
+          pointerEvents="none"
+        />
 
-            {/* Settings section label */}
-            <Text style={[styles.menuSection, { color: colors.muted, borderBottomColor: colors.border }]}>
-              Settings
-            </Text>
+        {/* Dismiss area + drawer side by side */}
+        <View style={styles.drawerRow}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => closeDrawer()} />
 
-            {NAV_ITEMS.map((item, i) => (
-              <TouchableOpacity
-                key={item.route}
-                style={[
-                  styles.menuItem,
-                  i < NAV_ITEMS.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-                ]}
-                onPress={() => navigate(item.route)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.menuItemText, { color: colors.text }]}>{item.label}</Text>
-                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-              </TouchableOpacity>
-            ))}
+          <Animated.View style={[
+            styles.drawer,
+            { backgroundColor: colors.surface, borderLeftColor: colors.border, transform: [{ translateX: slideAnim }] },
+          ]}>
+            <View style={[styles.drawerInner, { paddingTop: top || 16 }]}>
 
-            {/* Divider before sign out */}
-            <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+              {/* Scrollable content */}
+              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
 
-            <TouchableOpacity style={styles.menuItem} onPress={handleSignOut} activeOpacity={0.7}>
-              <Text style={[styles.menuItemText, { color: colors.danger }]}>Sign out</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
+                {/* User email */}
+                {email && (
+                  <View style={[styles.emailRow, { borderBottomColor: colors.border }]}>
+                    <View style={[styles.emailAvatar, { backgroundColor: colors.accent + '22' }]}>
+                      <Ionicons name="person-outline" size={18} color={colors.accent} />
+                    </View>
+                    <Text style={[styles.emailText, { color: colors.muted }]} numberOfLines={1}>{email}</Text>
+                  </View>
+                )}
+
+                {/* Settings */}
+                <Text style={[styles.sectionLabel, { color: colors.muted }]}>Settings</Text>
+                <View style={[styles.group, { borderColor: colors.border }]}>
+                  {SETTINGS_ITEMS.map((item, i) => (
+                    <TouchableOpacity
+                      key={item.route}
+                      style={[
+                        styles.row,
+                        i < SETTINGS_ITEMS.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                      ]}
+                      onPress={() => navigate(item.route)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name={item.icon as any} size={18} color={colors.muted} />
+                      <Text style={[styles.rowText, { color: colors.text }]}>{item.label}</Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Account */}
+                <Text style={[styles.sectionLabel, { color: colors.muted }]}>Account</Text>
+                <View style={[styles.group, { borderColor: colors.border }]}>
+                  <TouchableOpacity style={styles.row} onPress={handleSignOut} activeOpacity={0.7}>
+                    <Ionicons name="log-out-outline" size={18} color={colors.danger} />
+                    <Text style={[styles.rowText, { color: colors.danger }]}>Sign out</Text>
+                  </TouchableOpacity>
+                </View>
+
+              </ScrollView>
+
+              {/* Dark mode toggle pinned to bottom */}
+              <View style={[styles.darkRow, { borderTopColor: colors.border, paddingBottom: bottom || 16 }]}>
+                <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={18} color={colors.muted} />
+                <Text style={[styles.rowText, { color: colors.text, flex: 1 }]}>Dark mode</Text>
+                <Switch
+                  value={isDark}
+                  onValueChange={setIsDark}
+                  trackColor={{ false: colors.border, true: colors.accent + '88' }}
+                  thumbColor={isDark ? colors.accent : '#f4f4f4'}
+                />
+              </View>
+
+            </View>
+          </Animated.View>
+        </View>
       </Modal>
     </>
   );
@@ -117,60 +168,73 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    height: 50,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
   },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logo: { width: 32, height: 32, borderRadius: 8 },
-  logoName: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
-  avatarBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  side: { width: 36 },
+  sideRight: { alignItems: 'flex-end' },
+  barTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '700' },
+
+  drawerRow: { flex: 1, flexDirection: 'row' },
+  drawer: {
+    width: DRAWER_WIDTH,
+    borderLeftWidth: 1,
+    elevation: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: -4, height: 0 },
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+  },
+  drawerInner: { flex: 1 },
+
+  emailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: 4,
+  },
+  emailAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
   },
-  overlay: { flex: 1 },
-  menu: {
-    position: 'absolute',
-    right: 12,
+  emailText: { flex: 1, fontSize: 13 },
+
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
+  },
+  group: {
+    marginHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
-    minWidth: 220,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
   },
-  menuEmail: {
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    fontSize: 13,
-    borderBottomWidth: 1,
-  },
-  menuSection: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 6,
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  menuItem: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    gap: 10,
+    paddingHorizontal: 14,
     paddingVertical: 13,
   },
-  menuItemText: { fontSize: 15, fontWeight: '500' },
-  menuChevron: { fontSize: 18 },
-  menuDivider: { height: StyleSheet.hairlineWidth },
+  rowText: { flex: 1, fontSize: 15, fontWeight: '500' },
+
+  darkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
 });

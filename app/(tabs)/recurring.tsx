@@ -139,6 +139,7 @@ export default function RecurringScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AppHeader title="Recurring" />
       <FlatList
         data={items}
         keyExtractor={(i) => i.id}
@@ -148,12 +149,7 @@ export default function RecurringScreen() {
           <RecurringCard item={item} colors={colors} onPress={() => openEdit(item)} />
         )}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-        ListHeaderComponent={
-          <View>
-            <View style={styles.headerEscape}><AppHeader /></View>
-            <Text style={[styles.title, { color: colors.text }]}>Recurring</Text>
-          </View>
-        }
+        ListHeaderComponent={null}
         ListEmptyComponent={
           <Text style={[styles.empty, { color: colors.muted }]}>No recurring payments.</Text>
         }
@@ -312,8 +308,6 @@ function RecurringCard({ item, colors, onPress }: { item: RecurringPayment; colo
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   list: { paddingHorizontal: 16 },
-  headerEscape: { marginHorizontal: -16 },
-  title: { fontSize: 26, fontWeight: '800', marginTop: 16, marginBottom: 16 },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
   card: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
   cardMain: { flexDirection: 'row', justifyContent: 'space-between', padding: 14, gap: 10 },

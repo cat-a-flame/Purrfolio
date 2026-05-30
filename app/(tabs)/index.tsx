@@ -169,6 +169,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AppHeader title="Dashboard" />
       <FlatList
         data={flat}
         keyExtractor={(item) =>
@@ -200,12 +201,6 @@ export default function DashboardScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
         ListHeaderComponent={
           <View style={styles.header}>
-            <View style={styles.headerEscape}>
-              <AppHeader />
-            </View>
-
-            <Text style={[styles.title, { color: colors.text }]}>Dashboard</Text>
-
             {/* Period picker */}
             <PeriodPicker value={period} onChange={setPeriod} />
 
@@ -289,8 +284,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   list: { paddingHorizontal: 16, paddingBottom: 16 },
   header: { gap: 12, marginBottom: 8 },
-  headerEscape: { marginHorizontal: -16 },
-  title: { fontSize: 26, fontWeight: '800', textAlign: 'center', marginBottom: 10 },
 
   cashFlow: {
     borderRadius: 10,

@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const lightColors = {
   bg: '#fff',
@@ -34,7 +36,42 @@ export const darkColors = {
 
 export type Colors = typeof lightColors;
 
+// ── Module-level dark-mode override (pub-sub, no context/provider needed) ──
+
+const STORAGE_KEY = '@purrfolio/theme';
+let _override: boolean | null = null; // null = follow system
+const _subs = new Set<() => void>();
+
+function _notify() { _subs.forEach(fn => fn()); }
+
+export async function loadThemePreference() {
+  const v = await AsyncStorage.getItem(STORAGE_KEY);
+  if (v === 'dark') _override = true;
+  else if (v === 'light') _override = false;
+  _notify();
+}
+
+export function setDarkMode(v: boolean) {
+  _override = v;
+  AsyncStorage.setItem(STORAGE_KEY, v ? 'dark' : 'light');
+  _notify();
+}
+
+function _useIsDark(): boolean {
+  const system = useColorScheme();
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const sub = () => tick(n => n + 1);
+    _subs.add(sub);
+    return () => { _subs.delete(sub); };
+  }, []);
+  return _override !== null ? _override : system === 'dark';
+}
+
 export function useTheme(): Colors {
-  const scheme = useColorScheme();
-  return scheme === 'dark' ? darkColors : lightColors;
+  return _useIsDark() ? darkColors : lightColors;
+}
+
+export function useDarkMode(): { isDark: boolean; setIsDark: (v: boolean) => void } {
+  return { isDark: _useIsDark(), setIsDark: setDarkMode };
 }

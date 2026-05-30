@@ -112,16 +112,11 @@ export default function StatsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AppHeader title="Statistics" />
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
       >
-        <View style={styles.headerEscape}>
-          <AppHeader />
-        </View>
-
-        <Text style={[styles.title, { color: colors.text }]}>Statistics</Text>
-
         <PeriodPicker value={period} onChange={setPeriod} />
 
         {/* Wallet balances */}
@@ -291,8 +286,6 @@ function CategoryBreakdown({ title, items, total, fallbackBarColor, currency, co
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: { paddingHorizontal: 16 },
-  headerEscape: { marginHorizontal: -16 },
-  title: { fontSize: 26, fontWeight: '800', marginTop: 16, marginBottom: 4 },
 
   summaryGrid: {
     flexDirection: 'row',
