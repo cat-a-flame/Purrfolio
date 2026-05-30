@@ -1,5 +1,13 @@
 import type { Currency } from './types';
 
+function withThousands(n: number, sep: string, decimals = 0): string {
+  const fixed = Math.abs(n).toFixed(decimals);
+  const [intPart, decPart] = fixed.split('.');
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, sep);
+  const sign = n < 0 ? '-' : '';
+  return decPart !== undefined ? `${sign}${grouped}.${decPart}` : `${sign}${grouped}`;
+}
+
 export function formatCurrency(amount: number, currency: Currency): string {
   try {
     const locale = currency === 'HUF' ? 'hu-HU' : 'en-US';
@@ -9,10 +17,9 @@ export function formatCurrency(amount: number, currency: Currency): string {
       maximumFractionDigits: currency === 'HUF' ? 0 : 2,
     }).format(amount);
   } catch {
-    const n = Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    if (currency === 'HUF') return `${n} Ft`;
-    if (currency === 'EUR') return `€${n}`;
-    return `$${n}`;
+    if (currency === 'HUF') return `${withThousands(amount, ' ')} Ft`;
+    if (currency === 'EUR') return `€${withThousands(amount, ',', 2)}`;
+    return `$${withThousands(amount, ',', 2)}`;
   }
 }
 
@@ -24,7 +31,7 @@ export function formatNumber(amount: number): string {
   try {
     return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount);
   } catch {
-    return amount.toString();
+    return withThousands(amount, ',', 2);
   }
 }
 
