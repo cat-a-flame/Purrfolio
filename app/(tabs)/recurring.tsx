@@ -59,22 +59,22 @@ export default function RecurringScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: planned, error: plannedErr }, { data: w }, { data: c }] = await Promise.all([
-      supabase
-        .from('planned')
-        .select('*, wallet:wallets(*), category:categories(*)')
-        .eq('user_id', user.id)
-        .order('name'),
+    const [{ data: planned }, { data: w }, { data: c }] = await Promise.all([
+      supabase.from('planned').select('*').eq('user_id', user.id).order('name'),
       supabase.from('wallets').select('*').eq('user_id', user.id),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
     ]);
 
-    console.log('[planned] rows:', planned?.length, 'error:', plannedErr, 'user_id:', user.id);
-    if (planned?.[0]) console.log('[planned] first row keys:', Object.keys(planned[0]));
+    const walletMap = new Map((w ?? []).map((x: Wallet) => [x.id, x]));
+    const categoryMap = new Map((c ?? []).map((x: Category) => [x.id, x]));
 
     setWallets(w ?? []);
     setCategories(c ?? []);
-    setItems(planned ?? []);
+    setItems((planned ?? []).map((r: any) => ({
+      ...r,
+      wallet: r.wallet_id ? walletMap.get(r.wallet_id) ?? null : null,
+      category: r.category_id ? categoryMap.get(r.category_id) ?? null : null,
+    })));
   }, []);
 
   useEffect(() => { load(); }, [load]);
