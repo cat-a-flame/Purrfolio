@@ -7,7 +7,8 @@ import { supabase } from '@/lib/supabase';
 import { loadThemePreference, useDarkMode } from '@/lib/theme';
 import type { Session } from '@supabase/supabase-js';
 import { useRouter, useSegments } from 'expo-router';
-import { useFonts, Comfortaa_400Regular, Comfortaa_500Medium, Comfortaa_600SemiBold, Comfortaa_700Bold } from '@expo-google-fonts/comfortaa';
+import { useFonts } from 'expo-font';
+import { Comfortaa_400Regular, Comfortaa_500Medium, Comfortaa_600SemiBold, Comfortaa_700Bold } from '@expo-google-fonts/comfortaa';
 import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
 import * as SplashScreen from 'expo-splash-screen';
 
