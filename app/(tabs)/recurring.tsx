@@ -51,14 +51,11 @@ export default function RecurringScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: recurring, error: recErr }, { data: w }, { data: c }] = await Promise.all([
+    const [{ data: recurring }, { data: w }, { data: c }] = await Promise.all([
       supabase.from('recurring_payments').select('*').eq('user_id', user.id).order('next_due_date', { ascending: true, nullsFirst: false }),
       supabase.from('wallets').select('*').eq('user_id', user.id),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
     ]);
-
-    if (recErr) console.error('[recurring] query error:', recErr);
-    console.log('[recurring] rows returned:', recurring?.length ?? 0, 'user_id:', user.id);
 
     const walletMap = new Map<string, Wallet>((w ?? []).map((x: Wallet) => [x.id, x]));
     const categoryMap = new Map<string, Category>((c ?? []).map((x: Category) => [x.id, x]));
