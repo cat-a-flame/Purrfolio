@@ -321,10 +321,35 @@ export default function AddTransactionScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Transfer layout: From wallet → arrow → To wallet */}
+        {/* Amount sent — shown here for transfers so it sits under "From wallet" */}
+        {isTransfer && (
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount sent</Text>
+            <TouchableOpacity
+              activeOpacity={1}
+              style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
+              onPress={() => amountRef.current?.focus()}
+            >
+              <TextInput
+                ref={amountRef}
+                value={formatAmountDisplay(form.amount)}
+                onChangeText={(v) => handleFromAmountChange(parseAmountInput(v))}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor={colors.placeholder}
+                style={[styles.amountInput, { color: colors.text }]}
+                textAlign="right"
+              />
+              {currency ? (
+                <Text style={[styles.currencyLabel, { color: colors.accent }]}>{currency}</Text>
+              ) : null}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Arrow divider + To wallet + Amount received — transfer only */}
         {isTransfer && (
           <>
-            {/* Arrow divider */}
             <View style={styles.arrowRow}>
               <View style={[styles.arrowLine, { backgroundColor: colors.border }]} />
               <View style={[styles.arrowCircle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -333,7 +358,6 @@ export default function AddTransactionScreen() {
               <View style={[styles.arrowLine, { backgroundColor: colors.border }]} />
             </View>
 
-            {/* To wallet */}
             <View style={styles.fieldGroup}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>To wallet</Text>
               <TouchableOpacity
@@ -348,54 +372,55 @@ export default function AddTransactionScreen() {
                 <Ionicons name="chevron-forward" size={18} color={colors.muted} />
               </TouchableOpacity>
             </View>
+
+            {!sameCurrency && (
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount received</Text>
+                <TouchableOpacity
+                  activeOpacity={1}
+                  style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => toAmountRef.current?.focus()}
+                >
+                  <TextInput
+                    ref={toAmountRef}
+                    value={formatAmountDisplay(form.to_amount)}
+                    onChangeText={(v) => setField('to_amount', parseAmountInput(v))}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor={colors.placeholder}
+                    style={[styles.amountInput, { color: colors.text }]}
+                    textAlign="right"
+                  />
+                  {selectedToWallet?.currency ? (
+                    <Text style={[styles.currencyLabel, { color: colors.accent }]}>{selectedToWallet.currency}</Text>
+                  ) : null}
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         )}
 
-        {/* Amount sent */}
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>{isTransfer ? 'Amount sent' : 'Amount'}</Text>
-          <TouchableOpacity
-            activeOpacity={1}
-            style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            onPress={() => amountRef.current?.focus()}
-          >
-            <TextInput
-              ref={amountRef}
-              value={formatAmountDisplay(form.amount)}
-              onChangeText={(v) => handleFromAmountChange(parseAmountInput(v))}
-              keyboardType="decimal-pad"
-              placeholder="0"
-              placeholderTextColor={colors.placeholder}
-              style={[styles.amountInput, { color: colors.text }]}
-              textAlign="right"
-            />
-            {currency ? (
-              <Text style={[styles.currencyLabel, { color: colors.accent }]}>{currency}</Text>
-            ) : null}
-          </TouchableOpacity>
-        </View>
-
-        {/* Amount received — transfer, cross-currency only */}
-        {isTransfer && !sameCurrency && (
+        {/* Amount — expense / income */}
+        {!isTransfer && (
           <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount received</Text>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
             <TouchableOpacity
               activeOpacity={1}
               style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
-              onPress={() => toAmountRef.current?.focus()}
+              onPress={() => amountRef.current?.focus()}
             >
               <TextInput
-                ref={toAmountRef}
-                value={formatAmountDisplay(form.to_amount)}
-                onChangeText={(v) => setField('to_amount', parseAmountInput(v))}
+                ref={amountRef}
+                value={formatAmountDisplay(form.amount)}
+                onChangeText={(v) => handleFromAmountChange(parseAmountInput(v))}
                 keyboardType="decimal-pad"
                 placeholder="0"
                 placeholderTextColor={colors.placeholder}
                 style={[styles.amountInput, { color: colors.text }]}
                 textAlign="right"
               />
-              {selectedToWallet?.currency ? (
-                <Text style={[styles.currencyLabel, { color: colors.accent }]}>{selectedToWallet.currency}</Text>
+              {currency ? (
+                <Text style={[styles.currencyLabel, { color: colors.accent }]}>{currency}</Text>
               ) : null}
             </TouchableOpacity>
           </View>
