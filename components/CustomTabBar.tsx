@@ -11,6 +11,10 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const FAB_R = 28;           // FAB radius (diameter 56)
 const BAR_H = 56;           // visual bar height (excludes safe-area inset)
+
+// Screens should add TAB_BAR_HEIGHT + useSafeAreaInsets().bottom as bottom padding
+// so content isn't hidden behind the floating tab bar.
+export const TAB_BAR_HEIGHT = BAR_H + FAB_R; // 84 px
 const NOTCH_R = 42;         // half-width of notch — wider = rounder U shape
 const NOTCH_SH = 10;        // shoulder: short horizontal lead-in before the curve
 const NOTCH_D = FAB_R + 28; // depth curve dips into bar (56 px)

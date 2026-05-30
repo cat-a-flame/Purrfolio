@@ -6,7 +6,8 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
 import { useTheme, Colors } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -40,6 +41,7 @@ type CategoryStat = {
 
 export default function StatsScreen() {
   const colors = useTheme();
+  const { bottom } = useSafeAreaInsets();
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
   const [txs, setTxs] = useState<any[]>([]);
   const [currency, setCurrency] = useState<Currency>('HUF');
@@ -97,7 +99,7 @@ export default function StatsScreen() {
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
       >
         <View style={styles.headerEscape}>
           <AppHeader />
@@ -251,7 +253,7 @@ function CategoryBreakdown({ title, items, total, fallbackBarColor, currency, co
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  container: { paddingHorizontal: 16, paddingBottom: 80 },
+  container: { paddingHorizontal: 16 },
   headerEscape: { marginHorizontal: -16 },
   title: { fontSize: 26, fontWeight: '800', marginTop: 16, marginBottom: 4 },
 

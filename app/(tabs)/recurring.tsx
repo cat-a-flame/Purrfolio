@@ -6,7 +6,8 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -15,6 +16,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 
 export default function RecurringScreen() {
   const colors = useTheme();
+  const { bottom } = useSafeAreaInsets();
   const [items, setItems] = useState<RecurringPayment[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -73,7 +75,7 @@ export default function RecurringScreen() {
         ListEmptyComponent={
           <Text style={[styles.empty, { color: colors.muted }]}>No recurring payments.</Text>
         }
-        ListFooterComponent={<View style={{ height: 32 }} />}
+        ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />
     </SafeAreaView>
   );

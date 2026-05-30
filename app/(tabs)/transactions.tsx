@@ -8,7 +8,8 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -20,6 +21,7 @@ type TypeFilter = 'all' | TransactionType;
 
 export default function TransactionsScreen() {
   const colors = useTheme();
+  const { bottom } = useSafeAreaInsets();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
@@ -170,7 +172,7 @@ export default function TransactionsScreen() {
         ListEmptyComponent={
           <Text style={[styles.empty, { color: colors.muted }]}>No transactions found.</Text>
         }
-        ListFooterComponent={<View style={{ height: 16 }} />}
+        ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />
     </SafeAreaView>
   );

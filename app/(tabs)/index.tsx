@@ -8,7 +8,8 @@ import {
   RefreshControl,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -60,6 +61,7 @@ function defaultPeriod(): PeriodValue {
 
 export default function DashboardScreen() {
   const colors = useTheme();
+  const { bottom } = useSafeAreaInsets();
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [periodTxs, setPeriodTxs] = useState<Transaction[]>([]);
@@ -303,7 +305,7 @@ export default function DashboardScreen() {
         ListEmptyComponent={
           <Text style={[styles.empty, { color: colors.muted }]}>No transactions in this period.</Text>
         }
-        ListFooterComponent={<View style={{ height: 16 }} />}
+        ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />
 
     </SafeAreaView>
