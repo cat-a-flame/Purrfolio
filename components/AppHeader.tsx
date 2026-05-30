@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
+    backgroundColor: '#fff',
   },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   logo: { width: 32, height: 32, borderRadius: 8 },

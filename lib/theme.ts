@@ -1,7 +1,7 @@
 import { useColorScheme } from 'react-native';
 
 export const lightColors = {
-  bg: '#f7f4ef',
+  bg: '#fff',
   surface: '#ffffff',
   accent: '#f26e4d',
   text: '#1c1a17',
