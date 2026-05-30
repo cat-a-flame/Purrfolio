@@ -116,15 +116,15 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         </Svg>
 
         {/* Tab icon rows sit inside the bar */}
-        <View style={[styles.tabRow, { height: BAR_H }]}>
+        <View style={[styles.tabRow, { height: BAR_H, paddingBottom: 10 }]}>
           <View style={styles.side}>{leftTabs.map(renderTab)}</View>
           <View style={{ width: NOTCH_MOUTH }} />
           <View style={styles.side}>{rightTabs.map(renderTab)}</View>
         </View>
       </View>
 
-      {/* FAB — centered at the notch, half above / half below bar top */}
-      <View style={[styles.fabWrap, { bottom: barHeight - FAB_R }]}>
+      {/* FAB — sits mostly inside the notch */}
+      <View style={[styles.fabWrap, { bottom: barHeight - FAB_R - 10 }]}>
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: colors.accent }]}
           onPress={() => router.push('/transaction/add')}
