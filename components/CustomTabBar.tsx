@@ -17,21 +17,33 @@ const BAR_H = 56;           // visual bar height (excludes safe-area inset)
 export const TAB_BAR_HEIGHT = BAR_H + FAB_R; // 84 px
 
 // ── Notch tuning knobs ──────────────────────
-const NOTCH_R = 36;  // circle radius — increase for more clearance around FAB
-const NOTCH_Y = 20;  // FAB centre depth below bar top — smaller = FAB sits higher
+const NOTCH_R  = 36; // circle radius — increase for more clearance around FAB
+const NOTCH_Y  = 20; // FAB centre depth below bar top — smaller = FAB sits higher
+const CORNER_R = 12; // radius of the fillet where the arc meets the bar top edge
 // ────────────────────────────────────────────
 
-// Horizontal distance from centre to where the circle crosses y=0
+// Horizontal distance from centre to where the raw circle crosses y=0
 const NOTCH_DX = Math.sqrt(Math.max(0, NOTCH_R * NOTCH_R - NOTCH_Y * NOTCH_Y));
 const NOTCH_MOUTH = NOTCH_DX * 2 + 16; // gap reserved in tab row
 
-// Single circular-arc notch using SVG "A" (large-arc=1, sweep=0 → dips downward)
+// Arc-tangent unit vector at the left entry point of the notch circle.
+// Used to build G1-continuous quadratic bezier fillets at both corners.
+const FILLET_TX = NOTCH_Y / NOTCH_R;   // x component (rightward)
+const FILLET_TY = NOTCH_DX / NOTCH_R;  // y component (downward)
+const FILLET_LY = CORNER_R * FILLET_TY; // y of both fillet endpoints (symmetric)
+
+// Single circular-arc notch with smooth corner fillets.
+// Each fillet is a Q bezier: control at the raw corner, end on the arc tangent.
 function buildPath(w: number, h: number): string {
   const cx = w / 2;
+  const lx = cx - NOTCH_DX + CORNER_R * FILLET_TX;
+  const rx = cx + NOTCH_DX - CORNER_R * FILLET_TX;
   return [
     `M 0 0`,
-    `L ${cx - NOTCH_DX} 0`,
-    `A ${NOTCH_R} ${NOTCH_R} 0 1 0 ${cx + NOTCH_DX} 0`,
+    `L ${cx - NOTCH_DX - CORNER_R} 0`,
+    `Q ${cx - NOTCH_DX} 0 ${lx} ${FILLET_LY}`,
+    `A ${NOTCH_R} ${NOTCH_R} 0 1 0 ${rx} ${FILLET_LY}`,
+    `Q ${cx + NOTCH_DX} 0 ${cx + NOTCH_DX + CORNER_R} 0`,
     `L ${w} 0`,
     `L ${w} ${h}`,
     `L 0 ${h}`,
@@ -41,10 +53,14 @@ function buildPath(w: number, h: number): string {
 
 function buildTopEdge(w: number): string {
   const cx = w / 2;
+  const lx = cx - NOTCH_DX + CORNER_R * FILLET_TX;
+  const rx = cx + NOTCH_DX - CORNER_R * FILLET_TX;
   return [
     `M 0 0`,
-    `L ${cx - NOTCH_DX} 0`,
-    `A ${NOTCH_R} ${NOTCH_R} 0 1 0 ${cx + NOTCH_DX} 0`,
+    `L ${cx - NOTCH_DX - CORNER_R} 0`,
+    `Q ${cx - NOTCH_DX} 0 ${lx} ${FILLET_LY}`,
+    `A ${NOTCH_R} ${NOTCH_R} 0 1 0 ${rx} ${FILLET_LY}`,
+    `Q ${cx + NOTCH_DX} 0 ${cx + NOTCH_DX + CORNER_R} 0`,
     `L ${w} 0`,
   ].join(' ');
 }
