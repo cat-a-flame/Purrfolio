@@ -59,7 +59,7 @@ export default function RecurringScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: planned }, { data: w }, { data: c }] = await Promise.all([
+    const [{ data: planned, error: plannedErr }, { data: w }, { data: c }] = await Promise.all([
       supabase
         .from('planned')
         .select('*, wallet:wallets(*), category:categories(*)')
@@ -68,6 +68,9 @@ export default function RecurringScreen() {
       supabase.from('wallets').select('*').eq('user_id', user.id),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
     ]);
+
+    console.log('[planned] rows:', planned?.length, 'error:', plannedErr, 'user_id:', user.id);
+    if (planned?.[0]) console.log('[planned] first row keys:', Object.keys(planned[0]));
 
     setWallets(w ?? []);
     setCategories(c ?? []);
