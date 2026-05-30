@@ -72,6 +72,7 @@ export default function EditTransactionScreen() {
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [moreExpanded, setMoreExpanded] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -239,6 +240,23 @@ export default function EditTransactionScreen() {
           </View>
         )}
 
+        {/* Wallet */}
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Wallet</Text>
+          <TouchableOpacity
+            style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            onPress={() => setShowWalletModal(true)}
+          >
+            <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
+              {selectedWallet
+                ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
+                : 'Select wallet…'}
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Amount */}
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
           <TouchableOpacity
@@ -283,22 +301,6 @@ export default function EditTransactionScreen() {
           onClose={() => setShowDatePicker(false)}
         />
 
-        {/* Wallet */}
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Wallet</Text>
-          <TouchableOpacity
-            style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            onPress={() => setShowWalletModal(true)}
-          >
-            <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
-              {selectedWallet
-                ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
-                : 'Select wallet…'}
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-          </TouchableOpacity>
-        </View>
-
         {/* Category */}
         {!isTransfer && (
           <View style={styles.fieldGroup}>
@@ -317,47 +319,56 @@ export default function EditTransactionScreen() {
           </View>
         )}
 
-        {/* Labels */}
-        {labels.length > 0 && (
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Labels</Text>
-            <TouchableOpacity
-              style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-              onPress={() => setShowLabelModal(true)}
-            >
-              <Text style={[styles.pickerBtnText, { color: selectedLabels.length ? colors.text : colors.muted }]}>
-                {selectedLabels.length > 0 ? selectedLabels.map((l) => l.name).join(', ') : 'Select labels…'}
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-            </TouchableOpacity>
-            {selectedLabels.length > 0 && (
-              <View style={styles.chips}>
-                {selectedLabels.map((l) => (
-                  <View key={l.id} style={[styles.chip, { borderColor: l.color, backgroundColor: l.color + '22' }]}>
-                    <Text style={[styles.chipText, { color: l.color }]}>{l.name}</Text>
-                  </View>
-                ))}
+        {/* More options — collapsible */}
+        <TouchableOpacity
+          style={[styles.moreToggle, { borderColor: colors.border }]}
+          onPress={() => setMoreExpanded((v) => !v)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.moreToggleText, { color: colors.muted }]}>More options</Text>
+          <Ionicons
+            name={moreExpanded ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={colors.muted}
+          />
+        </TouchableOpacity>
+
+        {moreExpanded && (
+          <>
+            {/* Labels */}
+            {labels.length > 0 && (
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Labels</Text>
+                <TouchableOpacity
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => setShowLabelModal(true)}
+                >
+                  <Text style={[styles.pickerBtnText, { color: selectedLabels.length ? colors.text : colors.muted }]}>
+                    {selectedLabels.length > 0 ? selectedLabels.map((l) => l.name).join(', ') : 'Select labels…'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                </TouchableOpacity>
               </View>
             )}
-          </View>
+
+            <AppInput
+              label="Payer (optional)"
+              value={form.payer}
+              onChangeText={(v) => setField('payer', v)}
+              placeholder="Who paid?"
+            />
+
+            <AppInput
+              label="Notes (optional)"
+              value={form.notes}
+              onChangeText={(v) => setField('notes', v)}
+              placeholder="Add a note…"
+              multiline
+              numberOfLines={3}
+              style={{ minHeight: 80, textAlignVertical: 'top' }}
+            />
+          </>
         )}
-
-        <AppInput
-          label="Payer (optional)"
-          value={form.payer}
-          onChangeText={(v) => setField('payer', v)}
-          placeholder="Who paid?"
-        />
-
-        <AppInput
-          label="Notes (optional)"
-          value={form.notes}
-          onChangeText={(v) => setField('notes', v)}
-          placeholder="Add a note…"
-          multiline
-          numberOfLines={3}
-          style={{ minHeight: 80, textAlignVertical: 'top' }}
-        />
 
         <AppButton onPress={handleSave} loading={loading} fullWidth>
           Save changes
@@ -463,16 +474,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginLeft: 10,
   },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
+  moreToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
     borderWidth: 1,
+    borderStyle: 'dashed',
   },
-  chipText: { fontSize: 14, fontWeight: '500' },
+  moreToggleText: { fontSize: 14, fontWeight: '500' },
   pickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',

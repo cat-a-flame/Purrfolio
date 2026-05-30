@@ -83,6 +83,7 @@ export default function AddTransactionScreen() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showToWalletModal, setShowToWalletModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [moreExpanded, setMoreExpanded] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -255,6 +256,40 @@ export default function AddTransactionScreen() {
           ))}
         </View>
 
+        {/* Wallet */}
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>{isTransfer ? 'From wallet' : 'Wallet'}</Text>
+          <TouchableOpacity
+            style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            onPress={() => setShowWalletModal(true)}
+          >
+            <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
+              {selectedWallet
+                ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
+                : 'Select wallet…'}
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* To Wallet — transfer only */}
+        {isTransfer && (
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>To wallet</Text>
+            <TouchableOpacity
+              style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+              onPress={() => setShowToWalletModal(true)}
+            >
+              <Text style={[styles.pickerBtnText, { color: selectedToWallet ? colors.text : colors.muted }]}>
+                {selectedToWallet
+                  ? `${selectedToWallet.icon ? selectedToWallet.icon + ' ' : ''}${selectedToWallet.name}`
+                  : 'Select wallet…'}
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Amount with currency */}
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
@@ -300,40 +335,6 @@ export default function AddTransactionScreen() {
           onClose={() => setShowDatePicker(false)}
         />
 
-        {/* From Wallet */}
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>{isTransfer ? 'From wallet' : 'Wallet'}</Text>
-          <TouchableOpacity
-            style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            onPress={() => setShowWalletModal(true)}
-          >
-            <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
-              {selectedWallet
-                ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
-                : 'Select wallet…'}
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-          </TouchableOpacity>
-        </View>
-
-        {/* To Wallet — transfer only */}
-        {isTransfer && (
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>To wallet</Text>
-            <TouchableOpacity
-              style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-              onPress={() => setShowToWalletModal(true)}
-            >
-              <Text style={[styles.pickerBtnText, { color: selectedToWallet ? colors.text : colors.muted }]}>
-                {selectedToWallet
-                  ? `${selectedToWallet.icon ? selectedToWallet.icon + ' ' : ''}${selectedToWallet.name}`
-                  : 'Select wallet…'}
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* Category — hidden for transfers */}
         {!isTransfer && (
           <View style={styles.fieldGroup}>
@@ -352,53 +353,62 @@ export default function AddTransactionScreen() {
           </View>
         )}
 
-        {/* Labels — hidden for transfers */}
-        {!isTransfer && labels.length > 0 && (
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Labels</Text>
-            <TouchableOpacity
-              style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-              onPress={() => setShowLabelModal(true)}
-            >
-              <Text style={[styles.pickerBtnText, { color: selectedLabels.length ? colors.text : colors.muted }]}>
-                {selectedLabels.length > 0
-                  ? selectedLabels.map((l) => l.name).join(', ')
-                  : 'Select labels…'}
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-            </TouchableOpacity>
-            {selectedLabels.length > 0 && (
-              <View style={styles.chips}>
-                {selectedLabels.map((l) => (
-                  <View key={l.id} style={[styles.chip, { borderColor: l.color, backgroundColor: l.color + '22' }]}>
-                    <Text style={[styles.chipText, { color: l.color }]}>{l.name}</Text>
-                  </View>
-                ))}
+        {/* More options — collapsible */}
+        <TouchableOpacity
+          style={[styles.moreToggle, { borderColor: colors.border }]}
+          onPress={() => setMoreExpanded((v) => !v)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.moreToggleText, { color: colors.muted }]}>More options</Text>
+          <Ionicons
+            name={moreExpanded ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={colors.muted}
+          />
+        </TouchableOpacity>
+
+        {moreExpanded && (
+          <>
+            {/* Labels — hidden for transfers */}
+            {!isTransfer && labels.length > 0 && (
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Labels</Text>
+                <TouchableOpacity
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => setShowLabelModal(true)}
+                >
+                  <Text style={[styles.pickerBtnText, { color: selectedLabels.length ? colors.text : colors.muted }]}>
+                    {selectedLabels.length > 0
+                      ? selectedLabels.map((l) => l.name).join(', ')
+                      : 'Select labels…'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                </TouchableOpacity>
               </View>
             )}
-          </View>
-        )}
 
-        {/* Payer — hidden for transfers */}
-        {!isTransfer && (
-          <AppInput
-            label="Payer (optional)"
-            value={form.payer}
-            onChangeText={(v) => setField('payer', v)}
-            placeholder="Who paid?"
-          />
-        )}
+            {/* Payer — hidden for transfers */}
+            {!isTransfer && (
+              <AppInput
+                label="Payer (optional)"
+                value={form.payer}
+                onChangeText={(v) => setField('payer', v)}
+                placeholder="Who paid?"
+              />
+            )}
 
-        {/* Notes */}
-        <AppInput
-          label="Notes (optional)"
-          value={form.notes}
-          onChangeText={(v) => setField('notes', v)}
-          placeholder="Add a note…"
-          multiline
-          numberOfLines={3}
-          style={{ minHeight: 80, textAlignVertical: 'top' }}
-        />
+            {/* Notes */}
+            <AppInput
+              label="Notes (optional)"
+              value={form.notes}
+              onChangeText={(v) => setField('notes', v)}
+              placeholder="Add a note…"
+              multiline
+              numberOfLines={3}
+              style={{ minHeight: 80, textAlignVertical: 'top' }}
+            />
+          </>
+        )}
 
         <AppButton onPress={handleSave} loading={loading} fullWidth>
           Save transaction
@@ -519,16 +529,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginLeft: 10,
   },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
+  moreToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
     borderWidth: 1,
+    borderStyle: 'dashed',
   },
-  chipText: { fontSize: 14, fontWeight: '500' },
+  moreToggleText: { fontSize: 14, fontWeight: '500' },
   pickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
