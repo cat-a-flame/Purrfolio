@@ -114,7 +114,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   }
 
   return (
-    <View style={{ height: containerHeight, backgroundColor: colors.surface }}>
+    <View style={{ height: containerHeight, backgroundColor: 'transparent' }}>
 
       {/* SVG bar fills the lower barHeight portion */}
       <View style={[styles.svgContainer, { height: barHeight }]}>
