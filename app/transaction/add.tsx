@@ -19,15 +19,28 @@ import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { todayInputDate } from '@/lib/utils';
 
 type Form = {
-  type: TransactionType;
+  type: TransactionType | 'transfer';
   amount: string;
   wallet_id: string;
+  to_wallet_id: string;
   category_id: string;
   date: string;
   notes: string;
   payer: string;
   labelIds: string[];
 };
+
+const TYPES: { value: Form['type']; label: string }[] = [
+  { value: 'expense', label: 'Expense' },
+  { value: 'income', label: 'Income' },
+  { value: 'transfer', label: 'Transfer' },
+];
+
+function typeColor(t: Form['type'], colors: any): string {
+  if (t === 'income') return colors.income;
+  if (t === 'expense') return colors.expense;
+  return colors.accent;
+}
 
 export default function AddTransactionScreen() {
   const colors = useTheme();
@@ -37,6 +50,7 @@ export default function AddTransactionScreen() {
     type: 'expense',
     amount: '',
     wallet_id: '',
+    to_wallet_id: '',
     category_id: '',
     date: todayInputDate(),
     notes: '',
@@ -53,6 +67,7 @@ export default function AddTransactionScreen() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showToWalletModal, setShowToWalletModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
@@ -100,6 +115,14 @@ export default function AddTransactionScreen() {
       setError('Please select a wallet.');
       return;
     }
+    if (form.type === 'transfer' && !form.to_wallet_id) {
+      setError('Please select a destination wallet.');
+      return;
+    }
+    if (form.type === 'transfer' && form.wallet_id === form.to_wallet_id) {
+      setError('Source and destination wallet must be different.');
+      return;
+    }
     if (!form.date) {
       setError('Please select a date.');
       return;
@@ -111,31 +134,65 @@ export default function AddTransactionScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    const { data: tx, error: txErr } = await supabase
-      .from('transactions')
-      .insert({
-        user_id: user.id,
-        type: form.type,
-        amount: parseFloat(form.amount),
-        wallet_id: form.wallet_id,
-        category_id: form.category_id || null,
-        date: form.date,
-        notes: form.notes || null,
-        payer: form.payer || null,
-      })
-      .select()
-      .single();
+    if (form.type === 'transfer') {
+      const groupId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const { error: txErr } = await supabase.from('transactions').insert([
+        {
+          user_id: user.id,
+          type: 'expense',
+          amount: parseFloat(form.amount),
+          wallet_id: form.wallet_id,
+          category_id: null,
+          date: form.date,
+          notes: form.notes || null,
+          payer: null,
+          transfer_group_id: groupId,
+        },
+        {
+          user_id: user.id,
+          type: 'income',
+          amount: parseFloat(form.amount),
+          wallet_id: form.to_wallet_id,
+          category_id: null,
+          date: form.date,
+          notes: form.notes || null,
+          payer: null,
+          transfer_group_id: groupId,
+        },
+      ]);
 
-    if (txErr) {
-      setError(txErr.message);
-      setLoading(false);
-      return;
-    }
+      if (txErr) {
+        setError(txErr.message);
+        setLoading(false);
+        return;
+      }
+    } else {
+      const { data: tx, error: txErr } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          type: form.type,
+          amount: parseFloat(form.amount),
+          wallet_id: form.wallet_id,
+          category_id: form.category_id || null,
+          date: form.date,
+          notes: form.notes || null,
+          payer: form.payer || null,
+        })
+        .select()
+        .single();
 
-    if (form.labelIds.length > 0) {
-      await supabase.from('transaction_labels').insert(
-        form.labelIds.map((lid) => ({ transaction_id: tx.id, label_id: lid }))
-      );
+      if (txErr) {
+        setError(txErr.message);
+        setLoading(false);
+        return;
+      }
+
+      if (form.labelIds.length > 0) {
+        await supabase.from('transaction_labels').insert(
+          form.labelIds.map((lid) => ({ transaction_id: tx.id, label_id: lid }))
+        );
+      }
     }
 
     setLoading(false);
@@ -147,8 +204,11 @@ export default function AddTransactionScreen() {
   );
 
   const selectedWallet = wallets.find((w) => w.id === form.wallet_id);
+  const selectedToWallet = wallets.find((w) => w.id === form.to_wallet_id);
   const selectedCategory = categories.find((c) => c.id === form.category_id);
   const selectedLabels = labels.filter((l) => form.labelIds.includes(l.id));
+  const currency = selectedWallet?.currency ?? '';
+  const isTransfer = form.type === 'transfer';
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -165,32 +225,39 @@ export default function AddTransactionScreen() {
 
         {/* Type toggle */}
         <View style={[styles.typeToggle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {(['expense', 'income'] as TransactionType[]).map((t) => (
+          {TYPES.map((t) => (
             <TouchableOpacity
-              key={t}
+              key={t.value}
               style={[
                 styles.typeBtn,
-                form.type === t && {
-                  backgroundColor: t === 'income' ? colors.income : colors.expense,
-                },
+                form.type === t.value && { backgroundColor: typeColor(t.value, colors) },
               ]}
-              onPress={() => { setField('type', t); setField('category_id', ''); }}
+              onPress={() => { setField('type', t.value); setField('category_id', ''); }}
             >
-              <Text style={[styles.typeBtnText, { color: form.type === t ? '#fff' : colors.muted }]}>
-                {t.charAt(0).toUpperCase() + t.slice(1)}
+              <Text style={[styles.typeBtnText, { color: form.type === t.value ? '#fff' : colors.muted }]}>
+                {t.label}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Amount */}
-        <AppInput
-          label="Amount"
-          value={form.amount}
-          onChangeText={(v) => setField('amount', v)}
-          keyboardType="decimal-pad"
-          placeholder="0.00"
-        />
+        {/* Amount with currency */}
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
+          <View style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+            {currency ? (
+              <Text style={[styles.currencyLabel, { color: colors.muted }]}>{currency}</Text>
+            ) : null}
+            <AppInput
+              value={form.amount}
+              onChangeText={(v) => setField('amount', v)}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+              style={styles.amountInput}
+              textAlign="right"
+            />
+          </View>
+        </View>
 
         {/* Date */}
         <View style={styles.fieldGroup}>
@@ -213,9 +280,9 @@ export default function AddTransactionScreen() {
           onClose={() => setShowDatePicker(false)}
         />
 
-        {/* Wallet */}
+        {/* From Wallet */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Wallet</Text>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>{isTransfer ? 'From wallet' : 'Wallet'}</Text>
           <TouchableOpacity
             style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
             onPress={() => setShowWalletModal(true)}
@@ -229,24 +296,44 @@ export default function AddTransactionScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Category — picker button */}
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Category</Text>
-          <TouchableOpacity
-            style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            onPress={() => setShowCategoryModal(true)}
-          >
-            <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]}>
-              {selectedCategory
-                ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
-                : 'Select category…'}
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-          </TouchableOpacity>
-        </View>
+        {/* To Wallet — transfer only */}
+        {isTransfer && (
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>To wallet</Text>
+            <TouchableOpacity
+              style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+              onPress={() => setShowToWalletModal(true)}
+            >
+              <Text style={[styles.pickerBtnText, { color: selectedToWallet ? colors.text : colors.muted }]}>
+                {selectedToWallet
+                  ? `${selectedToWallet.icon ? selectedToWallet.icon + ' ' : ''}${selectedToWallet.name}`
+                  : 'Select wallet…'}
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            </TouchableOpacity>
+          </View>
+        )}
 
-        {/* Labels — multi-select picker */}
-        {labels.length > 0 && (
+        {/* Category — hidden for transfers */}
+        {!isTransfer && (
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Category</Text>
+            <TouchableOpacity
+              style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+              onPress={() => setShowCategoryModal(true)}
+            >
+              <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]}>
+                {selectedCategory
+                  ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
+                  : 'Select category…'}
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Labels — hidden for transfers */}
+        {!isTransfer && labels.length > 0 && (
           <View style={styles.fieldGroup}>
             <Text style={[styles.fieldLabel, { color: colors.muted }]}>Labels</Text>
             <TouchableOpacity
@@ -272,13 +359,15 @@ export default function AddTransactionScreen() {
           </View>
         )}
 
-        {/* Payer */}
-        <AppInput
-          label="Payer (optional)"
-          value={form.payer}
-          onChangeText={(v) => setField('payer', v)}
-          placeholder="Who paid?"
-        />
+        {/* Payer — hidden for transfers */}
+        {!isTransfer && (
+          <AppInput
+            label="Payer (optional)"
+            value={form.payer}
+            onChangeText={(v) => setField('payer', v)}
+            placeholder="Who paid?"
+          />
+        )}
 
         {/* Notes */}
         <AppInput
@@ -298,8 +387,8 @@ export default function AddTransactionScreen() {
         <View style={{ height: 32 }} />
       </ScrollView>
 
-      {/* Wallet picker modal */}
-      <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title="Select wallet">
+      {/* From wallet picker modal */}
+      <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title={isTransfer ? 'From wallet' : 'Select wallet'}>
         {wallets.map((w) => (
           <TouchableOpacity
             key={w.id}
@@ -309,6 +398,21 @@ export default function AddTransactionScreen() {
             {w.icon ? <Text style={styles.modalRowIcon}>{w.icon}</Text> : <View style={{ width: 28 }} />}
             <Text style={[styles.modalRowText, { color: form.wallet_id === w.id ? colors.accent : colors.text }]}>{w.name}</Text>
             {form.wallet_id === w.id && <Text style={{ color: colors.accent }}>✓</Text>}
+          </TouchableOpacity>
+        ))}
+      </BottomModal>
+
+      {/* To wallet picker modal */}
+      <BottomModal visible={showToWalletModal} onClose={() => setShowToWalletModal(false)} title="To wallet">
+        {wallets.map((w) => (
+          <TouchableOpacity
+            key={w.id}
+            style={[styles.modalRow, { borderBottomColor: colors.border }, form.to_wallet_id === w.id && { backgroundColor: colors.accent + '11' }]}
+            onPress={() => { setField('to_wallet_id', w.id); setShowToWalletModal(false); }}
+          >
+            {w.icon ? <Text style={styles.modalRowIcon}>{w.icon}</Text> : <View style={{ width: 28 }} />}
+            <Text style={[styles.modalRowText, { color: form.to_wallet_id === w.id ? colors.accent : colors.text }]}>{w.name}</Text>
+            {form.to_wallet_id === w.id && <Text style={{ color: colors.accent }}>✓</Text>}
           </TouchableOpacity>
         ))}
       </BottomModal>
@@ -390,6 +494,27 @@ const styles = StyleSheet.create({
   typeBtnText: { fontSize: 15, fontWeight: '600' },
   fieldGroup: { gap: 8 },
   fieldLabel: { fontSize: 13, fontWeight: '500' },
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    minHeight: 42,
+  },
+  currencyLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  amountInput: {
+    flex: 1,
+    borderWidth: 0,
+    borderRadius: 0,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
+    minHeight: 42,
+  },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row',

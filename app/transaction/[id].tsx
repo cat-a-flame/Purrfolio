@@ -178,6 +178,7 @@ export default function EditTransactionScreen() {
   const selectedWallet = wallets.find((w) => w.id === form.wallet_id);
   const selectedCategory = categories.find((c) => c.id === form.category_id);
   const selectedLabels = labels.filter((l) => form.labelIds.includes(l.id));
+  const currency = selectedWallet?.currency ?? '';
 
   if (fetching) {
     return (
@@ -224,13 +225,22 @@ export default function EditTransactionScreen() {
           </View>
         )}
 
-        <AppInput
-          label="Amount"
-          value={form.amount}
-          onChangeText={(v) => setField('amount', v)}
-          keyboardType="decimal-pad"
-          placeholder="0.00"
-        />
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
+          <View style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+            {currency ? (
+              <Text style={[styles.currencyLabel, { color: colors.muted }]}>{currency}</Text>
+            ) : null}
+            <AppInput
+              value={form.amount}
+              onChangeText={(v) => setField('amount', v)}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+              style={styles.amountInput}
+              textAlign="right"
+            />
+          </View>
+        </View>
 
         {/* Date */}
         <View style={styles.fieldGroup}>
@@ -427,6 +437,27 @@ const styles = StyleSheet.create({
   typeBtnText: { fontSize: 15, fontWeight: '600' },
   fieldGroup: { gap: 8 },
   fieldLabel: { fontSize: 13, fontWeight: '500' },
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    minHeight: 42,
+  },
+  currencyLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  amountInput: {
+    flex: 1,
+    borderWidth: 0,
+    borderRadius: 0,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
+    minHeight: 42,
+  },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row',
