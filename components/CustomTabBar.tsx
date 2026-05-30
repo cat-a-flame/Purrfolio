@@ -11,20 +11,20 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const FAB_R = 28;           // FAB radius (diameter 56)
 const BAR_H = 56;           // visual bar height (excludes safe-area inset)
-const NOTCH_R = 28;         // half-width of notch at bar top — matches FAB radius for tight hug
+const NOTCH_R = 42;         // half-width of notch — wider = rounder U shape
 const NOTCH_SH = 10;        // shoulder: short horizontal lead-in before the curve
-const NOTCH_D = FAB_R + 16; // depth curve dips into bar (44 px)
+const NOTCH_D = FAB_R + 28; // depth curve dips into bar (56 px)
 
-// Bezier control points tuned so the curve follows the FAB's circular edge.
-// CP1 drops 40% toward NOTCH_D at the same x as the notch edge (steep start).
-// CP2 is close to center (20% of NOTCH_R) at full depth (tangent ≈ horizontal).
+// CP1 is nearly below the bezier start (steep entry → no V kink).
+// CP2 is 45% of NOTCH_R from center at full depth (horizontal arrival → flat bottom).
+// Together they approximate a circular arc around the FAB.
 function buildPath(w: number, h: number): string {
   const cx = w / 2;
   return [
     `M 0 0`,
     `L ${cx - NOTCH_R - NOTCH_SH} 0`,
-    `C ${cx - NOTCH_R} ${NOTCH_D * 0.4}, ${cx - NOTCH_R * 0.2} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
-    `C ${cx + NOTCH_R * 0.2} ${NOTCH_D}, ${cx + NOTCH_R} ${NOTCH_D * 0.4}, ${cx + NOTCH_R + NOTCH_SH} 0`,
+    `C ${cx - NOTCH_R} ${NOTCH_D * 0.55}, ${cx - NOTCH_R * 0.45} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
+    `C ${cx + NOTCH_R * 0.45} ${NOTCH_D}, ${cx + NOTCH_R} ${NOTCH_D * 0.55}, ${cx + NOTCH_R + NOTCH_SH} 0`,
     `L ${w} 0`,
     `L ${w} ${h}`,
     `L 0 ${h}`,
@@ -37,8 +37,8 @@ function buildTopEdge(w: number): string {
   return [
     `M 0 0`,
     `L ${cx - NOTCH_R - NOTCH_SH} 0`,
-    `C ${cx - NOTCH_R} ${NOTCH_D * 0.4}, ${cx - NOTCH_R * 0.2} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
-    `C ${cx + NOTCH_R * 0.2} ${NOTCH_D}, ${cx + NOTCH_R} ${NOTCH_D * 0.4}, ${cx + NOTCH_R + NOTCH_SH} 0`,
+    `C ${cx - NOTCH_R} ${NOTCH_D * 0.55}, ${cx - NOTCH_R * 0.45} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
+    `C ${cx + NOTCH_R * 0.45} ${NOTCH_D}, ${cx + NOTCH_R} ${NOTCH_D * 0.55}, ${cx + NOTCH_R + NOTCH_SH} 0`,
     `L ${w} 0`,
   ].join(' ');
 }
