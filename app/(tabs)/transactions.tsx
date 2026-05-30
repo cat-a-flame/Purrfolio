@@ -15,8 +15,8 @@ import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import TransactionRow from '@/components/TransactionRow';
 import CategoryPickerModal from '@/components/CategoryPickerModal';
-import DatePickerModal from '@/components/DatePickerModal';
 import BottomModal from '@/components/BottomModal';
+import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { Ionicons } from '@expo/vector-icons';
 import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { groupByDate, formatDate } from '@/lib/utils';
@@ -24,6 +24,18 @@ import { useRouter } from 'expo-router';
 
 type TypeFilter = 'all' | TransactionType;
 type ModalKind = 'type' | 'wallet' | 'label' | null;
+
+function defaultPeriod(): PeriodValue {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return {
+    from: iso(new Date(now.getFullYear(), now.getMonth(), 1)),
+    to: iso(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+    label: 'This month',
+    tab: 'months',
+  };
+}
 
 // ── Reusable dropdown button ──────────────────────────────────────────────────
 function DropBtn({
@@ -89,13 +101,10 @@ export default function TransactionsScreen() {
   const [walletFilter, setWalletFilter] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [labelFilter, setLabelFilter] = useState<string>('');
-  const [dateFrom, setDateFrom] = useState<string>('');
-  const [dateTo, setDateTo] = useState<string>('');
+  const [period, setPeriod] = useState<PeriodValue | null>(null);
 
   const [openModal, setOpenModal] = useState<ModalKind>(null);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-  const [showFromPicker, setShowFromPicker] = useState(false);
-  const [showToPicker, setShowToPicker] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -137,11 +146,10 @@ export default function TransactionsScreen() {
     setWalletFilter('');
     setCategoryFilter('');
     setLabelFilter('');
-    setDateFrom('');
-    setDateTo('');
+    setPeriod(null);
   }
 
-  const hasActiveFilters = !!(search || typeFilter !== 'all' || walletFilter || categoryFilter || labelFilter || dateFrom || dateTo);
+  const hasActiveFilters = !!(search || typeFilter !== 'all' || walletFilter || categoryFilter || labelFilter || period);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -150,8 +158,8 @@ export default function TransactionsScreen() {
       if (walletFilter && tx.wallet_id !== walletFilter) return false;
       if (categoryFilter && tx.category_id !== categoryFilter) return false;
       if (labelFilter && !tx.labels?.some((l: Label) => l.id === labelFilter)) return false;
-      if (dateFrom && tx.date < dateFrom) return false;
-      if (dateTo && tx.date > dateTo) return false;
+      if (period?.from && tx.date < period.from) return false;
+      if (period?.to && tx.date > period.to) return false;
       if (q) {
         const inNotes = tx.notes?.toLowerCase().includes(q) ?? false;
         const inPayer = tx.payer?.toLowerCase().includes(q) ?? false;
@@ -159,7 +167,7 @@ export default function TransactionsScreen() {
       }
       return true;
     });
-  }, [transactions, search, typeFilter, walletFilter, categoryFilter, labelFilter, dateFrom, dateTo]);
+  }, [transactions, search, typeFilter, walletFilter, categoryFilter, labelFilter, period]);
 
   const groups = groupByDate(filtered);
 
@@ -261,37 +269,24 @@ export default function TransactionsScreen() {
             </View>
 
             {/* Date range */}
-            <View style={styles.dateRow}>
-              <TouchableOpacity
-                style={[styles.dateBtn, { borderColor: dateFrom ? colors.accent : colors.border, backgroundColor: colors.surface }]}
-                onPress={() => setShowFromPicker(true)}
-              >
-                <Ionicons name="calendar-outline" size={14} color={dateFrom ? colors.accent : colors.muted} />
-                <Text style={[styles.dateBtnText, { color: dateFrom ? colors.text : colors.muted }]}>
-                  {dateFrom ? formatDate(dateFrom) : 'From date'}
-                </Text>
-                {dateFrom ? (
-                  <TouchableOpacity onPress={() => setDateFrom('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Ionicons name="close-circle" size={14} color={colors.muted} />
-                  </TouchableOpacity>
-                ) : null}
-              </TouchableOpacity>
-              <Text style={[styles.dateSep, { color: colors.muted }]}>–</Text>
-              <TouchableOpacity
-                style={[styles.dateBtn, { borderColor: dateTo ? colors.accent : colors.border, backgroundColor: colors.surface }]}
-                onPress={() => setShowToPicker(true)}
-              >
-                <Ionicons name="calendar-outline" size={14} color={dateTo ? colors.accent : colors.muted} />
-                <Text style={[styles.dateBtnText, { color: dateTo ? colors.text : colors.muted }]}>
-                  {dateTo ? formatDate(dateTo) : 'To date'}
-                </Text>
-                {dateTo ? (
-                  <TouchableOpacity onPress={() => setDateTo('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Ionicons name="close-circle" size={14} color={colors.muted} />
-                  </TouchableOpacity>
-                ) : null}
-              </TouchableOpacity>
-            </View>
+            {period ? (
+              <View style={styles.periodRow}>
+                <View style={{ flex: 1 }}>
+                  <PeriodPicker value={period} onChange={setPeriod} />
+                </View>
+                <TouchableOpacity onPress={() => setPeriod(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close-circle" size={22} color={colors.muted} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <DropBtn
+                label="All dates"
+                active={false}
+                onPress={() => setPeriod(defaultPeriod())}
+                onClear={() => {}}
+                colors={colors}
+              />
+            )}
           </View>
         }
         ListEmptyComponent={
@@ -355,19 +350,6 @@ export default function TransactionsScreen() {
         onSelect={(id) => { setCategoryFilter(id); setShowCategoryPicker(false); }}
       />
 
-      {/* Date pickers */}
-      <DatePickerModal
-        visible={showFromPicker}
-        value={dateFrom}
-        onConfirm={(d) => { setDateFrom(d); setShowFromPicker(false); }}
-        onClose={() => setShowFromPicker(false)}
-      />
-      <DatePickerModal
-        visible={showToPicker}
-        value={dateTo}
-        onConfirm={(d) => { setDateTo(d); setShowToPicker(false); }}
-        onClose={() => setShowToPicker(false)}
-      />
     </SafeAreaView>
   );
 }
@@ -406,19 +388,7 @@ const styles = StyleSheet.create({
   },
   dropBtnText: { flex: 1, fontSize: 13 },
 
-  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dateBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  dateBtnText: { flex: 1, fontSize: 13 },
-  dateSep: { fontSize: 16, fontWeight: '300' },
+  periodRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
   modalRow: {
     flexDirection: 'row',
