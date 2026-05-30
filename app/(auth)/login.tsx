@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 36,
-    fontFamily: 'Comfortaa_700Bold',
+    fontFamily: 'Figtree_700Bold',
   },
   subtitle: {
     fontSize: 15,

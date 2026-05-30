@@ -254,7 +254,7 @@ function CatFormFields({
               ]}
               onPress={() => setField('type', t)}
             >
-              <Text style={{ color: form.type === t ? colors.accent : colors.text, fontFamily: 'Comfortaa_600SemiBold', fontSize: 13 }}>
+              <Text style={{ color: form.type === t ? colors.accent : colors.text, fontFamily: 'Figtree_600SemiBold', fontSize: 13 }}>
                 {t}
               </Text>
             </TouchableOpacity>
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   back: { fontSize: 15 },
-  title: { fontSize: 18, fontFamily: 'Comfortaa_700Bold' },
+  title: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   add: { fontSize: 15 },
   list: { padding: 16 },
@@ -318,10 +318,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  rowName: { fontSize: 15, fontFamily: 'Comfortaa_600SemiBold' },
+  rowName: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
   rowSub: { fontSize: 12, textTransform: 'capitalize' },
   badge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-  badgeText: { fontSize: 11, fontFamily: 'Comfortaa_600SemiBold' },
+  badgeText: { fontSize: 11, fontFamily: 'Figtree_600SemiBold' },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

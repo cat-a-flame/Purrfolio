@@ -104,14 +104,14 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   icon: { fontSize: 20 },
-  iconFallback: { fontSize: 16, fontFamily: 'Comfortaa_600SemiBold' },
+  iconFallback: { fontSize: 16, fontFamily: 'Figtree_600SemiBold' },
   info: {
     flex: 1,
     gap: 2,
   },
   category: {
     fontSize: 15,
-    fontFamily: 'Comfortaa_600SemiBold',
+    fontFamily: 'Figtree_600SemiBold',
   },
   walletRow: {
     flexDirection: 'row',
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   labelText: {
     fontSize: 11,
-    fontFamily: 'Comfortaa_500Medium',
+    fontFamily: 'Figtree_500Medium',
   },
   amountCol: {
     alignItems: 'flex-end',
@@ -148,6 +148,6 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 15,
-    fontFamily: 'Comfortaa_700Bold',
+    fontFamily: 'Figtree_700Bold',
   },
 });

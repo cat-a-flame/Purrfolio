@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
 
   sectionLabel: {
     fontSize: 11,
-    fontFamily: 'Comfortaa_700Bold',
+    fontFamily: 'Figtree_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     paddingHorizontal: 16,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
-  rowText: { flex: 1, fontSize: 15, fontFamily: 'Comfortaa_500Medium' },
+  rowText: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
 
   darkRow: {
     flexDirection: 'row',

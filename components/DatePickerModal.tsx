@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   itemTextSelected: {
-    fontFamily: 'Comfortaa_700Bold',
+    fontFamily: 'Figtree_700Bold',
     fontSize: 17,
   },
   confirmBtn: {
@@ -171,6 +171,6 @@ const styles = StyleSheet.create({
   confirmText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Comfortaa_700Bold',
+    fontFamily: 'Figtree_700Bold',
   },
 });

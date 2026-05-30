@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 36,
-    fontFamily: 'Comfortaa_700Bold',
+    fontFamily: 'Figtree_700Bold',
   },
   subtitle: {
     fontSize: 15,
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: 22,
-    fontFamily: 'Comfortaa_700Bold',
+    fontFamily: 'Figtree_700Bold',
     textAlign: 'center',
   },
   successBody: {

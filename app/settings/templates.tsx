@@ -280,7 +280,7 @@ function TemplateFormFields({
             ]}
             onPress={() => setField('type', t)}
           >
-            <Text style={{ color: form.type === t ? '#fff' : colors.muted, fontFamily: 'Comfortaa_600SemiBold', fontSize: 14 }}>
+            <Text style={{ color: form.type === t ? '#fff' : colors.muted, fontFamily: 'Figtree_600SemiBold', fontSize: 14 }}>
               {t.charAt(0).toUpperCase() + t.slice(1)}
             </Text>
           </TouchableOpacity>
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   back: { fontSize: 15 },
-  title: { fontSize: 18, fontFamily: 'Comfortaa_700Bold' },
+  title: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   add: { fontSize: 15 },
   list: { padding: 16 },
@@ -391,9 +391,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 12,
   },
-  rowName: { fontSize: 15, fontFamily: 'Comfortaa_600SemiBold' },
+  rowName: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
   rowSub: { fontSize: 13 },
-  amount: { fontSize: 16, fontFamily: 'Comfortaa_700Bold' },
+  amount: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
   typeToggle: {
     flexDirection: 'row',
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
   },
-  fieldLabel: { fontSize: 13, fontFamily: 'Comfortaa_500Medium', marginBottom: 6 },
+  fieldLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium', marginBottom: 6 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     paddingHorizontal: 10,

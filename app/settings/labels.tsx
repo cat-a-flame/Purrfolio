@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   back: { fontSize: 15 },
-  title: { fontSize: 18, fontFamily: 'Comfortaa_700Bold' },
+  title: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   add: { fontSize: 15 },
   list: { padding: 16 },
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   colorDot: { width: 16, height: 16, borderRadius: 8 },
-  rowName: { fontSize: 15, fontFamily: 'Comfortaa_500Medium' },
+  rowName: { fontSize: 15, fontFamily: 'Figtree_500Medium' },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
   preview: {
     alignSelf: 'flex-start',
@@ -174,6 +174,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
   },
-  previewText: { fontSize: 13, fontFamily: 'Comfortaa_500Medium' },
+  previewText: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
   modalActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
 });

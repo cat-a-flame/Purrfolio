@@ -92,6 +92,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 15,
-    fontFamily: 'Comfortaa_600SemiBold',
+    fontFamily: 'Figtree_600SemiBold',
   },
 });

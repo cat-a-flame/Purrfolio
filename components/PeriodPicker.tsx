@@ -355,7 +355,7 @@ function makeStyles(colors: any) {
     },
     navBtn: { padding: 4 },
     labelBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-    labelText: { fontSize: 15, fontFamily: 'Comfortaa_600SemiBold', color: colors.text },
+    labelText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold', color: colors.text },
 
     backdrop: {
       flex: 1,
@@ -380,7 +380,7 @@ function makeStyles(colors: any) {
       borderBottomWidth: 2,
       borderBottomColor: 'transparent',
     },
-    tabText: { fontSize: 13, fontFamily: 'Comfortaa_600SemiBold' },
+    tabText: { fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
 
     panel: { padding: 16, gap: 12 },
     panelNav: {
@@ -389,7 +389,7 @@ function makeStyles(colors: any) {
       justifyContent: 'space-between',
       marginBottom: 4,
     },
-    panelNavLabel: { fontSize: 15, fontFamily: 'Comfortaa_600SemiBold' },
+    panelNavLabel: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
 
     grid: {
       flexDirection: 'row',
@@ -402,7 +402,7 @@ function makeStyles(colors: any) {
       alignItems: 'center',
       borderRadius: 10,
     },
-    cellText: { fontSize: 14, fontFamily: 'Comfortaa_500Medium' },
+    cellText: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
 
     weekDayHeaders: {
       flexDirection: 'row',
@@ -412,7 +412,7 @@ function makeStyles(colors: any) {
       flex: 1,
       textAlign: 'center',
       fontSize: 12,
-      fontFamily: 'Comfortaa_600SemiBold',
+      fontFamily: 'Figtree_600SemiBold',
     },
     weekRow: {
       flexDirection: 'row',
@@ -430,7 +430,7 @@ function makeStyles(colors: any) {
     customHint: { fontSize: 12, marginBottom: 4 },
     customFields: { flexDirection: 'row', gap: 12 },
     customField: { flex: 1, gap: 6 },
-    customLabel: { fontSize: 12, fontFamily: 'Comfortaa_600SemiBold' },
+    customLabel: { fontSize: 12, fontFamily: 'Figtree_600SemiBold' },
     customInput: {
       borderWidth: 1,
       borderRadius: 8,
@@ -444,6 +444,6 @@ function makeStyles(colors: any) {
       alignItems: 'center',
       marginTop: 4,
     },
-    applyBtnText: { color: '#fff', fontFamily: 'Comfortaa_700Bold', fontSize: 15 },
+    applyBtnText: { color: '#fff', fontFamily: 'Figtree_700Bold', fontSize: 15 },
   });
 }

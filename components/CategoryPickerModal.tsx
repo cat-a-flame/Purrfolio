@@ -188,5 +188,5 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 2 },
   subHeaderTitle: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
-  subHeaderText: { fontSize: 16, fontFamily: 'Comfortaa_700Bold' },
+  subHeaderText: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
 });

@@ -8,17 +8,17 @@ import { loadThemePreference, useDarkMode } from '@/lib/theme';
 import type { Session } from '@supabase/supabase-js';
 import { useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { Comfortaa_400Regular, Comfortaa_500Medium, Comfortaa_600SemiBold, Comfortaa_700Bold } from '@expo-google-fonts/comfortaa';
+import { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold } from '@expo-google-fonts/figtree';
 import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
 import * as SplashScreen from 'expo-splash-screen';
 
 SplashScreen.preventAutoHideAsync();
 
-// Set Comfortaa as the default font for all Text elements.
+// Set Figtree as the default font for all Text elements.
 // This runs at module level; no Text renders before fonts are loaded
 // because we return null until fontsLoaded is true.
 (Text as any).defaultProps = (Text as any).defaultProps || {};
-(Text as any).defaultProps.style = { fontFamily: 'Comfortaa_400Regular' };
+(Text as any).defaultProps.style = { fontFamily: 'Figtree_400Regular' };
 
 export default function RootLayout() {
   const { isDark } = useDarkMode();
@@ -28,10 +28,10 @@ export default function RootLayout() {
   const segments = useSegments();
 
   const [fontsLoaded] = useFonts({
-    Comfortaa_400Regular,
-    Comfortaa_500Medium,
-    Comfortaa_600SemiBold,
-    Comfortaa_700Bold,
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+    Figtree_700Bold,
     Lora_400Regular,
     Lora_600SemiBold,
     Lora_700Bold,

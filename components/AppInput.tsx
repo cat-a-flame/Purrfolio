@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontFamily: 'Comfortaa_500Medium',
+    fontFamily: 'Figtree_500Medium',
     marginBottom: 2,
   },
   input: {
