@@ -11,9 +11,9 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const FAB_R = 28;              // FAB radius  (diameter 56)
 const BAR_H = 60;              // visual bar height
-const NOTCH_R = 40;            // horizontal half-width of notch at bar top
-const NOTCH_SH = 12;           // shoulder: extra horizontal lead-in / lead-out
-const NOTCH_D = FAB_R + 6;    // depth notch dips into the bar (34px)
+const NOTCH_R = 44;            // horizontal half-width of notch at bar top
+const NOTCH_SH = 14;           // shoulder: extra horizontal lead-in / lead-out
+const NOTCH_D = FAB_R + 16;   // depth notch dips into the bar (44px)
 
 // Two symmetric cubic bezier curves carving a smooth U-notch.
 // The control points at 0.6× create a wide enough cavity for the FAB.
@@ -116,7 +116,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         </Svg>
 
         {/* Tab icon rows sit inside the bar */}
-        <View style={[styles.tabRow, { height: BAR_H, paddingBottom: 10 }]}>
+        <View style={[styles.tabRow, { height: BAR_H, paddingBottom: 20 }]}>
           <View style={styles.side}>{leftTabs.map(renderTab)}</View>
           <View style={{ width: NOTCH_MOUTH }} />
           <View style={styles.side}>{rightTabs.map(renderTab)}</View>
@@ -124,7 +124,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
       </View>
 
       {/* FAB — sits mostly inside the notch */}
-      <View style={[styles.fabWrap, { bottom: barHeight - FAB_R - 10 }]}>
+      <View style={[styles.fabWrap, { bottom: barHeight - FAB_R - 20 }]}>
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: colors.accent }]}
           onPress={() => router.push('/transaction/add')}
