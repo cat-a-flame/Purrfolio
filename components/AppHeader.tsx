@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   },
   side: { width: 36 },
   sideRight: { alignItems: 'flex-end' },
-  barTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontFamily: 'Lora_600SemiBold' },
+  barTitle: { flex: 1, textAlign: 'center', fontSize: 22, fontFamily: 'Lora_600SemiBold' },
 
   drawerRow: { flex: 1, flexDirection: 'row' },
   drawer: {

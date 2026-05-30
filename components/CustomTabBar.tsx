@@ -10,7 +10,7 @@ import { lightColors, darkColors } from '@/lib/theme';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const FAB_R = 28;           // FAB radius (diameter 56)
-const BAR_H = 56;           // visual bar height (excludes safe-area inset)
+const BAR_H = 50;           // visual bar height (excludes safe-area inset)
 
 // Screens should add TAB_BAR_HEIGHT + useSafeAreaInsets().bottom as bottom padding
 // so content isn't hidden behind the floating tab bar.
@@ -120,12 +120,12 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
       {/* SVG bar fills the lower barHeight portion */}
       <View style={[styles.svgContainer, { height: barHeight }]}>
         <Svg width={SCREEN_WIDTH} height={barHeight} style={StyleSheet.absoluteFill}>
-          <Path d={buildPath(SCREEN_WIDTH, barHeight)} fill={colors.surface} />
+          <Path d={buildPath(SCREEN_WIDTH, barHeight)} fill="#fcf1ff" />
           <Path
             d={buildTopEdge(SCREEN_WIDTH)}
             fill="none"
-            stroke={colors.border}
-            strokeWidth={1}
+            stroke={colors.border2}
+            strokeWidth={0}
           />
         </Svg>
 
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderRadius: 12,
-    backgroundColor: '#f3ebfe',
+    backgroundColor: '#ddcdf3',
   },
   fabWrap: {
     position: 'absolute',

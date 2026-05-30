@@ -171,6 +171,7 @@ export default function DashboardScreen() {
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <AppHeader title="Dashboard" />
       <FlatList
+        style={{ paddingTop: 16 }}
         data={flat}
         keyExtractor={(item) =>
           item.kind === 'dayHeader' ? `h-${item.date}` : item.tx.id
@@ -185,7 +186,7 @@ export default function DashboardScreen() {
                 <Text style={[styles.dayDate, { color: colors.muted }]}>
                   {formatDayHeader(item.date)}
                 </Text>
-                <Text style={[styles.dayNet, { color: positive ? colors.income : colors.expense }]}>
+                <Text style={[styles.dayNet, { color: positive ? colors.income : colors.expense, paddingRight: 6 }]}>
                   {positive ? '+' : '−'}{formatCurrency(Math.abs(item.dayNet), currency)}
                 </Text>
               </View>
@@ -201,20 +202,17 @@ export default function DashboardScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
         ListHeaderComponent={
           <View style={styles.header}>
-            {/* Period picker */}
-            <PeriodPicker value={period} onChange={setPeriod} />
-
             {/* Cash Flow card */}
             <LinearGradient
-                colors={[
-                  '#4D7BE7',
-                  '#C064BC',
-                  '#F78162',
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.cashFlow}
->
+              colors={[
+                '#4D7BE7',
+                '#C064BC',
+                '#F78162',
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cashFlow}
+            >
               {/* Title row + VS badge */}
               <View style={styles.cashFlowHeader}>
                 <Text style={[styles.cashFlowTitle, { color: '#fff' }]}>Cash Flow</Text>
@@ -239,7 +237,7 @@ export default function DashboardScreen() {
               </Text>
 
               {/* Income bar */}
-              <View style={styles.barSection}>
+              <View style={[styles.barSection, { marginBottom: 12 }]}>
                 <View style={styles.barLabelRow}>
                   <Text style={[styles.cashFlowLabel, { color: '#fff' }]}>Income</Text>
                   <Text style={[styles.cashFlowValue, { color: '#fff' }]}>
@@ -265,9 +263,8 @@ export default function DashboardScreen() {
               </View>
             </LinearGradient>
 
-            {flat.length > 0 && (
-              <Text style={[styles.sectionTitle, { color: colors.muted }]}>Transactions</Text>
-            )}
+            {/* Period picker */}
+            <PeriodPicker value={period} onChange={setPeriod} />
           </View>
         }
         ListEmptyComponent={
@@ -299,7 +296,7 @@ const styles = StyleSheet.create({
   cashFlowLabel: { fontSize: 12 },
   cashFlowValue: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
   vsBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  vsText: { fontSize: 12, fontFamily: 'Figtree_600SemiBold' },
+  vsText: { fontSize: 12, fontFamily: 'Figtree_600SemiBold', paddingVertical: 1 },
   barSection: { gap: 4 },
   barLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   barTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
