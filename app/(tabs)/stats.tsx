@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   RefreshControl,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
@@ -14,7 +15,7 @@ import AppHeader from '@/components/AppHeader';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { formatCurrency } from '@/lib/utils';
 import { useCountUp } from '@/lib/useCountUp';
-import type { Currency } from '@/lib/types';
+import type { Currency, Wallet } from '@/lib/types';
 
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -43,6 +44,7 @@ export default function StatsScreen() {
   const colors = useTheme();
   const { bottom } = useSafeAreaInsets();
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
   const [txs, setTxs] = useState<any[]>([]);
   const [currency, setCurrency] = useState<Currency>('HUF');
   const [refreshing, setRefreshing] = useState(false);
@@ -51,8 +53,9 @@ export default function StatsScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: wallets }, { data: data }] = await Promise.all([
-      supabase.from('wallets').select('currency, is_default').eq('user_id', user.id),
+    const [{ data: walletRows }, { data: allTxSums }, { data: data }] = await Promise.all([
+      supabase.from('wallets').select('*').eq('user_id', user.id).order('is_default', { ascending: false }),
+      supabase.from('transactions').select('wallet_id, type, amount').eq('user_id', user.id).limit(10000),
       supabase
         .from('transactions')
         .select('type, amount, category:categories(id, name, icon, color)')
@@ -63,7 +66,19 @@ export default function StatsScreen() {
         .limit(10000),
     ]);
 
-    const defaultW = (wallets ?? []).find((w: any) => w.is_default) ?? (wallets ?? [])[0];
+    const walletList = walletRows ?? [];
+    const txSums = allTxSums ?? [];
+    const balanceMap = new Map<string, number>();
+    for (const w of walletList) {
+      const wTxs = txSums.filter((t: any) => t.wallet_id === w.id);
+      const inc = wTxs.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
+      const exp = wTxs.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
+      balanceMap.set(w.id, (w.starting_balance ?? 0) + inc - exp);
+    }
+    const enriched = walletList.map((w: any) => ({ ...w, _balance: balanceMap.get(w.id) ?? w.starting_balance ?? 0 }));
+    setWallets(enriched);
+
+    const defaultW = enriched.find((w: any) => w.is_default) ?? enriched[0];
     if (defaultW?.currency) setCurrency(defaultW.currency as Currency);
     setTxs(data ?? []);
   }, [period.from, period.to]);
@@ -108,6 +123,28 @@ export default function StatsScreen() {
         <Text style={[styles.title, { color: colors.text }]}>Statistics</Text>
 
         <PeriodPicker value={period} onChange={setPeriod} />
+
+        {/* Wallet balances */}
+        {wallets.length > 0 && (
+          <FlatList
+            horizontal
+            data={wallets}
+            keyExtractor={(w) => w.id}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.walletRow}
+            renderItem={({ item: w }) => (
+              <View style={[styles.walletChip, { backgroundColor: (w.color || '#888') + '22', borderColor: (w.color || '#888') + '55' }]}>
+                {w.icon ? <Text style={styles.walletIcon}>{w.icon}</Text> : null}
+                <View>
+                  <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
+                  <Text style={[styles.walletBalance, { color: colors.muted }]}>
+                    {formatCurrency((w as any)._balance ?? w.starting_balance ?? 0, w.currency)}
+                  </Text>
+                </View>
+              </View>
+            )}
+          />
+        )}
 
         {/* 2×2 summary grid */}
         <View style={styles.summaryGrid}>
@@ -317,4 +354,19 @@ const styles = StyleSheet.create({
   barTrack: { height: 5, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 5, borderRadius: 3 },
   catPct: { fontSize: 11, fontWeight: '600', width: 32, textAlign: 'right' },
+
+  walletRow: { gap: 10, paddingVertical: 4 },
+  walletChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: 140,
+  },
+  walletIcon: { fontSize: 20 },
+  walletName: { fontSize: 13, fontWeight: '600' },
+  walletBalance: { fontSize: 12, marginTop: 1 },
 });

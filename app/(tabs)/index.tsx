@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
@@ -15,7 +14,7 @@ import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import TransactionRow from '@/components/TransactionRow';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
-import type { Transaction, Wallet } from '@/lib/types';
+import type { Transaction, Currency } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
 import { useCountUp } from '@/lib/useCountUp';
 import { useRouter } from 'expo-router';
@@ -66,7 +65,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
-  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [currency, setCurrency] = useState<Currency>('HUF');
   const [periodTxs, setPeriodTxs] = useState<Transaction[]>([]);
   const [prevNet, setPrevNet] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -76,18 +75,11 @@ export default function DashboardScreen() {
     if (!user) return;
 
     const prev = getPrevRange(period);
-    const [{ data: w }, { data: allTxSums }, { data: txs }, { data: prevTxs }] = await Promise.all([
+    const [{ data: w }, { data: txs }, { data: prevTxs }] = await Promise.all([
       supabase
         .from('wallets')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('is_default', { ascending: false }),
-      // All transactions for wallet balance calculation
-      supabase
-        .from('transactions')
-        .select('wallet_id, type, amount')
-        .eq('user_id', user.id)
-        .limit(10000),
+        .select('currency, is_default')
+        .eq('user_id', user.id),
       // All transactions in selected period for cashflow + list
       supabase
         .from('transactions')
@@ -108,17 +100,8 @@ export default function DashboardScreen() {
         .limit(10000),
     ]);
 
-    // Wallet balance: starting_balance + all income − all expenses
-    const walletList = w ?? [];
-    const txSums = allTxSums ?? [];
-    const balanceMap = new Map<string, number>();
-    for (const wallet of walletList) {
-      const wTxs = txSums.filter((t: any) => t.wallet_id === wallet.id);
-      const inc = wTxs.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
-      const exp = wTxs.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
-      balanceMap.set(wallet.id, (wallet.starting_balance ?? 0) + inc - exp);
-    }
-    setWallets(walletList.map(wl => ({ ...wl, _balance: balanceMap.get(wl.id) ?? wl.starting_balance ?? 0 })));
+    const defaultW = (w ?? []).find((wl: any) => wl.is_default) ?? (w ?? [])[0];
+    if (defaultW?.currency) setCurrency(defaultW.currency as Currency);
 
     const normalized = (txs ?? []).map((tx: any) => ({
       ...tx,
@@ -165,13 +148,6 @@ export default function DashboardScreen() {
   const total = income + expense;
   const incomePct = total > 0 ? (income / total) * 100 : 0;
   const expensePct = total > 0 ? (expense / total) * 100 : 0;
-
-  const defaultWallet = wallets.find(w => w.is_default) ?? wallets[0];
-  const currency = defaultWallet?.currency ?? 'HUF';
-  const allSameCurrency = wallets.every(w => w.currency === currency);
-  const totalBalance = allSameCurrency
-    ? wallets.reduce((s, w) => s + ((w as any)._balance ?? 0), 0)
-    : null;
 
   // Group transactions by date
   const groups = useMemo(() => groupByDate(periodTxs), [periodTxs]);
@@ -294,26 +270,6 @@ export default function DashboardScreen() {
               </View>
             </LinearGradient>
 
-            {/* Wallet chips */}
-            {wallets.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.walletRow}>
-                {wallets.map(w => (
-                  <View
-                    key={w.id}
-                    style={[styles.walletChip, { backgroundColor: (w.color || '#888') + '22', borderColor: (w.color || '#888') + '55' }]}
-                  >
-                    {w.icon ? <Text style={{ fontSize: 15 }}>{w.icon}</Text> : null}
-                    <View>
-                      <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
-                      <Text style={[styles.walletBalance, { color: colors.muted }]}>
-                        {formatCurrency((w as any)._balance ?? w.starting_balance ?? 0, w.currency)}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-
             {flat.length > 0 && (
               <Text style={[styles.sectionTitle, { color: colors.muted }]}>Transactions</Text>
             )}
@@ -355,21 +311,6 @@ const styles = StyleSheet.create({
   barLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   barTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 6, borderRadius: 3 },
-
-  walletRow: { gap: 8, paddingBottom: 4 },
-  walletChip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    flexBasis: '50%',
-  },
-  walletName: { fontSize: 13, fontWeight: '600' },
-  walletBalance: { fontSize: 12 },
 
   sectionTitle: { fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
 
