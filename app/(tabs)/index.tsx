@@ -18,6 +18,7 @@ import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Wallet } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
 import { useCountUp } from '@/lib/useCountUp';
+import { useRouter } from 'expo-router';
 
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -61,6 +62,7 @@ function defaultPeriod(): PeriodValue {
 
 export default function DashboardScreen() {
   const colors = useTheme();
+  const router = useRouter();
   const { bottom } = useSafeAreaInsets();
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
   const [wallets, setWallets] = useState<Wallet[]>([]);
@@ -211,7 +213,12 @@ export default function DashboardScreen() {
               </View>
             );
           }
-          return <TransactionRow transaction={item.tx} />;
+          return (
+            <TransactionRow
+              transaction={item.tx}
+              onPress={() => router.push(`/transaction/${item.tx.id}`)}
+            />
+          );
         }}
         ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
         ListHeaderComponent={

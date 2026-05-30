@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/lib/theme';
 import type { Transaction } from '@/lib/types';
@@ -7,9 +7,10 @@ import { formatCurrency } from '@/lib/utils';
 
 interface Props {
   transaction: Transaction;
+  onPress?: () => void;
 }
 
-export default function TransactionRow({ transaction: tx }: Props) {
+export default function TransactionRow({ transaction: tx, onPress }: Props) {
   const colors = useTheme();
   const isTransfer = !!tx.transfer_group_id;
   const isIncome = tx.type === 'income';
@@ -30,7 +31,11 @@ export default function TransactionRow({ transaction: tx }: Props) {
       : colors.border;
 
   return (
-    <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={onPress ? 0.7 : 1}
+      style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+    >
       {/* Icon with coloured background */}
       <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
         {isTransfer ? (
@@ -77,7 +82,7 @@ export default function TransactionRow({ transaction: tx }: Props) {
           {amountPrefix}{formatCurrency(tx.amount, currency)}
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

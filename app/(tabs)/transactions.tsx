@@ -16,11 +16,13 @@ import AppHeader from '@/components/AppHeader';
 import TransactionRow from '@/components/TransactionRow';
 import type { Transaction, Wallet, TransactionType } from '@/lib/types';
 import { groupByDate, formatDate } from '@/lib/utils';
+import { useRouter } from 'expo-router';
 
 type TypeFilter = 'all' | TransactionType;
 
 export default function TransactionsScreen() {
   const colors = useTheme();
+  const router = useRouter();
   const { bottom } = useSafeAreaInsets();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
@@ -101,7 +103,12 @@ export default function TransactionsScreen() {
               </Text>
             );
           }
-          return <TransactionRow transaction={item.tx} />;
+          return (
+            <TransactionRow
+              transaction={item.tx}
+              onPress={() => router.push(`/transaction/${item.tx.id}`)}
+            />
+          );
         }}
         ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
         ListHeaderComponent={

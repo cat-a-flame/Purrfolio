@@ -48,6 +48,10 @@ export default function RootLayout() {
           options={{ presentation: 'modal', headerShown: false }}
         />
         <Stack.Screen
+          name="transaction/[id]"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
+        <Stack.Screen
           name="settings/wallets"
           options={{ headerShown: false }}
         />
