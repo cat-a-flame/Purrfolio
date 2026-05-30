@@ -14,17 +14,25 @@ const BAR_H = 56;           // visual bar height (excludes safe-area inset)
 const NOTCH_R = 42;         // half-width of notch — wider = rounder U shape
 const NOTCH_SH = 10;        // shoulder: short horizontal lead-in before the curve
 const NOTCH_D = FAB_R + 28; // depth curve dips into bar (56 px)
+const NOTCH_BR = 20;        // bottom corner radius — drives the quarter-circle arcs
 
-// CP1 is nearly below the bezier start (steep entry → no V kink).
-// CP2 is 45% of NOTCH_R from center at full depth (horizontal arrival → flat bottom).
-// Together they approximate a circular arc around the FAB.
+// 4-segment path: shoulder → steep descent → quarter-circle arc → mirror.
+// The two arc segments use k=0.552 (cubic bezier quarter-circle approximation)
+// so the bottom is a true circular curve, not a V meeting point.
 function buildPath(w: number, h: number): string {
   const cx = w / 2;
+  const br = NOTCH_BR;
   return [
     `M 0 0`,
     `L ${cx - NOTCH_R - NOTCH_SH} 0`,
-    `C ${cx - NOTCH_R} ${NOTCH_D * 0.55}, ${cx - NOTCH_R * 0.45} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
-    `C ${cx + NOTCH_R * 0.45} ${NOTCH_D}, ${cx + NOTCH_R} ${NOTCH_D * 0.55}, ${cx + NOTCH_R + NOTCH_SH} 0`,
+    // Left descent: steep fall, arrives at arc tangentially (downward)
+    `C ${cx - NOTCH_R} ${NOTCH_D * 0.4}, ${cx - br} ${NOTCH_D * 0.5}, ${cx - br} ${NOTCH_D - br}`,
+    // Left quarter-circle arc (k=0.552)
+    `C ${cx - br} ${NOTCH_D - br * 0.448}, ${cx - br * 0.552} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
+    // Right quarter-circle arc (mirror)
+    `C ${cx + br * 0.552} ${NOTCH_D}, ${cx + br} ${NOTCH_D - br * 0.448}, ${cx + br} ${NOTCH_D - br}`,
+    // Right ascent: mirror of left descent
+    `C ${cx + br} ${NOTCH_D * 0.5}, ${cx + NOTCH_R} ${NOTCH_D * 0.4}, ${cx + NOTCH_R + NOTCH_SH} 0`,
     `L ${w} 0`,
     `L ${w} ${h}`,
     `L 0 ${h}`,
@@ -34,11 +42,14 @@ function buildPath(w: number, h: number): string {
 
 function buildTopEdge(w: number): string {
   const cx = w / 2;
+  const br = NOTCH_BR;
   return [
     `M 0 0`,
     `L ${cx - NOTCH_R - NOTCH_SH} 0`,
-    `C ${cx - NOTCH_R} ${NOTCH_D * 0.55}, ${cx - NOTCH_R * 0.45} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
-    `C ${cx + NOTCH_R * 0.45} ${NOTCH_D}, ${cx + NOTCH_R} ${NOTCH_D * 0.55}, ${cx + NOTCH_R + NOTCH_SH} 0`,
+    `C ${cx - NOTCH_R} ${NOTCH_D * 0.4}, ${cx - br} ${NOTCH_D * 0.5}, ${cx - br} ${NOTCH_D - br}`,
+    `C ${cx - br} ${NOTCH_D - br * 0.448}, ${cx - br * 0.552} ${NOTCH_D}, ${cx} ${NOTCH_D}`,
+    `C ${cx + br * 0.552} ${NOTCH_D}, ${cx + br} ${NOTCH_D - br * 0.448}, ${cx + br} ${NOTCH_D - br}`,
+    `C ${cx + br} ${NOTCH_D * 0.5}, ${cx + NOTCH_R} ${NOTCH_D * 0.4}, ${cx + NOTCH_R + NOTCH_SH} 0`,
     `L ${w} 0`,
   ].join(' ');
 }
