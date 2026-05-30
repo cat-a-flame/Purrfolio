@@ -1,12 +1,31 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { View, StyleSheet, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { lightColors, darkColors } from '@/lib/theme';
+
+function TabIcon({ name, color, focused, accentBg }: { name: any; color: string; focused: boolean; accentBg: string }) {
+  return (
+    <View style={[styles.iconWrap, focused && { backgroundColor: accentBg }]}>
+      <Ionicons name={name} size={22} color={color} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  iconWrap: {
+    width: 48,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 export default function TabsLayout() {
   const scheme = useColorScheme();
   const colors = scheme === 'dark' ? darkColors : lightColors;
+  const accentBg = colors.accent + '22';
 
   return (
     <Tabs
@@ -14,13 +33,11 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
+        tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.border,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
+          height: 60,
         },
       }}
     >
@@ -28,28 +45,28 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="home-outline" color={color} focused={focused} accentBg={accentBg} />,
         }}
       />
       <Tabs.Screen
         name="transactions"
         options={{
           title: 'Transactions',
-          tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="list-outline" color={color} focused={focused} accentBg={accentBg} />,
         }}
       />
       <Tabs.Screen
         name="recurring"
         options={{
           title: 'Recurring',
-          tabBarIcon: ({ color, size }) => <Ionicons name="repeat-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="repeat-outline" color={color} focused={focused} accentBg={accentBg} />,
         }}
       />
       <Tabs.Screen
         name="stats"
         options={{
           title: 'Stats',
-          tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="bar-chart-outline" color={color} focused={focused} accentBg={accentBg} />,
         }}
       />
       <Tabs.Screen
