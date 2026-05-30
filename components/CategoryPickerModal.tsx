@@ -6,20 +6,22 @@ import {
   StyleSheet,
   Animated,
   ScrollView,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/lib/theme';
 import type { Category } from '@/lib/types';
 import BottomModal from './BottomModal';
-import AppButton from './AppButton';
 
 interface Props {
   visible: boolean;
   onClose: () => void;
-  categories: Category[];   // all categories (parents + children) already filtered by type
+  categories: Category[];
   selectedId: string;
   onSelect: (id: string) => void;
 }
+
+const PANEL_HEIGHT = Dimensions.get('window').height * 0.52;
 
 export default function CategoryPickerModal({ visible, onClose, categories, selectedId, onSelect }: Props) {
   const colors = useTheme();
@@ -27,6 +29,7 @@ export default function CategoryPickerModal({ visible, onClose, categories, sele
   const [selectedParent, setSelectedParent] = useState<Category | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const subScrollRef = useRef<ScrollView>(null);
 
   const roots = categories.filter((c) => !c.parent_id);
   const childrenOf = (id: string) => categories.filter((c) => c.parent_id === id);
@@ -35,10 +38,12 @@ export default function CategoryPickerModal({ visible, onClose, categories, sele
     const children = childrenOf(cat.id);
     if (children.length === 0) {
       onSelect(cat.id);
-      onClose();
+      handleClose();
       return;
     }
     setSelectedParent(cat);
+    // Scroll sub-panel to top before animating in
+    subScrollRef.current?.scrollTo({ y: 0, animated: false });
     Animated.timing(slideAnim, {
       toValue: 1,
       duration: 220,
@@ -55,7 +60,6 @@ export default function CategoryPickerModal({ visible, onClose, categories, sele
   }
 
   function handleClose() {
-    // reset state when closing
     slideAnim.setValue(0);
     setSelectedParent(null);
     onClose();
@@ -72,10 +76,9 @@ export default function CategoryPickerModal({ visible, onClose, categories, sele
   });
 
   return (
-    <BottomModal visible={visible} onClose={handleClose} title="">
-      {/* Clip container so the sliding panel stays inside */}
+    <BottomModal visible={visible} onClose={handleClose} title="Select category">
       <View
-        style={styles.clipper}
+        style={[styles.clipper, { height: PANEL_HEIGHT }]}
         onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
       >
         <Animated.View
@@ -85,7 +88,11 @@ export default function CategoryPickerModal({ visible, onClose, categories, sele
           ]}
         >
           {/* ── Left panel: parent categories ── */}
-          <View style={[styles.panel, { width: containerWidth || '50%' }]}>
+          <ScrollView
+            style={{ width: containerWidth || '50%' }}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled
+          >
             {/* None row */}
             <TouchableOpacity
               style={[styles.row, { borderBottomColor: colors.border }, !selectedId && { backgroundColor: colors.accent + '11' }]}
@@ -111,11 +118,11 @@ export default function CategoryPickerModal({ visible, onClose, categories, sele
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
 
           {/* ── Right panel: sub-categories ── */}
-          <View style={[styles.panel, { width: containerWidth || '50%' }]}>
-            {/* Header with back button */}
+          <View style={{ width: containerWidth || '50%' }}>
+            {/* Header with back button — outside scroll so it stays fixed */}
             <View style={[styles.subHeader, { borderBottomColor: colors.border }]}>
               <TouchableOpacity onPress={goBack} style={styles.backBtn}>
                 <Ionicons name="arrow-back" size={20} color={colors.accent} />
@@ -126,37 +133,26 @@ export default function CategoryPickerModal({ visible, onClose, categories, sele
               </View>
             </View>
 
-            {/* Parent itself as first option */}
-            {selectedParent && (() => {
-              const isSelected = selectedId === selectedParent.id;
-              return (
-                <TouchableOpacity
-                  style={[styles.row, { borderBottomColor: colors.border }, isSelected && { backgroundColor: colors.accent + '11' }]}
-                  onPress={() => selectItem(selectedParent.id)}
-                >
-                  <Text style={[styles.rowText, { color: isSelected ? colors.accent : colors.text }]}>
-                    {selectedParent.name} (general)
-                  </Text>
-                  {isSelected && <Ionicons name="checkmark" size={18} color={colors.accent} />}
-                </TouchableOpacity>
-              );
-            })()}
-
-            {/* Children */}
-            {(selectedParent ? childrenOf(selectedParent.id) : []).map((child) => {
-              const isSelected = selectedId === child.id;
-              return (
-                <TouchableOpacity
-                  key={child.id}
-                  style={[styles.row, { borderBottomColor: colors.border }, isSelected && { backgroundColor: colors.accent + '11' }]}
-                  onPress={() => selectItem(child.id)}
-                >
-                  {child.icon ? <Text style={styles.rowIcon}>{child.icon}</Text> : <View style={{ width: 28 }} />}
-                  <Text style={[styles.rowText, { color: isSelected ? colors.accent : colors.text }]}>{child.name}</Text>
-                  {isSelected && <Ionicons name="checkmark" size={18} color={colors.accent} />}
-                </TouchableOpacity>
-              );
-            })}
+            <ScrollView
+              ref={subScrollRef}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+            >
+              {(selectedParent ? childrenOf(selectedParent.id) : []).map((child) => {
+                const isSelected = selectedId === child.id;
+                return (
+                  <TouchableOpacity
+                    key={child.id}
+                    style={[styles.row, { borderBottomColor: colors.border }, isSelected && { backgroundColor: colors.accent + '11' }]}
+                    onPress={() => selectItem(child.id)}
+                  >
+                    {child.icon ? <Text style={styles.rowIcon}>{child.icon}</Text> : <View style={{ width: 28 }} />}
+                    <Text style={[styles.rowText, { color: isSelected ? colors.accent : colors.text }]}>{child.name}</Text>
+                    {isSelected && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
         </Animated.View>
       </View>
@@ -170,9 +166,7 @@ const styles = StyleSheet.create({
   },
   slider: {
     flexDirection: 'row',
-  },
-  panel: {
-    flexShrink: 0,
+    flex: 1,
   },
   row: {
     flexDirection: 'row',
