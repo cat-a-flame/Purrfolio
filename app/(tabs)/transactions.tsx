@@ -9,20 +9,17 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import TransactionRow from '@/components/TransactionRow';
 import type { Transaction, Wallet, TransactionType } from '@/lib/types';
 import { groupByDate, formatDate } from '@/lib/utils';
-import { Ionicons } from '@expo/vector-icons';
 
 type TypeFilter = 'all' | TransactionType;
 
 export default function TransactionsScreen() {
   const colors = useTheme();
-  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
@@ -173,15 +170,8 @@ export default function TransactionsScreen() {
         ListEmptyComponent={
           <Text style={[styles.empty, { color: colors.muted }]}>No transactions found.</Text>
         }
-        ListFooterComponent={<View style={{ height: 80 }} />}
+        ListFooterComponent={<View style={{ height: 16 }} />}
       />
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.accent }]}
-        onPress={() => router.push('/transaction/add')}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="add" size={30} color="#fff" />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -226,19 +216,4 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-  },
 });

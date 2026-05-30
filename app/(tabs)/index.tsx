@@ -9,7 +9,6 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -18,7 +17,6 @@ import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Wallet } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
 import { useCountUp } from '@/lib/useCountUp';
-import { Ionicons } from '@expo/vector-icons';
 
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -62,8 +60,6 @@ function defaultPeriod(): PeriodValue {
 
 export default function DashboardScreen() {
   const colors = useTheme();
-  const router = useRouter();
-
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [periodTxs, setPeriodTxs] = useState<Transaction[]>([]);
@@ -307,23 +303,16 @@ export default function DashboardScreen() {
         ListEmptyComponent={
           <Text style={[styles.empty, { color: colors.muted }]}>No transactions in this period.</Text>
         }
-        ListFooterComponent={<View style={{ height: 80 }} />}
+        ListFooterComponent={<View style={{ height: 16 }} />}
       />
 
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.accent }]}
-        onPress={() => router.push('/transaction/add')}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="add" size={30} color="#fff" />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  list: { paddingHorizontal: 16, paddingBottom: 80 },
+  list: { paddingHorizontal: 16, paddingBottom: 16 },
   header: { gap: 12, marginBottom: 8 },
   headerEscape: { marginHorizontal: -16 },
   title: { fontSize: 26, fontWeight: '800' },
@@ -373,19 +362,4 @@ const styles = StyleSheet.create({
   dayNet: { fontSize: 13, fontWeight: '700' },
 
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-  },
 });
