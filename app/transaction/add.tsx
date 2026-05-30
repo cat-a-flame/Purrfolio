@@ -6,6 +6,8 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -236,6 +238,10 @@ export default function AddTransactionScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 24 }]} keyboardShouldPersistTaps="handled">
         {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
 
@@ -418,6 +424,7 @@ export default function AddTransactionScreen() {
           Save transaction
         </AppButton>
       </View>
+      </KeyboardAvoidingView>
 
       {/* From wallet picker modal */}
       <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title={isTransfer ? 'From wallet' : 'Select wallet'}>

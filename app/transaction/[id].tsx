@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -216,6 +218,10 @@ export default function EditTransactionScreen() {
         </TouchableOpacity>
       </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 24 }]} keyboardShouldPersistTaps="handled">
         {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
 
@@ -378,6 +384,7 @@ export default function EditTransactionScreen() {
           Save changes
         </AppButton>
       </View>
+      </KeyboardAvoidingView>
 
       {/* Wallet picker modal */}
       <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title="Select wallet">
