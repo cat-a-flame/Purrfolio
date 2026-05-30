@@ -130,7 +130,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         </Svg>
 
         {/* Tab icons — anchored above the safe-area inset so they stay in the visual bar */}
-        <View style={[styles.tabRow, { height: BAR_H, bottom: bottom }]}>
+        <View style={[styles.tabRow, { height: BAR_H, bottom: 17 }]}>
           <View style={styles.side}>{leftTabs.map(renderTab)}</View>
           <View style={{ width: NOTCH_MOUTH }} />
           <View style={styles.side}>{rightTabs.map(renderTab)}</View>
