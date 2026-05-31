@@ -74,11 +74,11 @@ function buildTopEdge(w: number): string {
   ].join(' ');
 }
 
-const TAB_ICONS: Record<string, string> = {
-  index: 'home-outline',
-  transactions: 'list-outline',
-  recurring: 'repeat-outline',
-  stats: 'bar-chart-outline',
+const TAB_ICONS: Record<string, { outline: string; filled: string }> = {
+  index:        { outline: 'home-outline',       filled: 'home' },
+  transactions: { outline: 'list-outline',       filled: 'list' },
+  recurring:    { outline: 'repeat-outline',     filled: 'repeat' },
+  stats:        { outline: 'bar-chart-outline',  filled: 'bar-chart' },
 };
 
 
@@ -103,7 +103,8 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
 
   function renderTab(route: (typeof state.routes)[number]) {
     const isFocused = state.routes[state.index].key === route.key;
-    const iconName = TAB_ICONS[route.name] ?? 'ellipse-outline';
+    const icons = TAB_ICONS[route.name] ?? { outline: 'ellipse-outline', filled: 'ellipse' };
+    const iconName = isFocused ? icons.filled : icons.outline;
     const color = isFocused ? '#692f7c' : '#998aa7';
     return (
       <TouchableOpacity
@@ -115,7 +116,6 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
         accessibilityState={isFocused ? { selected: true } : {}}
       >
         <View style={styles.iconWrap}>
-          {isFocused && <View style={styles.iconActiveBg} />}
           <Ionicons name={iconName as any} size={22} color={color} />
         </View>
       </TouchableOpacity>
