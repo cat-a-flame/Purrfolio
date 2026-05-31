@@ -1,8 +1,12 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
+  TextInput,
   ScrollView,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
@@ -16,10 +20,23 @@ import AppHeader from '@/components/AppHeader';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
 import BottomModal from '@/components/BottomModal';
+import DatePickerModal from '@/components/DatePickerModal';
+import CategoryPickerModal from '@/components/CategoryPickerModal';
 import { Ionicons } from '@expo/vector-icons';
-import type { RecurringPayment, Wallet, Category, RecurrenceFrequency } from '@/lib/types';
+import type { RecurringPayment, Wallet, Category, Label, RecurrenceFrequency } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { generateDueDates, nextDueDate, frequencyLabel, isoDate, monthBounds } from '@/lib/recurringUtils';
+
+function formatAmountDisplay(raw: string): string {
+  if (!raw) return '';
+  const [intPart, decPart] = raw.split('.');
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return decPart !== undefined ? `${grouped}.${decPart}` : grouped;
+}
+
+function parseAmountInput(text: string): string {
+  return text.replace(/\s/g, '');
+}
 
 const FREQUENCIES: RecurrenceFrequency[] = ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'];
 
@@ -34,11 +51,13 @@ type EditForm = {
   end_date: string;
   payer: string;
   notes: string;
+  labelIds: string[];
 };
 
 const EMPTY_FORM: EditForm = {
   name: '', type: 'expense', amount: '', wallet_id: '', category_id: '',
   frequency: 'monthly', start_date: isoDate(new Date()), end_date: '', payer: '', notes: '',
+  labelIds: [],
 };
 
 export default function RecurringScreen() {
@@ -49,6 +68,7 @@ export default function RecurringScreen() {
   const [occurrences, setOccurrences] = useState<any[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [labels, setLabels] = useState<Label[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
@@ -57,7 +77,6 @@ export default function RecurringScreen() {
   const [form, setForm] = useState<EditForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -68,12 +87,13 @@ export default function RecurringScreen() {
     const wideFrom = new Date(from); wideFrom.setMonth(wideFrom.getMonth() - 1);
     const wideTo = new Date(to); wideTo.setMonth(wideTo.getMonth() + 1);
 
-    const [{ data: pmts }, { data: w }, { data: c }, { data: occs }] = await Promise.all([
+    const [{ data: pmts }, { data: w }, { data: c }, { data: occs }, { data: l }] = await Promise.all([
       supabase.from('recurring_payments').select('*').eq('user_id', user.id).order('name'),
       supabase.from('wallets').select('*').eq('user_id', user.id),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
       supabase.from('recurring_occurrences').select('*').eq('user_id', user.id)
         .gte('due_date', isoDate(wideFrom)).lte('due_date', isoDate(wideTo)),
+      supabase.from('labels').select('*').eq('user_id', user.id).order('name'),
     ]);
 
     const walletMap = new Map((w ?? []).map((x: Wallet) => [x.id, x]));
@@ -81,6 +101,7 @@ export default function RecurringScreen() {
 
     setWallets(w ?? []);
     setCategories(c ?? []);
+    setLabels(l ?? []);
     setOccurrences(occs ?? []);
     setPayments((pmts ?? []).map((r: any) => ({
       ...r,
@@ -96,10 +117,6 @@ export default function RecurringScreen() {
     await load();
     setRefreshing(false);
   }, [load]);
-
-  function setField<K extends keyof EditForm>(key: K, value: EditForm[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
 
   const today = new Date();
 
@@ -190,7 +207,7 @@ export default function RecurringScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
 
-    const { error } = await supabase
+    const { data: newPayment, error } = await supabase
       .from('recurring_payments')
       .insert({
         user_id: user.id,
@@ -204,7 +221,15 @@ export default function RecurringScreen() {
         end_date: form.end_date || null,
         payer: form.payer.trim() || null,
         notes: form.notes || null,
-      });
+      })
+      .select('id')
+      .single();
+
+    if (!error && newPayment && form.labelIds.length > 0) {
+      await supabase.from('recurring_payment_labels').insert(
+        form.labelIds.map((lid) => ({ recurring_payment_id: newPayment.id, label_id: lid }))
+      );
+    }
 
     setSaving(false);
     if (error) { setFormError(error.message); return; }
@@ -257,7 +282,8 @@ export default function RecurringScreen() {
 
   async function handleToggleActive() {
     if (!editing) return;
-    await supabase.from('recurring_payments').update({ is_active: !editing.is_active }).eq('id', editing.id);
+    const next = !editing.is_active;
+    await supabase.from('recurring_payments').update({ is_active: next }).eq('id', editing.id);
     setEditing(null);
     load();
   }
@@ -368,6 +394,7 @@ export default function RecurringScreen() {
                           wallet_id: p.wallet_id ?? '', category_id: p.category_id ?? '',
                           frequency: p.frequency, start_date: p.start_date,
                           end_date: p.end_date ?? '', payer: p.payer ?? '', notes: p.notes ?? '',
+                          labelIds: [],
                         });
                         setFormError('');
                         setEditing(p);
@@ -388,7 +415,6 @@ export default function RecurringScreen() {
 
       </ScrollView>
 
-      {/* Add modal */}
       <PaymentModal
         visible={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -400,12 +426,10 @@ export default function RecurringScreen() {
         onSave={handleAdd}
         wallets={wallets}
         categories={categories}
-        showCategoryModal={showCategoryModal}
-        setShowCategoryModal={setShowCategoryModal}
+        labels={labels}
         colors={colors}
       />
 
-      {/* Edit modal */}
       {editing && (
         <PaymentModal
           visible={!!editing}
@@ -418,8 +442,7 @@ export default function RecurringScreen() {
           onSave={handleEdit}
           wallets={wallets}
           categories={categories}
-          showCategoryModal={showCategoryModal}
-          setShowCategoryModal={setShowCategoryModal}
+          labels={labels}
           colors={colors}
           onDelete={handleDelete}
           onToggleActive={handleToggleActive}
@@ -446,7 +469,7 @@ function DueCard({
   const currency = payment.wallet?.currency ?? 'HUF';
   const isOverdue = dueDate < today && isoDate(dueDate) !== isoDate(today);
   const diff = Math.round((dueDate.getTime() - today.getTime()) / 86400000);
-  let label = isoDate(dueDate) === isoDate(today) ? 'Today'
+  const label = isoDate(dueDate) === isoDate(today) ? 'Today'
     : diff === 1 ? 'Tomorrow'
     : diff < 0 ? `${Math.abs(diff)}d overdue`
     : diff < 7 ? `In ${diff} days`
@@ -535,13 +558,12 @@ function PaymentRow({
   );
 }
 
-// ─── PaymentModal ────────────────────────────────────────────────────────────
+// ─── PaymentModal (full-screen, matches [id].tsx layout) ─────────────────────
 
 function PaymentModal({
   visible, onClose, title,
   form, setForm, formError, saving, onSave,
-  wallets, categories,
-  showCategoryModal, setShowCategoryModal,
+  wallets, categories, labels,
   colors,
   onDelete, onToggleActive, isActive,
 }: {
@@ -555,212 +577,361 @@ function PaymentModal({
   onSave: () => void;
   wallets: Wallet[];
   categories: Category[];
-  showCategoryModal: boolean;
-  setShowCategoryModal: (v: boolean) => void;
+  labels: Label[];
   colors: any;
   onDelete?: () => void;
   onToggleActive?: () => void;
   isActive?: boolean;
 }) {
+  const { bottom } = useSafeAreaInsets();
+  const amountRef = useRef<TextInput>(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showLabelModal, setShowLabelModal] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [moreExpanded, setMoreExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!visible) {
+      setShowWalletModal(false);
+      setShowCategoryModal(false);
+      setShowLabelModal(false);
+      setShowStartDatePicker(false);
+      setShowEndDatePicker(false);
+      setMoreExpanded(false);
+    }
+  }, [visible]);
+
   function setField<K extends keyof EditForm>(key: K, value: EditForm[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function toggleLabel(id: string) {
+    setForm((f) => ({
+      ...f,
+      labelIds: f.labelIds.includes(id)
+        ? f.labelIds.filter((x) => x !== id)
+        : [...f.labelIds, id],
+    }));
+  }
+
+  const selectedWallet = wallets.find((w) => w.id === form.wallet_id);
   const selectedCategory = categories.find((c) => c.id === form.category_id);
+  const selectedLabels = labels.filter((l) => form.labelIds.includes(l.id));
+  const currency = selectedWallet?.currency ?? '';
+  const filteredCategories = categories.filter((c) => c.type === 'both' || c.type === form.type);
 
   return (
-    <>
-      <BottomModal visible={visible} onClose={onClose} title={title}>
-        <View style={styles.modalForm}>
-          {formError ? <Text style={[styles.formError, { color: colors.danger }]}>{formError}</Text> : null}
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaView edges={['top']} style={[styles.modalSafe, { backgroundColor: colors.bg }]}>
 
-          {/* Type chips */}
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Type</Text>
-            <View style={styles.chips}>
+        {/* Header */}
+        <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={onClose} style={styles.headerBtn}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
+          {onDelete ? (
+            <TouchableOpacity onPress={onDelete} style={styles.headerBtnRight}>
+              <Ionicons name="trash-outline" size={20} color={colors.danger} />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 40 }} />
+          )}
+        </View>
+
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView
+            contentContainerStyle={[styles.form, { paddingBottom: 24 }]}
+            keyboardShouldPersistTaps="handled"
+          >
+            {formError ? <Text style={[styles.error, { color: colors.danger }]}>{formError}</Text> : null}
+
+            {/* Type toggle */}
+            <View style={[styles.typeToggle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               {(['expense', 'income'] as const).map((t) => (
                 <TouchableOpacity
                   key={t}
                   style={[
-                    styles.chip,
-                    { borderColor: colors.border, backgroundColor: colors.surface },
-                    form.type === t && { borderColor: colors.accent, backgroundColor: colors.accent + '22' },
+                    styles.typeBtn,
+                    form.type === t && { backgroundColor: t === 'income' ? colors.income : colors.expense },
                   ]}
-                  onPress={() => setField('type', t)}
+                  onPress={() => { setField('type', t); setField('category_id', ''); }}
                 >
-                  <Text style={[styles.chipText, { color: form.type === t ? colors.accent : colors.text }]}>
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  <Text style={[styles.typeBtnText, { color: form.type === t ? '#fff' : colors.muted }]}>
+                    {t === 'expense' ? 'Expense' : 'Income'}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
 
-          <AppInput
-            label="Name"
-            value={form.name}
-            onChangeText={(v) => setField('name', v)}
-            placeholder="e.g. Netflix"
-          />
-          <AppInput
-            label="Amount"
-            value={form.amount}
-            onChangeText={(v) => setField('amount', v)}
-            keyboardType="decimal-pad"
-            placeholder="0.00"
-          />
-          <AppInput
-            label="Start date (YYYY-MM-DD)"
-            value={form.start_date}
-            onChangeText={(v) => setField('start_date', v)}
-            placeholder="2024-01-01"
-          />
-          <AppInput
-            label="End date (optional)"
-            value={form.end_date}
-            onChangeText={(v) => setField('end_date', v)}
-            placeholder="2025-12-31"
-          />
+            {/* Name */}
+            <AppInput
+              label="Name"
+              value={form.name}
+              onChangeText={(v) => setField('name', v)}
+              placeholder="e.g. Netflix"
+            />
 
-          {/* Frequency chips */}
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Frequency</Text>
-            <View style={styles.chips}>
-              {FREQUENCIES.map((f) => (
-                <TouchableOpacity
-                  key={f}
-                  style={[
-                    styles.chip,
-                    { borderColor: colors.border, backgroundColor: colors.surface },
-                    form.frequency === f && { borderColor: colors.accent, backgroundColor: colors.accent + '22' },
-                  ]}
-                  onPress={() => setField('frequency', f)}
-                >
-                  <Text style={[styles.chipText, { color: form.frequency === f ? colors.accent : colors.text }]}>
-                    {frequencyLabel(f)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Wallet chips */}
-          {wallets.length > 0 && (
+            {/* Wallet */}
             <View style={styles.fieldGroup}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>Wallet</Text>
+              <TouchableOpacity
+                style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                onPress={() => setShowWalletModal(true)}
+              >
+                <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
+                  {selectedWallet
+                    ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
+                    : 'Select wallet…'}
+                </Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Amount */}
+            <View style={styles.fieldGroup}>
+              <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                onPress={() => amountRef.current?.focus()}
+              >
+                <TextInput
+                  ref={amountRef}
+                  value={formatAmountDisplay(form.amount)}
+                  onChangeText={(v) => setField('amount', parseAmountInput(v))}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor={colors.muted}
+                  style={[styles.amountInput, { color: colors.text }]}
+                  textAlign="right"
+                />
+                {currency ? (
+                  <Text style={[styles.currencyLabel, { color: colors.accent }]}>{currency}</Text>
+                ) : null}
+              </TouchableOpacity>
+            </View>
+
+            {/* Start date */}
+            <View style={styles.fieldGroup}>
+              <Text style={[styles.fieldLabel, { color: colors.muted }]}>Start date</Text>
+              <TouchableOpacity
+                style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                onPress={() => setShowStartDatePicker(true)}
+              >
+                <Text style={[styles.pickerBtnText, { color: form.start_date ? colors.text : colors.muted }]}>
+                  {form.start_date || 'Select date…'}
+                </Text>
+                <Ionicons name="calendar-outline" size={18} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Frequency */}
+            <View style={styles.fieldGroup}>
+              <Text style={[styles.fieldLabel, { color: colors.muted }]}>Frequency</Text>
               <View style={styles.chips}>
-                {wallets.map((w) => (
+                {FREQUENCIES.map((f) => (
                   <TouchableOpacity
-                    key={w.id}
+                    key={f}
                     style={[
                       styles.chip,
                       { borderColor: colors.border, backgroundColor: colors.surface },
-                      form.wallet_id === w.id && { borderColor: colors.accent, backgroundColor: colors.accent + '22' },
+                      form.frequency === f && { borderColor: colors.accent, backgroundColor: colors.accent + '22' },
                     ]}
-                    onPress={() => setField('wallet_id', form.wallet_id === w.id ? '' : w.id)}
+                    onPress={() => setField('frequency', f)}
                   >
-                    {w.icon ? <Text>{w.icon} </Text> : null}
-                    <Text style={[styles.chipText, { color: form.wallet_id === w.id ? colors.accent : colors.text }]}>
-                      {w.name}
+                    <Text style={[styles.chipText, { color: form.frequency === f ? colors.accent : colors.text }]}>
+                      {frequencyLabel(f)}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
-          )}
 
-          {/* Category picker */}
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Category</Text>
+            {/* Category */}
+            <View style={styles.fieldGroup}>
+              <Text style={[styles.fieldLabel, { color: colors.muted }]}>Category</Text>
+              <TouchableOpacity
+                style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                onPress={() => setShowCategoryModal(true)}
+              >
+                <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]}>
+                  {selectedCategory
+                    ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
+                    : 'Select category…'}
+                </Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* More options */}
             <TouchableOpacity
-              style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-              onPress={() => setShowCategoryModal(true)}
+              style={[styles.moreToggle, { borderColor: colors.border }]}
+              onPress={() => setMoreExpanded((v) => !v)}
+              activeOpacity={0.7}
             >
-              <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]}>
-                {selectedCategory
-                  ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
-                  : 'Select category…'}
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+              <Text style={[styles.moreToggleText, { color: colors.muted }]}>More options</Text>
+              <Ionicons
+                name={moreExpanded ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={colors.muted}
+              />
             </TouchableOpacity>
+
+            {moreExpanded && (
+              <>
+                {labels.length > 0 && (
+                  <View style={styles.fieldGroup}>
+                    <Text style={[styles.fieldLabel, { color: colors.muted }]}>Labels</Text>
+                    <TouchableOpacity
+                      style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                      onPress={() => setShowLabelModal(true)}
+                    >
+                      <Text style={[styles.pickerBtnText, { color: selectedLabels.length ? colors.text : colors.muted }]}>
+                        {selectedLabels.length > 0
+                          ? selectedLabels.map((l) => l.name).join(', ')
+                          : 'Select labels…'}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <AppInput
+                  label="Payer (optional)"
+                  value={form.payer}
+                  onChangeText={(v) => setField('payer', v)}
+                  placeholder="e.g. OTP Bank"
+                />
+
+                <AppInput
+                  label="Notes (optional)"
+                  value={form.notes}
+                  onChangeText={(v) => setField('notes', v)}
+                  placeholder="Add a note…"
+                  multiline
+                  numberOfLines={3}
+                  style={{ minHeight: 80, textAlignVertical: 'top' }}
+                />
+
+                {/* End date */}
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>End date (optional)</Text>
+                  <TouchableOpacity
+                    style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                    onPress={() => setShowEndDatePicker(true)}
+                  >
+                    <Text style={[styles.pickerBtnText, { color: form.end_date ? colors.text : colors.muted }]}>
+                      {form.end_date || 'No end date'}
+                    </Text>
+                    <Ionicons name="calendar-outline" size={18} color={colors.muted} />
+                  </TouchableOpacity>
+                  {form.end_date ? (
+                    <TouchableOpacity onPress={() => setField('end_date', '')}>
+                      <Text style={[styles.clearText, { color: colors.muted }]}>Clear end date</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </>
+            )}
+
+            {/* Pause / Resume — only when editing */}
+            {onToggleActive && (
+              <TouchableOpacity style={styles.secondaryBtn} onPress={onToggleActive}>
+                <Ionicons name={isActive ? 'pause-outline' : 'play-outline'} size={16} color={colors.muted} />
+                <Text style={[styles.secondaryBtnText, { color: colors.muted }]}>
+                  {isActive ? 'Pause recurring payment' : 'Resume recurring payment'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+
+          {/* Sticky footer save button */}
+          <View style={[styles.stickyFooter, { paddingBottom: bottom + 16, borderTopColor: colors.border }]}>
+            <AppButton onPress={onSave} loading={saving} fullWidth>
+              {onDelete ? 'Save changes' : 'Save recurring payment'}
+            </AppButton>
           </View>
+        </KeyboardAvoidingView>
 
-          <AppInput
-            label="Payer / payee (optional)"
-            value={form.payer}
-            onChangeText={(v) => setField('payer', v)}
-            placeholder="e.g. OTP Bank"
-          />
-          <AppInput
-            label="Notes (optional)"
-            value={form.notes}
-            onChangeText={(v) => setField('notes', v)}
-            placeholder="Add a note…"
-            multiline
-            numberOfLines={2}
-            style={{ minHeight: 60, textAlignVertical: 'top' }}
-          />
-
-          <AppButton onPress={onSave} loading={saving} fullWidth>Save</AppButton>
-
-          {onToggleActive && (
-            <TouchableOpacity style={styles.secondaryBtn} onPress={onToggleActive}>
-              <Ionicons name={isActive ? 'pause-outline' : 'play-outline'} size={16} color={colors.muted} />
-              <Text style={[styles.secondaryBtnText, { color: colors.muted }]}>
-                {isActive ? 'Pause' : 'Resume'}
+        {/* Wallet picker */}
+        <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title="Select wallet">
+          {wallets.map((w) => (
+            <TouchableOpacity
+              key={w.id}
+              style={[
+                styles.modalRow,
+                { borderBottomColor: colors.border },
+                form.wallet_id === w.id && { backgroundColor: colors.accent + '11' },
+              ]}
+              onPress={() => { setField('wallet_id', w.id); setShowWalletModal(false); }}
+            >
+              {w.icon ? <Text style={styles.modalRowIcon}>{w.icon}</Text> : <View style={{ width: 28 }} />}
+              <Text style={[styles.modalRowText, { color: form.wallet_id === w.id ? colors.accent : colors.text }]}>
+                {w.name}
               </Text>
+              {form.wallet_id === w.id && <Text style={{ color: colors.accent }}>✓</Text>}
             </TouchableOpacity>
-          )}
+          ))}
+        </BottomModal>
 
-          {onDelete && (
-            <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
-              <Ionicons name="trash-outline" size={16} color={colors.danger} />
-              <Text style={[styles.deleteBtnText, { color: colors.danger }]}>Delete</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </BottomModal>
+        {/* Start date picker */}
+        <DatePickerModal
+          visible={showStartDatePicker}
+          value={form.start_date || isoDate(new Date())}
+          onConfirm={(d) => setField('start_date', d)}
+          onClose={() => setShowStartDatePicker(false)}
+        />
 
-      {/* Category sub-modal */}
-      <BottomModal
-        visible={showCategoryModal}
-        onClose={() => setShowCategoryModal(false)}
-        title="Select category"
-      >
-        <TouchableOpacity
-          style={[
-            styles.modalRow,
-            { borderBottomColor: colors.border },
-            !form.category_id && { backgroundColor: colors.accent + '11' },
-          ]}
-          onPress={() => { setField('category_id', ''); setShowCategoryModal(false); }}
-        >
-          <Text style={[styles.modalRowText, { color: !form.category_id ? colors.accent : colors.text }]}>
-            — None
-          </Text>
-          {!form.category_id && <Text style={{ color: colors.accent }}>✓</Text>}
-        </TouchableOpacity>
-        {categories.map((c) => (
-          <TouchableOpacity
-            key={c.id}
-            style={[
-              styles.modalRow,
-              { borderBottomColor: colors.border },
-              form.category_id === c.id && { backgroundColor: colors.accent + '11' },
-            ]}
-            onPress={() => { setField('category_id', c.id); setShowCategoryModal(false); }}
-          >
-            {c.icon
-              ? <Text style={styles.modalRowIcon}>{c.icon}</Text>
-              : <View style={{ width: 28 }} />}
-            <Text style={[styles.modalRowText, { color: form.category_id === c.id ? colors.accent : colors.text }]}>
-              {c.name}
-            </Text>
-            {form.category_id === c.id && <Text style={{ color: colors.accent }}>✓</Text>}
-          </TouchableOpacity>
-        ))}
-      </BottomModal>
-    </>
+        {/* End date picker */}
+        <DatePickerModal
+          visible={showEndDatePicker}
+          value={form.end_date || isoDate(new Date())}
+          onConfirm={(d) => setField('end_date', d)}
+          onClose={() => setShowEndDatePicker(false)}
+        />
+
+        {/* Category picker */}
+        <CategoryPickerModal
+          visible={showCategoryModal}
+          onClose={() => setShowCategoryModal(false)}
+          categories={filteredCategories}
+          selectedId={form.category_id}
+          onSelect={(id) => setField('category_id', id)}
+        />
+
+        {/* Label picker */}
+        <BottomModal visible={showLabelModal} onClose={() => setShowLabelModal(false)} title="Select labels">
+          {labels.map((l) => {
+            const selected = form.labelIds.includes(l.id);
+            return (
+              <TouchableOpacity
+                key={l.id}
+                style={[
+                  styles.modalRow,
+                  { borderBottomColor: colors.border },
+                  selected && { backgroundColor: l.color + '11' },
+                ]}
+                onPress={() => toggleLabel(l.id)}
+              >
+                <View style={[styles.labelDot, { backgroundColor: l.color }]} />
+                <Text style={[styles.modalRowText, { color: selected ? l.color : colors.text }]}>{l.name}</Text>
+                {selected && <Text style={{ color: l.color }}>✓</Text>}
+              </TouchableOpacity>
+            );
+          })}
+          <View style={{ marginTop: 8 }}>
+            <AppButton onPress={() => setShowLabelModal(false)} fullWidth>Done</AppButton>
+          </View>
+        </BottomModal>
+
+      </SafeAreaView>
+    </Modal>
   );
 }
 
@@ -810,89 +981,94 @@ const styles = StyleSheet.create({
   dueAmount: { fontSize: 13, fontFamily: 'Figtree_700Bold' },
   dueActions: { flexDirection: 'row', gap: 6 },
   skipBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 30, height: 30, borderRadius: 15, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
   },
   payBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
   },
   paymentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    gap: 10,
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, gap: 10,
   },
   paymentIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
+    width: 34, height: 34, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   paymentDot: { width: 10, height: 10, borderRadius: 5 },
   paymentName: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
   paymentSub: { fontSize: 12, marginTop: 1 },
   paymentAmount: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
 
-  // modal form styles
-  modalForm: { gap: 14, paddingBottom: 8 },
-  formError: { fontSize: 13, textAlign: 'center' },
+  // Full-screen modal
+  modalSafe: { flex: 1 },
+  headerBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1,
+  },
+  headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
+  headerBtnRight: { width: 40, alignItems: 'flex-end', justifyContent: 'center' },
+  headerTitle: { fontSize: 17, fontFamily: 'Figtree_600SemiBold' },
+  form: { padding: 16, gap: 16, flexGrow: 1 },
+  stickyFooter: {
+    paddingHorizontal: 16, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  error: { fontSize: 14, textAlign: 'center' },
+
+  // Type toggle (matches [id].tsx)
+  typeToggle: {
+    flexDirection: 'row', borderRadius: 12, borderWidth: 1,
+    overflow: 'hidden', padding: 4, gap: 4,
+  },
+  typeBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
+  typeBtnText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
+
+  // Fields (matches [id].tsx)
   fieldGroup: { gap: 8 },
   fieldLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
+  amountRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, minHeight: 46,
   },
-  chipText: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
+  amountInput: { flex: 1, fontSize: 16, paddingVertical: 10 },
+  currencyLabel: { fontSize: 15, fontFamily: 'Figtree_700Bold', marginLeft: 10 },
   pickerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, borderWidth: 1,
   },
   pickerBtnText: { fontSize: 15, flex: 1 },
+
+  // Frequency chips
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
+  },
+  chipText: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
+
+  // More options (matches [id].tsx)
+  moreToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderStyle: 'dashed',
+  },
+  moreToggleText: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
+  clearText: { fontSize: 13, textAlign: 'right' },
+
+  // Secondary action
+  secondaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 10,
+  },
+  secondaryBtnText: { fontSize: 15, fontFamily: 'Figtree_500Medium' },
+
+  // Modal list rows (matches [id].tsx)
   modalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 10,
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 12, paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth, gap: 10,
   },
   modalRowIcon: { fontSize: 20, width: 28, textAlign: 'center' },
   modalRowText: { flex: 1, fontSize: 15 },
-  secondaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-  },
-  secondaryBtnText: { fontSize: 15, fontFamily: 'Figtree_500Medium' },
-  deleteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-  },
-  deleteBtnText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
+  labelDot: { width: 12, height: 12, borderRadius: 6 },
 });
