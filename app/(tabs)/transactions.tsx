@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
@@ -19,7 +20,7 @@ import BottomModal from '@/components/BottomModal';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { Ionicons } from '@expo/vector-icons';
 import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
-import { groupByDate, formatDate } from '@/lib/utils';
+import { groupByDate, formatDate, formatCurrency } from '@/lib/utils';
 import SkeletonBox from '@/components/SkeletonBox';
 import Toast from '@/components/Toast';
 import { Events } from '@/lib/events';
@@ -106,6 +107,9 @@ export default function TransactionsScreen() {
   const [labelFilter, setLabelFilter] = useState<string>('');
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
 
+  const [activeTab, setActiveTab] = useState<'transactions' | 'wallets'>('transactions');
+  const [walletBalances, setWalletBalances] = useState<Map<string, number>>(new Map());
+
   const [openModal, setOpenModal] = useState<ModalKind>(null);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -120,7 +124,7 @@ export default function TransactionsScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: w }, { data: t }, { data: c }, { data: l }] = await Promise.all([
+    const [{ data: w }, { data: t }, { data: c }, { data: l }, { data: allTxSums }] = await Promise.all([
       supabase.from('wallets').select('*').eq('user_id', user.id).order('is_default', { ascending: false }),
       supabase
         .from('transactions')
@@ -132,11 +136,22 @@ export default function TransactionsScreen() {
         .limit(10000),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
       supabase.from('labels').select('*').eq('user_id', user.id).order('name'),
+      supabase.from('transactions').select('wallet_id, type, amount').eq('user_id', user.id).limit(10000),
     ]);
 
-    setWallets(w ?? []);
+    const walletList = w ?? [];
+    setWallets(walletList);
     setCategories(c ?? []);
     setLabels(l ?? []);
+
+    const balMap = new Map<string, number>();
+    for (const wl of walletList) {
+      const wTxs = (allTxSums ?? []).filter((tx: any) => tx.wallet_id === wl.id);
+      const inc = wTxs.filter((tx: any) => tx.type === 'income').reduce((s: number, tx: any) => s + tx.amount, 0);
+      const exp = wTxs.filter((tx: any) => tx.type === 'expense').reduce((s: number, tx: any) => s + tx.amount, 0);
+      balMap.set(wl.id, (wl.starting_balance ?? 0) + inc - exp);
+    }
+    setWalletBalances(balMap);
     setTransactions((t ?? []).map((tx: any) => ({
       ...tx,
       labels: (tx.labels ?? []).map((l: any) => l.label).filter(Boolean),
@@ -208,7 +223,58 @@ export default function TransactionsScreen() {
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <AppHeader title="Transactions" />
-      <FlatList
+
+      {/* Tab switcher */}
+      <View style={[styles.tabStrip, { borderBottomColor: colors.border }]}>
+        {(['transactions', 'wallets'] as const).map((tab) => {
+          const active = activeTab === tab;
+          return (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tabBtn, active && { borderBottomColor: colors.accent, borderBottomWidth: 2 }]}
+              onPress={() => setActiveTab(tab)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.tabBtnText, { color: active ? colors.accent : colors.muted }]}>
+                {tab === 'transactions' ? 'Transactions' : 'Wallets'}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Wallets tab */}
+      {activeTab === 'wallets' && (
+        <ScrollView
+          contentContainerStyle={[styles.walletsList, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
+          {wallets.map((w) => {
+            const balance = walletBalances.get(w.id) ?? 0;
+            const balColor = balance >= 0 ? colors.income : colors.expense;
+            return (
+              <View key={w.id} style={[styles.walletCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={[styles.walletColorBar, { backgroundColor: w.color || colors.muted }]} />
+                <View style={styles.walletIcon}>
+                  {w.icon
+                    ? <Text style={{ fontSize: 22 }}>{w.icon}</Text>
+                    : <View style={[styles.walletIconFallback, { backgroundColor: (w.color || colors.muted) + '33' }]} />}
+                </View>
+                <View style={styles.walletInfo}>
+                  <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
+                  <Text style={[styles.walletCurrency, { color: colors.muted }]}>{w.currency}</Text>
+                </View>
+                <Text style={[styles.walletBalance, { color: balColor }]}>
+                  {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), w.currency as any)}
+                </Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
+
+      {/* Transactions tab */}
+      {activeTab === 'transactions' && <FlatList
         data={flat}
         keyExtractor={(item) => item.kind === 'header' ? `h-${item.date}` : item.tx.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -310,7 +376,7 @@ export default function TransactionsScreen() {
           )
         }
         ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
-      />
+      />}
 
       {/* Type modal */}
       <BottomModal visible={openModal === 'type'} onClose={() => setOpenModal(null)} title="Transaction type">
@@ -430,6 +496,28 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
+
+  tabStrip: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
+  tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12 },
+  tabBtnText: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
+
+  walletsList: { padding: 16, gap: 10 },
+  walletCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+    gap: 12,
+    paddingRight: 14,
+  },
+  walletColorBar: { width: 4, alignSelf: 'stretch' },
+  walletIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  walletIconFallback: { width: 28, height: 28, borderRadius: 8 },
+  walletInfo: { flex: 1, paddingVertical: 14, gap: 2 },
+  walletName: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
+  walletCurrency: { fontSize: 12, fontFamily: 'Figtree_500Medium' },
+  walletBalance: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
   skeletonRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
