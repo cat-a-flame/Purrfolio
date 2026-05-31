@@ -16,7 +16,6 @@ import TransactionRow from '@/components/TransactionRow';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Currency } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
-import { getMNBRates, toHUF, type Rates } from '@/lib/exchange';
 import { useCountUp } from '@/lib/useCountUp';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -69,7 +68,6 @@ export default function DashboardScreen() {
   const [currency, setCurrency] = useState<Currency>('HUF');
   const [periodTxs, setPeriodTxs] = useState<Transaction[]>([]);
   const [prevNet, setPrevNet] = useState<number | null>(null);
-  const [rates, setRates] = useState<Rates>({});
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -77,7 +75,7 @@ export default function DashboardScreen() {
     if (!user) return;
 
     const prev = getPrevRange(period);
-    const [{ data: w }, { data: txs }, { data: prevTxs }, fetchedRates] = await Promise.all([
+    const [{ data: w }, { data: txs }, { data: prevTxs }] = await Promise.all([
       supabase
         .from('wallets')
         .select('currency, is_default')
@@ -94,13 +92,12 @@ export default function DashboardScreen() {
       // Previous period transactions for vs% (exclude transfers)
       supabase
         .from('transactions')
-        .select('type, amount, wallet:wallets(currency)')
+        .select('type, amount')
         .eq('user_id', user.id)
         .gte('date', prev.from)
         .lte('date', prev.to)
         .is('transfer_group_id', null)
         .limit(10000),
-      getMNBRates(),
     ]);
 
     const defaultW = (w ?? []).find((wl: any) => wl.is_default) ?? (w ?? [])[0];
@@ -112,10 +109,9 @@ export default function DashboardScreen() {
     }));
     setPeriodTxs(normalized);
 
-    setRates(fetchedRates);
     const pList = prevTxs ?? [];
-    const pInc = pList.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + toHUF(t.amount, t.wallet?.currency, fetchedRates), 0);
-    const pExp = pList.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + toHUF(t.amount, t.wallet?.currency, fetchedRates), 0);
+    const pInc = pList.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
+    const pExp = pList.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
     setPrevNet(pInc - pExp);
   }, [period.from, period.to]);
 
@@ -127,18 +123,18 @@ export default function DashboardScreen() {
     setRefreshing(false);
   }, [load]);
 
-  // Cash flow — exclude transfers, convert to HUF via MNB middle rate
+  // Cash flow — exclude transfers; amounts in native wallet currency (raw sum, same as PennyPuff)
   const nonTransferTxs = useMemo(
     () => periodTxs.filter(tx => !tx.transfer_group_id),
     [periodTxs],
   );
   const income = useMemo(
-    () => nonTransferTxs.filter(t => t.type === 'income').reduce((s, t) => s + toHUF(t.amount, t.wallet?.currency, rates), 0),
-    [nonTransferTxs, rates],
+    () => nonTransferTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+    [nonTransferTxs],
   );
   const expense = useMemo(
-    () => nonTransferTxs.filter(t => t.type === 'expense').reduce((s, t) => s + toHUF(t.amount, t.wallet?.currency, rates), 0),
-    [nonTransferTxs, rates],
+    () => nonTransferTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+    [nonTransferTxs],
   );
   const net = income - expense;
   const animatedNet = useCountUp(net);
@@ -163,13 +159,13 @@ export default function DashboardScreen() {
   const flat = useMemo<ListItem[]>(() => {
     const items: ListItem[] = [];
     for (const g of groups) {
-      const dayIncome = g.items.filter(t => t.type === 'income' && !t.transfer_group_id).reduce((s, t) => s + toHUF(t.amount, t.wallet?.currency, rates), 0);
-      const dayExpense = g.items.filter(t => t.type === 'expense' && !t.transfer_group_id).reduce((s, t) => s + toHUF(t.amount, t.wallet?.currency, rates), 0);
+      const dayIncome = g.items.filter(t => t.type === 'income' && !t.transfer_group_id).reduce((s, t) => s + t.amount, 0);
+      const dayExpense = g.items.filter(t => t.type === 'expense' && !t.transfer_group_id).reduce((s, t) => s + t.amount, 0);
       items.push({ kind: 'dayHeader', date: g.date, dayNet: dayIncome - dayExpense });
       for (const tx of g.items) items.push({ kind: 'tx', tx });
     }
     return items;
-  }, [groups, rates]);
+  }, [groups]);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>

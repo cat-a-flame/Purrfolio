@@ -15,7 +15,6 @@ import { useTheme, Colors } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { formatCurrency } from '@/lib/utils';
-import { getMNBRates, toHUF, type Rates } from '@/lib/exchange';
 import type { Currency, Wallet } from '@/lib/types';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -73,7 +72,7 @@ type CategoryStat = {
   count: number;
 };
 
-function groupByCategory(txs: any[], type: 'income' | 'expense', rates: Rates): CategoryStat[] {
+function groupByCategory(txs: any[], type: 'income' | 'expense'): CategoryStat[] {
   const map = new Map<string | null, CategoryStat>();
   for (const tx of txs) {
     if (tx.type !== type) continue;
@@ -83,7 +82,7 @@ function groupByCategory(txs: any[], type: 'income' | 'expense', rates: Rates): 
       map.set(key, { id: key, name: cat?.name ?? 'Uncategorised', icon: cat?.icon ?? null, color: cat?.color ?? null, amount: 0, count: 0 });
     }
     const s = map.get(key)!;
-    s.amount += toHUF(tx.amount, tx.wallet?.currency, rates);
+    s.amount += tx.amount;
     s.count += 1;
   }
   return Array.from(map.values()).sort((a, b) => b.amount - a.amount);
@@ -147,7 +146,6 @@ export default function StatsScreen() {
   const [wallets, setWallets] = useState<(Wallet & { _balance: number })[]>([]);
   const [txs, setTxs] = useState<any[]>([]);
   const [prevTxs, setPrevTxs] = useState<any[]>([]);
-  const [rates, setRates] = useState<Rates>({});
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -161,13 +159,12 @@ export default function StatsScreen() {
       { data: allTxSums },
       { data: periodData },
       { data: prevData },
-      fetchedRates,
     ] = await Promise.all([
       supabase.from('wallets').select('*').eq('user_id', user.id).order('is_default', { ascending: false }),
       supabase.from('transactions').select('wallet_id, type, amount').eq('user_id', user.id).limit(10000),
       supabase
         .from('transactions')
-        .select('type, amount, wallet_id, wallet:wallets(currency), category:categories(id, name, icon, color)')
+        .select('type, amount, wallet_id, category:categories(id, name, icon, color)')
         .eq('user_id', user.id)
         .gte('date', period.from)
         .lte('date', period.to)
@@ -175,13 +172,12 @@ export default function StatsScreen() {
         .limit(10000),
       supabase
         .from('transactions')
-        .select('type, amount, wallet:wallets(currency), category:categories(id, name, icon, color)')
+        .select('type, amount, category:categories(id, name, icon, color)')
         .eq('user_id', user.id)
         .gte('date', prevRange.from)
         .lte('date', prevRange.to)
         .is('transfer_group_id', null)
         .limit(10000),
-      getMNBRates(),
     ]);
 
     const walletList = walletRows ?? [];
@@ -196,7 +192,6 @@ export default function StatsScreen() {
     setWallets(walletList.map((w: any) => ({ ...w, _balance: balanceMap.get(w.id) ?? w.starting_balance ?? 0 })));
     setTxs(periodData ?? []);
     setPrevTxs(prevData ?? []);
-    setRates(fetchedRates);
   }, [period.from, period.to]);
 
   useEffect(() => { load(); }, [load]);
@@ -207,15 +202,9 @@ export default function StatsScreen() {
     setRefreshing(false);
   }, [load]);
 
-  // aggregates — all amounts converted to HUF via MNB middle rate
-  const income = useMemo(
-    () => txs.filter(t => t.type === 'income').reduce((s: number, t: any) => s + toHUF(t.amount, t.wallet?.currency, rates), 0),
-    [txs, rates],
-  );
-  const expense = useMemo(
-    () => txs.filter(t => t.type === 'expense').reduce((s: number, t: any) => s + toHUF(t.amount, t.wallet?.currency, rates), 0),
-    [txs, rates],
-  );
+  // aggregates
+  const income = useMemo(() => txs.filter(t => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0), [txs]);
+  const expense = useMemo(() => txs.filter(t => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0), [txs]);
   const net = income - expense;
   const txCount = txs.length;
 
@@ -224,7 +213,7 @@ export default function StatsScreen() {
     return (def?.currency as Currency) ?? 'HUF';
   }, [wallets]);
 
-  const expenseByCategory = useMemo(() => groupByCategory(txs, 'expense', rates), [txs, rates]);
+  const expenseByCategory = useMemo(() => groupByCategory(txs, 'expense'), [txs]);
 
   // Merge categories under 10 000 into "Other" for the chart
   const displayExpenseByCategory = useMemo(() => {
@@ -248,7 +237,7 @@ export default function StatsScreen() {
       .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
   }, [wallets]);
 
-  const prevExpenseByCategory = useMemo(() => groupByCategory(prevTxs, 'expense', rates), [prevTxs, rates]);
+  const prevExpenseByCategory = useMemo(() => groupByCategory(prevTxs, 'expense'), [prevTxs]);
 
   const comparisonData = useMemo(() => {
     const allIds = new Set([
