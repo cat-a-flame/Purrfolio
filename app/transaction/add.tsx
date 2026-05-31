@@ -258,7 +258,7 @@ export default function AddTransactionScreen() {
       }
     }
 
-    Events.emit('transaction-saved', { success: true });
+    Events.emit('transaction-saved', { success: true, message: 'Record created.' });
     setLoading(false);
     router.back();
   }

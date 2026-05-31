@@ -158,7 +158,7 @@ export default function TransactionsScreen() {
   useEffect(() => {
     return Events.on('transaction-saved', ({ success, message }: { success: boolean; message?: string }) => {
       loadRef.current(true);
-      setToast({ visible: true, message: success ? 'Transaction saved!' : (message ?? 'Failed to save.'), success });
+      setToast({ visible: true, message: message ?? (success ? 'Done.' : 'Something went wrong.'), success });
       setTimeout(() => setToast(t => ({ ...t, visible: false })), 3000);
     });
   }, []);

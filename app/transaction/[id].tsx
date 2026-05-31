@@ -174,7 +174,7 @@ export default function EditTransactionScreen() {
     }
 
     setLoading(false);
-    Events.emit('transaction-saved', { success: true, message: 'Transaction updated.' });
+    Events.emit('transaction-saved', { success: true, message: 'Record updated.' });
     router.back();
   }
 
@@ -188,7 +188,7 @@ export default function EditTransactionScreen() {
           const { error: txErr } = await supabase.from('transactions').delete().eq('id', id);
           Events.emit('transaction-saved', {
             success: !txErr,
-            message: txErr ? (txErr.message ?? 'Failed to delete.') : 'Transaction deleted.',
+            message: txErr ? (txErr.message ?? 'Failed to delete.') : 'Record deleted.',
           });
           router.back();
         },
