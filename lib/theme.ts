@@ -6,7 +6,7 @@ export const lightColors = {
   bg: '#f5f3f7',
   surface: '#ffffff',
   accent: '#692f7c',
-  text: '#1c1a17',
+  text: '#523e5c',
   muted: '#8972a4',
   danger: '#ef573c',
   income: '#149a83',

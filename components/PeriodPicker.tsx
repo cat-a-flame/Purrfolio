@@ -137,16 +137,16 @@ export default function PeriodPicker({ value, onChange }: Props) {
       {/* Trigger row */}
       <View style={s.trigger}>
         <TouchableOpacity onPress={() => navigate(-1)} style={s.navBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={22} color={colors.text} />
+          <Ionicons name="chevron-back" size={22} color={colors.muted} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => setOpen(true)} style={s.labelBtn}>
           <Text style={s.labelText}>{value.label}</Text>
-          <Ionicons name="chevron-down" size={16} color={colors.muted} style={{ marginLeft: 2 }} />
+          <Ionicons name="chevron-down" size={16} color={colors.text} style={{ marginLeft: 2 }} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigate(1)} style={s.navBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-forward" size={22} color={colors.text} />
+          <Ionicons name="chevron-forward" size={22} color={colors.muted} />
         </TouchableOpacity>
       </View>
 

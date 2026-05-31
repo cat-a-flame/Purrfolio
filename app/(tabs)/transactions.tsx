@@ -290,7 +290,7 @@ export default function TransactionsScreen() {
             />
           );
         }}
-        ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListHeaderComponent={
           <View style={styles.headerBlock}>
             <View style={styles.titleRow}>

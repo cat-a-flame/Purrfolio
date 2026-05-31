@@ -128,7 +128,7 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
       {/* SVG bar fills the lower barHeight portion */}
       <View style={[styles.svgContainer, { height: barHeight }]}>
         <Svg width={SCREEN_WIDTH} height={barHeight} style={StyleSheet.absoluteFill}>
-          <Path d={buildPath(SCREEN_WIDTH, barHeight)} fill="#fff" />
+          <Path d={buildPath(SCREEN_WIDTH, barHeight)} fill={colors.surface} />
           <Path
             d={buildTopEdge(SCREEN_WIDTH)}
             fill="none"

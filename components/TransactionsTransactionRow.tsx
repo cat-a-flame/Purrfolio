@@ -34,64 +34,80 @@ export default function TransactionsTransactionRow({ transaction: tx, onPress }:
       activeOpacity={onPress ? 0.7 : 1}
       style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
-      {/* Icon with coloured background */}
-      <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
-        {isTransfer ? (
-          <Ionicons name="swap-horizontal-outline" size={20} color={colors.muted} />
-        ) : icon ? (
-          <Text style={styles.icon}>{icon}</Text>
-        ) : (
-          <Text style={[styles.iconFallback, { color: colors.muted }]}>?</Text>
-        )}
-      </View>
+      <View style={[styles.wrapper]}>
+        {/* Icon with coloured background */}
+        <View style={[styles.iconBox, { backgroundColor: '#fcf1ff' }]}>
+          {isTransfer ? (
+            <Ionicons name="swap-horizontal-outline" size={20} color={colors.muted} />
+          ) : icon ? (
+            <Text style={styles.icon}>{icon}</Text>
+          ) : (
+            <Text style={[styles.iconFallback, { color: colors.muted }]}>?</Text>
+          )}
+        </View>
 
-      <View style={styles.info}>
-        <Text style={[styles.category, { color: colors.text }]}>{label}</Text>
+        <View style={styles.info}>
+          <Text style={[styles.category, { color: colors.text }]}>{label}</Text>
 
-        {/* Wallet: coloured dot + name */}
-        {tx.wallet ? (
-          <View style={styles.walletRow}>
-            <View style={[styles.walletDot, { backgroundColor: tx.wallet.color || colors.muted }]} />
-            <Text style={[styles.sub, { color: colors.muted }]}>{tx.wallet.name}</Text>
-          </View>
-        ) : null}
-
-        {tx.notes ? (
-          <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={1}>
-            {tx.notes}
-          </Text>
-        ) : null}
-        {tx.payer ? (
-          <Text style={[styles.sub, { color: colors.muted }]}>{tx.payer}</Text>
-        ) : null}
-        {tx.labels && tx.labels.length > 0 && (
-          <View style={styles.labels}>
-            {tx.labels.map((l) => (
-              <View key={l.id} style={[styles.labelChip, { backgroundColor: l.color + '33' }]}>
-                <Text style={[styles.labelText, { color: l.color }]}>{l.name}</Text>
+          <View style={styles.walletLabelRow}>
+            {/* Wallet: coloured dot + name */}
+            {tx.wallet ? (
+              <View style={styles.walletRow}>
+                <Ionicons name="wallet" size={12} color={colors.muted} />
+                <Text style={[styles.sub, { color: colors.muted }]}>{tx.wallet.name}</Text>
               </View>
-            ))}
+            ) : null}
+
+            {tx.labels && tx.labels.length > 0 && (
+              <View style={styles.labels}>
+                {tx.labels.map((l) => (
+                  <View key={l.id} style={[styles.labelChip]}>
+                    <Ionicons name="pricetag" size={12} color={colors.muted} />
+                    <Text style={[styles.labelText, { color: colors.muted }]}>{l.name}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
-        )}
+
+        </View>
+
+        <View style={styles.amountCol}>
+          <Text style={[styles.amount, { color: amountColor }]}>
+            {amountPrefix}{formatCurrency(tx.amount, currency)}
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.amountCol}>
-        <Text style={[styles.amount, { color: amountColor }]}>
-          {amountPrefix}{formatCurrency(tx.amount, currency)}
-        </Text>
-      </View>
+      {tx.payer && tx.notes && tx.notes.length > 0 && (
+        <View style={[styles.subtext, { borderColor: colors.border2 }]}>
+          {tx.payer ? (
+            <Text style={[styles.sub, { color: colors.text }]}>{tx.payer}</Text>
+          ) : null}
+
+          {tx.notes ? (
+            <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={2}>
+              {tx.notes}
+            </Text>
+          ) : null}
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 0,
+  },
+  wrapper: {
+    display: 'flex',
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
+    alignItems: 'center',
     gap: 10,
+    paddingHorizontal: 12,
   },
   iconBox: {
     width: 40,
@@ -116,11 +132,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
   },
-  walletDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
   sub: {
     fontSize: 13,
   },
@@ -128,24 +139,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 4,
-    marginTop: 4,
   },
   labelChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   labelText: {
-    fontSize: 11,
-    fontFamily: 'Figtree_500Medium',
+    fontSize: 13,
   },
   amountCol: {
     alignItems: 'flex-end',
     justifyContent: 'flex-start',
-    paddingTop: 10,
   },
   amount: {
     fontSize: 15,
     fontFamily: 'Figtree_700Bold',
   },
+  walletLabelRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  subtext: {
+    borderTopWidth: 1,
+    marginTop: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    gap: 4,
+    flexWrap: 'wrap',
+  }
 });

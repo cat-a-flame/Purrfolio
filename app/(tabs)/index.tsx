@@ -243,9 +243,12 @@ export default function DashboardScreen() {
             />
           );
         }}
-        ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListHeaderComponent={
           <View style={styles.header}>
+            {/* Period picker */}
+            <PeriodPicker value={period} onChange={setPeriod} />
+            
             {/* Cash Flow card */}
             <LinearGradient
               colors={[
@@ -273,8 +276,8 @@ export default function DashboardScreen() {
               {loading
                 ? <SkeletonBox style={{ height: 34, width: 170, borderRadius: 6, backgroundColor: '#ffffff40' }} />
                 : <Text style={[styles.cashFlowNet, { color: net >= 0 ? '#fff' : '#ffcaca' }]}>
-                    {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), 'HUF')}
-                  </Text>
+                  {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), 'HUF')}
+                </Text>
               }
 
               {/* Income bar */}
@@ -305,14 +308,11 @@ export default function DashboardScreen() {
                 </View>
               </View>
             </LinearGradient>
-
-            {/* Period picker */}
-            <PeriodPicker value={period} onChange={setPeriod} />
           </View>
         }
         ListEmptyComponent={
           loading ? (
-            <View style={{ gap: 6, marginTop: 4 }}>
+            <View style={{ gap: 10, marginTop: 4 }}>
               {[3, 2, 2].map((count, gi) => (
                 <View key={gi}>
                   <View style={[styles.dayHeader, { marginTop: 20, marginBottom: 10 }]}>
@@ -357,9 +357,10 @@ const styles = StyleSheet.create({
   header: { gap: 12, marginBottom: 8 },
 
   cashFlow: {
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 0,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
     gap: 10,
     marginBottom: 8,
     marginTop: 6,
@@ -382,9 +383,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 6,
-    paddingHorizontal: 2,
+    marginTop: 24,
+    marginBottom: 0,
+    paddingHorizontal: 4,
   },
   dayDate: { fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
   dayNet: { fontSize: 13, fontFamily: 'Figtree_700Bold' },
