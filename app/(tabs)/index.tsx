@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,12 @@ import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
-import TransactionRow from '@/components/DashboardTransactionRow';
+import TransactionRow from '@/components/TransactionRow';
 import SkeletonBox from '@/components/SkeletonBox';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Currency } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
-import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import { getMNBRatesForPeriod, getMNBRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
 import { Events } from '@/lib/events';
 import Toast from '@/components/Toast';
 import { useRouter } from 'expo-router';
@@ -118,9 +118,9 @@ export default function DashboardScreen() {
     }));
     setPeriodTxs(normalized);
 
-    let periodRates = await getExchangeRatesForPeriod(period.from, period.to);
+    let periodRates = await getMNBRatesForPeriod(period.from, period.to);
     if (Object.keys(periodRates).length === 0) {
-      const current = await getExchangeRates();
+      const current = await getMNBRates();
       if (Object.keys(current).length > 0) {
         periodRates = { [period.from]: current };
       }
@@ -148,7 +148,7 @@ export default function DashboardScreen() {
   useEffect(() => {
     return Events.on('transaction-saved', ({ success, message }: { success: boolean; message?: string }) => {
       loadRef.current(true);
-      setToast({ visible: true, message: message ?? (success ? 'Done.' : 'Something went wrong.'), success });
+      setToast({ visible: true, message: success ? 'Transaction saved!' : (message ?? 'Failed to save.'), success });
       setTimeout(() => setToast(t => ({ ...t, visible: false })), 3000);
     });
   }, []);

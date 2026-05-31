@@ -32,10 +32,10 @@ export default function DashboardTransactionRow({ transaction: tx, onPress }: Pr
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={onPress ? 0.7 : 1}
-      style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      style={[styles.row, { backgroundColor: colors.surface, borderWidth: 0 }]}
     >
       {/* Icon with coloured background */}
-      <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
+      <View style={[styles.iconBox, { backgroundColor: '#fcf1ff' }]}>
         {isTransfer ? (
           <Ionicons name="swap-horizontal-outline" size={20} color={colors.muted} />
         ) : icon ? (
@@ -51,7 +51,7 @@ export default function DashboardTransactionRow({ transaction: tx, onPress }: Pr
         <View style={styles.walletLabelRow}>
           {tx.wallet ? (
             <View style={styles.walletRow}>
-              <Ionicons name="wallet-outline" size={12} color={colors.muted} />
+              <Ionicons name="wallet" size={12} color={colors.muted} />
               <Text style={[styles.sub, { color: colors.muted }]}>{tx.wallet.name}</Text>
             </View>
           ) : null}
@@ -59,7 +59,7 @@ export default function DashboardTransactionRow({ transaction: tx, onPress }: Pr
             <View style={styles.labels}>
               {tx.labels.map((l) => (
                 <View key={l.id} style={[styles.labelChip]}>
-                  <Ionicons name="pricetag-outline" size={12} color={colors.muted} />
+                  <Ionicons name="pricetag" size={12} color={colors.muted} />
                   <Text style={[styles.labelText, { color: colors.muted }]}>{l.name}</Text>
                 </View>
               ))}
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 0,
     gap: 10,
   },
   iconBox: {

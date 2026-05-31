@@ -77,8 +77,8 @@ function buildTopEdge(w: number): string {
 const TAB_ICONS: Record<string, { outline: string; filled: string }> = {
   index:        { outline: 'home-outline',       filled: 'home' },
   transactions: { outline: 'list-outline',       filled: 'list' },
-  recurring:    { outline: 'repeat-outline',     filled: 'repeat' },
-  stats:        { outline: 'bar-chart-outline',  filled: 'bar-chart' },
+  recurring:    { outline: 'refresh-outline',     filled: 'refresh' },
+  stats:        { outline: 'stats-chart-outline',  filled: 'stats-chart' },
 };
 
 
@@ -128,12 +128,12 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
       {/* SVG bar fills the lower barHeight portion */}
       <View style={[styles.svgContainer, { height: barHeight }]}>
         <Svg width={SCREEN_WIDTH} height={barHeight} style={StyleSheet.absoluteFill}>
-          <Path d={buildPath(SCREEN_WIDTH, barHeight)} fill="#fcf1ff" />
+          <Path d={buildPath(SCREEN_WIDTH, barHeight)} fill="#fff" />
           <Path
             d={buildTopEdge(SCREEN_WIDTH)}
             fill="none"
             stroke={colors.border2}
-            strokeWidth={0}
+            strokeWidth={1}
           />
         </Svg>
 

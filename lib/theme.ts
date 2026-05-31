@@ -3,7 +3,7 @@ import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const lightColors = {
-  bg: '#fff',
+  bg: '#f5f3f7',
   surface: '#ffffff',
   accent: '#692f7c',
   text: '#1c1a17',

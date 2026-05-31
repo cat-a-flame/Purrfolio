@@ -222,7 +222,7 @@ export default function TransactionsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AppHeader title="Transactions" />
+      <AppHeader title="Overview" />
 
       {/* Tab switcher */}
       <View style={[styles.tabStrip, { borderBottomColor: colors.border }]}>
@@ -236,7 +236,7 @@ export default function TransactionsScreen() {
               activeOpacity={0.7}
             >
               <Text style={[styles.tabBtnText, { color: active ? colors.accent : colors.muted }]}>
-                {tab === 'transactions' ? 'Overview' : 'Accounts'}
+                {tab === 'transactions' ? 'Transactions' : 'Accounts'}
               </Text>
             </TouchableOpacity>
           );

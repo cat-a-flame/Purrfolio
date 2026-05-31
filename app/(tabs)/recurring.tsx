@@ -636,7 +636,7 @@ function PaymentModal({
           <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
           {onDelete ? (
             <TouchableOpacity onPress={onDelete} style={styles.headerBtnRight}>
-              <Ionicons name="trash-outline" size={20} color={colors.danger} />
+              <Ionicons name="trash" size={22} color={colors.danger} />
             </TouchableOpacity>
           ) : (
             <View style={{ width: 40 }} />
@@ -729,7 +729,7 @@ function PaymentModal({
                 <Text style={[styles.pickerBtnText, { color: form.start_date ? colors.text : colors.muted }]}>
                   {form.start_date || 'Select date…'}
                 </Text>
-                <Ionicons name="calendar-outline" size={18} color={colors.muted} />
+                <Ionicons name="calendar" size={18} color={colors.muted} />
               </TouchableOpacity>
             </View>
 
@@ -823,7 +823,7 @@ function PaymentModal({
                     <Text style={[styles.pickerBtnText, { color: form.end_date ? colors.text : colors.muted }]}>
                       {form.end_date || 'No end date'}
                     </Text>
-                    <Ionicons name="calendar-outline" size={18} color={colors.muted} />
+                    <Ionicons name="calendar" size={18} color={colors.muted} />
                   </TouchableOpacity>
                   {form.end_date ? (
                     <TouchableOpacity onPress={() => setField('end_date', '')}>
@@ -869,7 +869,9 @@ function PaymentModal({
               <Text style={[styles.modalRowText, { color: form.wallet_id === w.id ? colors.accent : colors.text }]}>
                 {w.name}
               </Text>
-              {form.wallet_id === w.id && <Text style={{ color: colors.accent }}>✓</Text>}
+              {form.wallet_id === w.id && <Text style={{ color: colors.accent }}>
+                <Ionicons name="checkmark" size={18} color={colors.accent} />  
+              </Text>}
             </TouchableOpacity>
           ))}
         </BottomModal>
@@ -889,7 +891,7 @@ function PaymentModal({
               <Text style={[styles.modalRowText, { color: form.frequency === f ? colors.accent : colors.text }]}>
                 {frequencyLabel(f)}
               </Text>
-              {form.frequency === f && <Text style={{ color: colors.accent }}>✓</Text>}
+              {form.frequency === f && <Text style={{ color: colors.accent }}><Ionicons name="checkmark" size={18} color={colors.accent} /></Text>}
             </TouchableOpacity>
           ))}
         </BottomModal>
@@ -935,7 +937,7 @@ function PaymentModal({
               >
                 <View style={[styles.labelDot, { backgroundColor: l.color }]} />
                 <Text style={[styles.modalRowText, { color: selected ? l.color : colors.text }]}>{l.name}</Text>
-                {selected && <Text style={{ color: l.color }}>✓</Text>}
+                {selected && <Text style={{ color: l.color }}><Ionicons name="checkmark" size={18} color={l.color} /></Text>}
               </TouchableOpacity>
             );
           })}

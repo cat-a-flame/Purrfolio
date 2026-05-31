@@ -80,7 +80,7 @@ export default function AppHeader({ title, leftAction }: Props) {
         <Text style={[styles.barTitle, { color: colors.text }]}>{title}</Text>
         <View style={[styles.side, styles.sideRight]}>
           <TouchableOpacity onPress={openDrawer} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="menu-outline" size={26} color={colors.text} />
+            <Ionicons name="menu" size={26} color={colors.text} />
           </TouchableOpacity>
         </View>
       </View>

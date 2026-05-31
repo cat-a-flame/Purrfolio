@@ -220,7 +220,7 @@ export default function EditTransactionScreen() {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Edit transaction</Text>
         <TouchableOpacity onPress={handleDelete} style={styles.headerBtnRight}>
-          <Ionicons name="trash-outline" size={20} color={colors.danger} />
+          <Ionicons name="trash" size={22} color={colors.danger} />
         </TouchableOpacity>
       </View>
 
@@ -303,7 +303,7 @@ export default function EditTransactionScreen() {
             <Text style={[styles.pickerBtnText, { color: form.date ? colors.text : colors.muted }]}>
               {form.date || 'Select date…'}
             </Text>
-            <Ionicons name="calendar-outline" size={18} color={colors.muted} />
+            <Ionicons name="calendar" size={18} color={colors.muted} />
           </TouchableOpacity>
         </View>
 
@@ -402,7 +402,9 @@ export default function EditTransactionScreen() {
           >
             {w.icon ? <Text style={styles.modalRowIcon}>{w.icon}</Text> : <View style={{ width: 28 }} />}
             <Text style={[styles.modalRowText, { color: form.wallet_id === w.id ? colors.accent : colors.text }]}>{w.name}</Text>
-            {form.wallet_id === w.id && <Text style={{ color: colors.accent }}>✓</Text>}
+            {form.wallet_id === w.id && <Text style={{ color: colors.accent }}>
+              <Ionicons name="checkmark" size={18} color={colors.accent} />  
+            </Text>}
           </TouchableOpacity>
         ))}
       </BottomModal>
@@ -427,7 +429,7 @@ export default function EditTransactionScreen() {
             >
               <View style={[styles.labelDot, { backgroundColor: l.color }]} />
               <Text style={[styles.modalRowText, { color: selected ? l.color : colors.text }]}>{l.name}</Text>
-              {selected && <Text style={{ color: l.color }}>✓</Text>}
+              {selected && <Text style={{ color: l.color }}><Ionicons name="checkmark" size={18} color={l.color} /></Text>}
             </TouchableOpacity>
           );
         })}
