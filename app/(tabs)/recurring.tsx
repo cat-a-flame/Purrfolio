@@ -292,7 +292,7 @@ export default function RecurringScreen() {
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <AppHeader
         title="Planned"
-        leftAction={
+        rightAction={
           <TouchableOpacity
             onPress={() => { setForm(EMPTY_FORM); setFormError(''); setShowAddModal(true); }}
             activeOpacity={0.7}
