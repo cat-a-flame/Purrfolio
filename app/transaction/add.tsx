@@ -311,7 +311,7 @@ export default function AddTransactionScreen() {
 
         {/* Wallet */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>{isTransfer ? 'From wallet' : 'Wallet'}</Text>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>{isTransfer ? 'From account' : 'Account'}</Text>
           <TouchableOpacity
             style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
             onPress={() => setShowWalletModal(true)}
@@ -363,7 +363,7 @@ export default function AddTransactionScreen() {
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: colors.muted }]}>To wallet</Text>
+              <Text style={[styles.fieldLabel, { color: colors.muted }]}>To account</Text>
               <TouchableOpacity
                 style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
                 onPress={() => setShowToWalletModal(true)}
@@ -541,7 +541,7 @@ export default function AddTransactionScreen() {
       </KeyboardAvoidingView>
 
       {/* From wallet picker modal */}
-      <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title={isTransfer ? 'From wallet' : 'Select wallet'}>
+      <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title={isTransfer ? 'From account' : 'Select account'}>
         {wallets.map((w) => (
           <TouchableOpacity
             key={w.id}
@@ -556,7 +556,7 @@ export default function AddTransactionScreen() {
       </BottomModal>
 
       {/* To wallet picker modal — source wallet excluded */}
-      <BottomModal visible={showToWalletModal} onClose={() => setShowToWalletModal(false)} title="To wallet">
+      <BottomModal visible={showToWalletModal} onClose={() => setShowToWalletModal(false)} title="To account">
         {wallets.filter((w) => w.id !== form.wallet_id).map((w) => (
           <TouchableOpacity
             key={w.id}

@@ -236,7 +236,7 @@ export default function TransactionsScreen() {
               activeOpacity={0.7}
             >
               <Text style={[styles.tabBtnText, { color: active ? colors.accent : colors.muted }]}>
-                {tab === 'transactions' ? 'Transactions' : 'Wallets'}
+                {tab === 'transactions' ? 'Overview' : 'Accounts'}
               </Text>
             </TouchableOpacity>
           );
@@ -396,8 +396,8 @@ export default function TransactionsScreen() {
       </BottomModal>
 
       {/* Wallet modal */}
-      <BottomModal visible={openModal === 'wallet'} onClose={() => setOpenModal(null)} title="Wallet">
-        <ModalRow label="All wallets" selected={!walletFilter} onPress={() => { setWalletFilter(''); setOpenModal(null); }} colors={colors} />
+      <BottomModal visible={openModal === 'wallet'} onClose={() => setOpenModal(null)} title="Account">
+        <ModalRow label="All accounts" selected={!walletFilter} onPress={() => { setWalletFilter(''); setOpenModal(null); }} colors={colors} />
         {wallets.map((w) => (
           <ModalRow
             key={w.id}

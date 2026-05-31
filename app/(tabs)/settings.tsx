@@ -43,7 +43,7 @@ export default function SettingsScreen() {
     {
       title: 'Manage',
       items: [
-        { label: 'Wallets', route: '/settings/wallets' },
+        { label: 'Accounts', route: '/settings/wallets' },
         { label: 'Categories', route: '/settings/categories' },
         { label: 'Labels', route: '/settings/labels' },
         { label: 'Templates', route: '/settings/templates' },

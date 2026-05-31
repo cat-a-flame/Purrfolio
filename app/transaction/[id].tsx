@@ -393,7 +393,7 @@ export default function EditTransactionScreen() {
       </KeyboardAvoidingView>
 
       {/* Wallet picker modal */}
-      <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title="Select wallet">
+      <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title="Select account">
         {wallets.map((w) => (
           <TouchableOpacity
             key={w.id}

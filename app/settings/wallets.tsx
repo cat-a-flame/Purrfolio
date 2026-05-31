@@ -113,7 +113,7 @@ export default function WalletsScreen() {
 
   async function handleDelete() {
     if (!editWallet) return;
-    Alert.alert('Delete wallet', `Delete "${editWallet.name}"?`, [
+    Alert.alert('Delete account', `Delete "${editWallet.name}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -136,7 +136,7 @@ export default function WalletsScreen() {
             <Text style={[styles.back, { color: colors.accent }]}>Back</Text>
           </View>
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Wallets</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Accounts</Text>
         <TouchableOpacity onPress={openAdd}>
           <View style={styles.addRow}>
             <Ionicons name="add" size={16} color={colors.accent} />
@@ -173,13 +173,13 @@ export default function WalletsScreen() {
       />
 
       {/* Add modal */}
-      <BottomModal visible={addVisible} onClose={() => setAddVisible(false)} title="Add wallet">
+      <BottomModal visible={addVisible} onClose={() => setAddVisible(false)} title="Add account">
         <WalletForm form={form} setField={setField} colors={colors} />
         <AppButton onPress={handleSave} loading={saving} fullWidth>Save</AppButton>
       </BottomModal>
 
       {/* Edit modal */}
-      <BottomModal visible={!!editWallet} onClose={() => setEditWallet(null)} title="Edit wallet">
+      <BottomModal visible={!!editWallet} onClose={() => setEditWallet(null)} title="Edit account">
         <WalletForm form={form} setField={setField} colors={colors} />
         <View style={styles.modalActions}>
           <AppButton onPress={handleDelete} variant="danger" style={{ flex: 1 }}>Delete</AppButton>
@@ -205,7 +205,7 @@ function WalletForm({
         label="Name"
         value={form.name}
         onChangeText={(v) => setField('name', v)}
-        placeholder="Wallet name"
+        placeholder="Account name"
       />
       <AppInput
         label="Icon (emoji)"

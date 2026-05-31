@@ -854,7 +854,7 @@ function PaymentModal({
         </KeyboardAvoidingView>
 
         {/* Wallet picker */}
-        <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title="Select wallet">
+        <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title="Select account">
           {wallets.map((w) => (
             <TouchableOpacity
               key={w.id}
