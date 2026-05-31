@@ -28,7 +28,7 @@ export const TAB_BAR_HEIGHT = BAR_H + FAB_R; // 84 px
 const NOTCH_R  = 36; // circle radius — increase for more clearance around FAB
 const NOTCH_Y  = 0; // notch depth: how far the arc dips below the bar top
 const CORNER_R = 12; // radius of the fillet where the arc meets the bar top edge
-const FAB_EXTRA_Y = 12; // extra px to push the FAB down independently of the notch
+const FAB_EXTRA_Y = 13; // extra px to push the FAB down independently of the notch
 // ────────────────────────────────────────────
 
 // Horizontal distance from centre to where the raw circle crosses y=0
@@ -116,7 +116,7 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
         accessibilityState={isFocused ? { selected: true } : {}}
       >
         <View style={styles.iconWrap}>
-          <Ionicons name={iconName as any} size={22} color={color} />
+          <Ionicons name={iconName as any} size={24} color={color} />
         </View>
       </TouchableOpacity>
     );
@@ -138,7 +138,7 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
         </Svg>
 
         {/* Tab icons — anchored above the safe-area inset so they stay in the visual bar */}
-        <View style={[styles.tabRow, { height: BAR_H, bottom: 17 }]}>
+        <View style={[styles.tabRow, { height: BAR_H, bottom: 22 }]}>
           <View style={styles.side}>{leftTabs.map(renderTab)}</View>
           <View style={{ width: NOTCH_MOUTH }} />
           <View style={styles.side}>{rightTabs.map(renderTab)}</View>
@@ -205,15 +205,6 @@ const styles = StyleSheet.create({
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconActiveBg: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 12,
-    backgroundColor: '#ddcdf3',
   },
   fabWrap: {
     position: 'absolute',

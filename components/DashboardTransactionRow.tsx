@@ -25,7 +25,7 @@ export default function DashboardTransactionRow({ transaction: tx, onPress }: Pr
   const iconBg = isTransfer
     ? colors.muted + '30'
     : tx.category?.color
-      ? tx.category.color + '30'
+      ? tx.category.color + '20'
       : colors.border;
 
   return (
@@ -48,38 +48,29 @@ export default function DashboardTransactionRow({ transaction: tx, onPress }: Pr
       <View style={styles.info}>
         <Text style={[styles.category, { color: colors.text }]}>{label}</Text>
 
-        {/* Wallet: coloured dot + name */}
-        {tx.wallet ? (
-          <View style={styles.walletRow}>
-            <View style={[styles.walletDot, { backgroundColor: tx.wallet.color || colors.muted }]} />
-            <Text style={[styles.sub, { color: colors.muted }]}>{tx.wallet.name}</Text>
-          </View>
-        ) : null}
-
-        {tx.notes ? (
-          <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={1}>
-            {tx.notes}
-          </Text>
-        ) : null}
-        {tx.payer ? (
-          <Text style={[styles.sub, { color: colors.muted }]}>{tx.payer}</Text>
-        ) : null}
-        {tx.labels && tx.labels.length > 0 && (
-          <View style={styles.labels}>
-            {tx.labels.map((l) => (
-              <View key={l.id} style={[styles.labelChip, { backgroundColor: l.color + '33' }]}>
-                <Text style={[styles.labelText, { color: l.color }]}>{l.name}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        <View style={styles.walletLabelRow}>
+          {tx.wallet ? (
+            <View style={styles.walletRow}>
+              <Ionicons name="wallet-outline" size={12} color={colors.muted} />
+              <Text style={[styles.sub, { color: colors.muted }]}>{tx.wallet.name}</Text>
+            </View>
+          ) : null}
+          {tx.labels && tx.labels.length > 0 && (
+            <View style={styles.labels}>
+              {tx.labels.map((l) => (
+                <View key={l.id} style={[styles.labelChip]}>
+                  <Ionicons name="pricetag-outline" size={12} color={colors.muted} />
+                  <Text style={[styles.labelText, { color: colors.muted }]}>{l.name}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
       </View>
 
-      <View style={styles.amountCol}>
-        <Text style={[styles.amount, { color: amountColor }]}>
-          {amountPrefix}{formatCurrency(tx.amount, currency)}
-        </Text>
-      </View>
+      <Text style={[styles.amount, { color: amountColor }]}>
+        {amountPrefix}{formatCurrency(tx.amount, currency)}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -87,7 +78,7 @@ export default function DashboardTransactionRow({ transaction: tx, onPress }: Pr
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
@@ -111,11 +102,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Figtree_600SemiBold',
   },
-  walletRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
   walletDot: {
     width: 8,
     height: 8,
@@ -128,24 +114,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 4,
-    marginTop: 4,
   },
   labelChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   labelText: {
-    fontSize: 11,
-    fontFamily: 'Figtree_500Medium',
-  },
-  amountCol: {
-    alignItems: 'flex-end',
-    justifyContent: 'flex-start',
-    paddingTop: 10,
+    fontSize: 13,
   },
   amount: {
     fontSize: 15,
     fontFamily: 'Figtree_700Bold',
   },
+  walletRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  walletLabelRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+}
 });
