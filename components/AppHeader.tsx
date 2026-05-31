@@ -18,7 +18,7 @@ import { useTheme, useDarkMode } from '@/lib/theme';
 
 interface Props {
   title: string;
-  leftAction?: ReactNode;
+  rightAction?: ReactNode;
 }
 
 const DRAWER_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);
@@ -32,14 +32,14 @@ const SETTINGS_ITEMS: NavItem[] = [
   { label: 'Templates',  route: '/settings/templates',  icon: 'copy-outline'     },
 ];
 
-export default function AppHeader({ title, leftAction }: Props) {
+export default function AppHeader({ title, rightAction }: Props) {
   const colors = useTheme();
   const { isDark, setIsDark } = useDarkMode();
   const router = useRouter();
   const { top, bottom } = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
-  const slideAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
+  const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -49,15 +49,15 @@ export default function AppHeader({ title, leftAction }: Props) {
   function openDrawer() {
     setOpen(true);
     Animated.parallel([
-      Animated.timing(slideAnim, { toValue: 0, duration: 260, useNativeDriver: true }),
-      Animated.timing(fadeAnim,  { toValue: 1, duration: 260, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0,             duration: 260, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 1,             duration: 260, useNativeDriver: true }),
     ]).start();
   }
 
   function closeDrawer(cb?: () => void) {
     Animated.parallel([
-      Animated.timing(slideAnim, { toValue: DRAWER_WIDTH, duration: 220, useNativeDriver: true }),
-      Animated.timing(fadeAnim,  { toValue: 0,            duration: 220, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 220, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 0,             duration: 220, useNativeDriver: true }),
     ]).start(() => { setOpen(false); cb?.(); });
   }
 
@@ -75,13 +75,13 @@ export default function AppHeader({ title, leftAction }: Props) {
       {/* ── Fixed top bar ────────────────────────────────────────────── */}
       <View style={[styles.bar, { backgroundColor: colors.bg }]}>
         <View style={styles.side}>
-          {leftAction ?? null}
-        </View>
-        <Text style={[styles.barTitle, { color: colors.text }]}>{title}</Text>
-        <View style={[styles.side, styles.sideRight]}>
           <TouchableOpacity onPress={openDrawer} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="menu" size={26} color={colors.text} />
           </TouchableOpacity>
+        </View>
+        <Text style={[styles.barTitle, { color: colors.text }]}>{title}</Text>
+        <View style={[styles.side, styles.sideRight]}>
+          {rightAction ?? null}
         </View>
       </View>
 
@@ -93,13 +93,11 @@ export default function AppHeader({ title, leftAction }: Props) {
           pointerEvents="none"
         />
 
-        {/* Dismiss area + drawer side by side */}
+        {/* Drawer on left, dismiss area on right */}
         <View style={styles.drawerRow}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => closeDrawer()} />
-
           <Animated.View style={[
             styles.drawer,
-            { backgroundColor: colors.surface, borderLeftColor: colors.border, transform: [{ translateX: slideAnim }] },
+            { backgroundColor: colors.surface, borderRightColor: colors.border, transform: [{ translateX: slideAnim }] },
           ]}>
             <View style={[styles.drawerInner, { paddingTop: top || 16 }]}>
 
@@ -161,6 +159,7 @@ export default function AppHeader({ title, leftAction }: Props) {
 
             </View>
           </Animated.View>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => closeDrawer()} />
         </View>
       </Modal>
     </>
@@ -181,10 +180,10 @@ const styles = StyleSheet.create({
   drawerRow: { flex: 1, flexDirection: 'row' },
   drawer: {
     width: DRAWER_WIDTH,
-    borderLeftWidth: 1,
+    borderRightWidth: 1,
     elevation: 24,
     shadowColor: '#000',
-    shadowOffset: { width: -4, height: 0 },
+    shadowOffset: { width: 4, height: 0 },
     shadowOpacity: 0.22,
     shadowRadius: 12,
   },

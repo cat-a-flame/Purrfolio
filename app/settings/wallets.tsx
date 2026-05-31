@@ -137,11 +137,8 @@ export default function WalletsScreen() {
           </View>
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Accounts</Text>
-        <TouchableOpacity onPress={openAdd}>
-          <View style={styles.addRow}>
-            <Ionicons name="add" size={16} color={colors.accent} />
-            <Text style={[styles.add, { color: colors.accent }]}>Add</Text>
-          </View>
+        <TouchableOpacity onPress={openAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="add-circle-outline" size={26} color={colors.accent} />
         </TouchableOpacity>
       </View>
 
