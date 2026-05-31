@@ -16,6 +16,7 @@ import AppHeader from '@/components/AppHeader';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { formatCurrency } from '@/lib/utils';
 import { getMNBRatesForPeriod, getMNBRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import SkeletonBox from '@/components/SkeletonBox';
 import type { Currency, Wallet } from '@/lib/types';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -149,9 +150,11 @@ export default function StatsScreen() {
   const [prevTxs, setPrevTxs] = useState<any[]>([]);
   const [dailyRates, setDailyRates] = useState<DailyRates>({});
   const [prevDailyRates, setPrevDailyRates] = useState<DailyRates>({});
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -210,13 +213,14 @@ export default function StatsScreen() {
     setWallets(walletList.map((w: any) => ({ ...w, _balance: balanceMap.get(w.id) ?? w.starting_balance ?? 0 })));
     setTxs(periodData ?? []);
     setPrevTxs(prevData ?? []);
+    setLoading(false);
   }, [period.from, period.to]);
 
   useEffect(() => { load(); }, [load]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
+    await load(true);
     setRefreshing(false);
   }, [load]);
 
@@ -277,6 +281,27 @@ export default function StatsScreen() {
       return { id, name: ref.name, icon: ref.icon, color: ref.color, current: cur?.amount ?? 0, previous: prv?.amount ?? 0 };
     }).sort((a, b) => b.current - a.current).slice(0, 8);
   }, [expenseByCategory, prevExpenseByCategory]);
+
+  if (loading) {
+    return (
+      <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+        <AppHeader title="Statistics" />
+        <ScrollView contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}>
+          <PeriodPicker value={period} onChange={setPeriod} />
+          {/* Summary tiles */}
+          <View style={styles.summaryGrid}>
+            {[0, 1, 2, 3].map(i => (
+              <SkeletonBox key={i} style={{ width: (SCREEN_W - 32 - 10) / 2, height: 80, borderRadius: 14 }} />
+            ))}
+          </View>
+          {/* Chart card placeholders */}
+          <SkeletonBox style={{ height: 320, borderRadius: 14 }} />
+          <SkeletonBox style={{ height: 160, borderRadius: 14 }} />
+          <SkeletonBox style={{ height: 260, borderRadius: 14 }} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>

@@ -20,6 +20,7 @@ import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { Ionicons } from '@expo/vector-icons';
 import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { groupByDate, formatDate } from '@/lib/utils';
+import SkeletonBox from '@/components/SkeletonBox';
 import { useRouter } from 'expo-router';
 
 type TypeFilter = 'all' | TransactionType;
@@ -105,9 +106,11 @@ export default function TransactionsScreen() {
 
   const [openModal, setOpenModal] = useState<ModalKind>(null);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -130,13 +133,14 @@ export default function TransactionsScreen() {
       ...tx,
       labels: (tx.labels ?? []).map((l: any) => l.label).filter(Boolean),
     })));
+    setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
+    await load(true);
     setRefreshing(false);
   }, [load]);
 
@@ -271,7 +275,22 @@ export default function TransactionsScreen() {
           </View>
         }
         ListEmptyComponent={
-          <Text style={[styles.empty, { color: colors.muted }]}>No transactions found.</Text>
+          loading ? (
+            <View style={{ gap: 6, marginTop: 4 }}>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <View key={i} style={[styles.skeletonRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <SkeletonBox style={{ width: 40, height: 40, borderRadius: 10 }} />
+                  <View style={{ flex: 1, gap: 7, paddingTop: 3 }}>
+                    <SkeletonBox style={{ height: 13, width: `${48 + (i * 11) % 28}%`, borderRadius: 4 }} />
+                    <SkeletonBox style={{ height: 11, width: `${28 + (i * 17) % 22}%`, borderRadius: 4 }} />
+                  </View>
+                  <SkeletonBox style={{ height: 13, width: 70, borderRadius: 4, marginTop: 3 }} />
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={[styles.empty, { color: colors.muted }]}>No transactions found.</Text>
+          )
         }
         ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />
@@ -388,4 +407,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
+  skeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 10,
+  },
 });

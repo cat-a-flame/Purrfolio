@@ -3,8 +3,8 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   StyleSheet,
-  TouchableOpacity,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import TransactionRow from '@/components/TransactionRow';
+import SkeletonBox from '@/components/SkeletonBox';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Currency } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
@@ -69,9 +70,11 @@ export default function DashboardScreen() {
   const [periodTxs, setPeriodTxs] = useState<Transaction[]>([]);
   const [prevNet, setPrevNet] = useState<number | null>(null);
   const [dailyRates, setDailyRates] = useState<DailyRates>({});
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -123,13 +126,14 @@ export default function DashboardScreen() {
     const pInc = pList.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
     const pExp = pList.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
     setPrevNet(pInc - pExp);
+    setLoading(false);
   }, [period.from, period.to]);
 
   useEffect(() => { load(); }, [load]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
+    await load(true);
     setRefreshing(false);
   }, [load]);
 
@@ -185,6 +189,44 @@ export default function DashboardScreen() {
     }
     return items;
   }, [groups, dailyRates]);
+
+  if (loading) {
+    return (
+      <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+        <AppHeader title="Dashboard" />
+        <ScrollView
+          style={{ paddingTop: 16 }}
+          contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
+        >
+          {/* Cashflow card skeleton */}
+          <SkeletonBox style={{ height: 190, borderRadius: 10, marginBottom: 8, marginTop: 6 }} />
+          {/* Period picker stays interactive */}
+          <PeriodPicker value={period} onChange={setPeriod} />
+          {/* Skeleton transaction groups */}
+          {[3, 2, 2].map((count, gi) => (
+            <View key={gi}>
+              <View style={[styles.dayHeader, { marginTop: 20, marginBottom: 10 }]}>
+                <SkeletonBox style={{ height: 13, width: 130, borderRadius: 4 }} />
+                <SkeletonBox style={{ height: 13, width: 65, borderRadius: 4 }} />
+              </View>
+              {Array.from({ length: count }).map((_, ri) => (
+                <View key={ri} style={{ marginBottom: 6 }}>
+                  <View style={[styles.skeletonRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <SkeletonBox style={{ width: 40, height: 40, borderRadius: 10 }} />
+                    <View style={{ flex: 1, gap: 7, paddingTop: 3 }}>
+                      <SkeletonBox style={{ height: 13, width: `${50 + (ri * 13) % 25}%`, borderRadius: 4 }} />
+                      <SkeletonBox style={{ height: 11, width: `${30 + (ri * 17) % 20}%`, borderRadius: 4 }} />
+                    </View>
+                    <SkeletonBox style={{ height: 13, width: 68, borderRadius: 4, marginTop: 3 }} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -335,4 +377,12 @@ const styles = StyleSheet.create({
   dayNet: { fontSize: 13, fontFamily: 'Figtree_700Bold' },
 
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
+  skeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 10,
+  },
 });
