@@ -47,11 +47,9 @@ export default function AppHeader({ title, rightAction }: Props) {
   }, []);
 
   function openDrawer() {
+    slideAnim.setValue(-DRAWER_WIDTH);
+    fadeAnim.setValue(0);
     setOpen(true);
-    Animated.parallel([
-      Animated.timing(slideAnim, { toValue: 0,             duration: 260, useNativeDriver: true }),
-      Animated.timing(fadeAnim,  { toValue: 1,             duration: 260, useNativeDriver: true }),
-    ]).start();
   }
 
   function closeDrawer(cb?: () => void) {
@@ -60,6 +58,16 @@ export default function AppHeader({ title, rightAction }: Props) {
       Animated.timing(fadeAnim,  { toValue: 0,             duration: 220, useNativeDriver: true }),
     ]).start(() => { setOpen(false); cb?.(); });
   }
+
+  // Start the open animation after the Modal has rendered
+  useEffect(() => {
+    if (open) {
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: 0, duration: 260, useNativeDriver: true }),
+        Animated.timing(fadeAnim,  { toValue: 1, duration: 260, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [open]);
 
   function navigate(route: string) { closeDrawer(() => router.push(route as any)); }
 
