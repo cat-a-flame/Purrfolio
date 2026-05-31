@@ -156,8 +156,9 @@ export default function StatsScreen() {
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
+    try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
 
     const prevRange = getPrevRange(period);
 
@@ -175,7 +176,7 @@ export default function StatsScreen() {
         .eq('user_id', user.id)
         .gte('date', period.from)
         .lte('date', period.to)
-        .is('transfer_group_id', null)
+        .filter('transfer_group_id', 'is', null)
         .limit(10000),
       supabase
         .from('transactions')
@@ -183,7 +184,7 @@ export default function StatsScreen() {
         .eq('user_id', user.id)
         .gte('date', prevRange.from)
         .lte('date', prevRange.to)
-        .is('transfer_group_id', null)
+        .filter('transfer_group_id', 'is', null)
         .limit(10000),
     ]);
 
@@ -216,7 +217,11 @@ export default function StatsScreen() {
     setWallets(walletList.map((w: any) => ({ ...w, _balance: balanceMap.get(w.id) ?? w.starting_balance ?? 0 })));
     setTxs(periodData ?? []);
     setPrevTxs(prevData ?? []);
-    setLoading(false);
+    } catch (e) {
+      console.error('[Stats] load error:', e);
+    } finally {
+      setLoading(false);
+    }
   }, [period.from, period.to]);
 
   useEffect(() => { load(); }, [load]);

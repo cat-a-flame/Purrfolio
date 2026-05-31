@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,12 @@ import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
-import TransactionRow from '@/components/TransactionRow';
+import TransactionRow from '@/components/DashboardTransactionRow';
 import SkeletonBox from '@/components/SkeletonBox';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Currency } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
-import { getMNBRatesForPeriod, getMNBRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
 import { Events } from '@/lib/events';
 import Toast from '@/components/Toast';
 import { useRouter } from 'expo-router';
@@ -80,58 +80,63 @@ export default function DashboardScreen() {
       setLoading(true);
       setPeriodTxs([]);
     }
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-    const prev = getPrevRange(period);
-    const [{ data: w }, { data: txs }, { data: prevTxs }] = await Promise.all([
-      supabase
-        .from('wallets')
-        .select('currency, is_default')
-        .eq('user_id', user.id),
-      // All transactions in selected period for cashflow + list
-      supabase
-        .from('transactions')
-        .select('*, wallet:wallets(*), category:categories(*), labels:transaction_labels(label:labels(*))')
-        .eq('user_id', user.id)
-        .gte('date', period.from)
-        .lte('date', period.to)
-        .order('date', { ascending: false })
-        .limit(10000),
-      // Previous period transactions for vs% (exclude transfers)
-      supabase
-        .from('transactions')
-        .select('type, amount')
-        .eq('user_id', user.id)
-        .gte('date', prev.from)
-        .lte('date', prev.to)
-        .is('transfer_group_id', null)
-        .limit(10000),
-    ]);
+      const prev = getPrevRange(period);
+      const [{ data: w }, { data: txs }, { data: prevTxs }] = await Promise.all([
+        supabase
+          .from('wallets')
+          .select('currency, is_default')
+          .eq('user_id', user.id),
+        // All transactions in selected period for cashflow + list
+        supabase
+          .from('transactions')
+          .select('*, wallet:wallets(*), category:categories(*), labels:transaction_labels(label:labels(*))')
+          .eq('user_id', user.id)
+          .gte('date', period.from)
+          .lte('date', period.to)
+          .order('date', { ascending: false })
+          .limit(10000),
+        // Previous period transactions for vs% (exclude transfers)
+        supabase
+          .from('transactions')
+          .select('type, amount')
+          .eq('user_id', user.id)
+          .gte('date', prev.from)
+          .lte('date', prev.to)
+          .filter('transfer_group_id', 'is', null)
+          .limit(10000),
+      ]);
 
-    const defaultW = (w ?? []).find((wl: any) => wl.is_default) ?? (w ?? [])[0];
-    if (defaultW?.currency) setCurrency(defaultW.currency as Currency);
+      const defaultW = (w ?? []).find((wl: any) => wl.is_default) ?? (w ?? [])[0];
+      if (defaultW?.currency) setCurrency(defaultW.currency as Currency);
 
-    const normalized = (txs ?? []).map((tx: any) => ({
-      ...tx,
-      labels: (tx.labels ?? []).map((l: any) => l.label).filter(Boolean),
-    }));
-    setPeriodTxs(normalized);
+      const normalized = (txs ?? []).map((tx: any) => ({
+        ...tx,
+        labels: (tx.labels ?? []).map((l: any) => l.label).filter(Boolean),
+      }));
+      setPeriodTxs(normalized);
 
-    let periodRates = await getMNBRatesForPeriod(period.from, period.to);
-    if (Object.keys(periodRates).length === 0) {
-      const current = await getMNBRates();
-      if (Object.keys(current).length > 0) {
-        periodRates = { [period.from]: current };
+      let periodRates = await getExchangeRatesForPeriod(period.from, period.to);
+      if (Object.keys(periodRates).length === 0) {
+        const current = await getExchangeRates();
+        if (Object.keys(current).length > 0) {
+          periodRates = { [period.from]: current };
+        }
       }
-    }
-    setDailyRates(periodRates);
+      setDailyRates(periodRates);
 
-    const pList = prevTxs ?? [];
-    const pInc = pList.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
-    const pExp = pList.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
-    setPrevNet(pInc - pExp);
-    setLoading(false);
+      const pList = prevTxs ?? [];
+      const pInc = pList.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
+      const pExp = pList.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
+      setPrevNet(pInc - pExp);
+    } catch (e) {
+      console.error('[Dashboard] load error:', e);
+    } finally {
+      setLoading(false);
+    }
   }, [period.from, period.to]);
 
   useEffect(() => { load(); }, [load]);
@@ -148,7 +153,7 @@ export default function DashboardScreen() {
   useEffect(() => {
     return Events.on('transaction-saved', ({ success, message }: { success: boolean; message?: string }) => {
       loadRef.current(true);
-      setToast({ visible: true, message: success ? 'Transaction saved!' : (message ?? 'Failed to save.'), success });
+      setToast({ visible: true, message: message ?? (success ? 'Done.' : 'Something went wrong.'), success });
       setTimeout(() => setToast(t => ({ ...t, visible: false })), 3000);
     });
   }, []);
