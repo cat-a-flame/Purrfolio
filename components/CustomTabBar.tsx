@@ -11,8 +11,8 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const FAB_R = 28;           // FAB radius (diameter 56)
 const BAR_H = 50;           // visual bar height (excludes safe-area inset)
-const EAR_SVG_H = 24;       // height of the ears SVG canvas
-const EAR_OVERLAP = 12;     // how much the circle overlaps (hides) the ear bases
+const EAR_SVG_H = 26;       // height of the ears SVG canvas
+const EAR_OVERLAP = 16;     // how much the circle overlaps (hides) the ear bases
 
 // Screens should add TAB_BAR_HEIGHT + useSafeAreaInsets().bottom as bottom padding
 // so content isn't hidden behind the floating tab bar.
@@ -148,8 +148,8 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
           style={{ marginBottom: -EAR_OVERLAP }}
           pointerEvents="none"
         >
-          <Path d={`M 2 ${EAR_SVG_H} L 9 9 Q 13 1 17 9 L 24 ${EAR_SVG_H} Z`} fill="#692f7c" transform={`rotate(-12, 13, ${EAR_SVG_H})`} />
-          <Path d={`M 32 ${EAR_SVG_H} L 39 9 Q 43 1 47 9 L 54 ${EAR_SVG_H} Z`} fill="#692f7c" transform={`rotate(12, 43, ${EAR_SVG_H})`} />
+          <Path d={`M 2 ${EAR_SVG_H} L 9 9 Q 13 1 17 9 L 24 ${EAR_SVG_H} Z`} fill="#692f7c" transform={`rotate(-28, 13, ${EAR_SVG_H})`} />
+          <Path d={`M 32 ${EAR_SVG_H} L 39 9 Q 43 1 47 9 L 54 ${EAR_SVG_H} Z`} fill="#692f7c" transform={`rotate(28, 43, ${EAR_SVG_H})`} />
         </Svg>
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: '#692f7c' }]}
