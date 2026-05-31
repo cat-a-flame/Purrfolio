@@ -73,7 +73,10 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent) {
+      setLoading(true);
+      setPeriodTxs([]);
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
