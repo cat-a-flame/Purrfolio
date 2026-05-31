@@ -134,18 +134,24 @@ export default function DashboardScreen() {
     setRefreshing(false);
   }, [load]);
 
-  // Cash flow — exclude transfers; amounts in native wallet currency (raw sum, same as PennyPuff)
+  // Cash flow — exclude transfers; convert each transaction to HUF using its day's rate
   const nonTransferTxs = useMemo(
     () => periodTxs.filter(tx => !tx.transfer_group_id),
     [periodTxs],
   );
   const income = useMemo(
-    () => nonTransferTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
-    [nonTransferTxs],
+    () => nonTransferTxs.filter(t => t.type === 'income').reduce((s, t) => {
+      const rates = getRatesForDate(t.date, dailyRates);
+      return s + toHUF(t.amount, (t.wallet as any)?.currency, rates);
+    }, 0),
+    [nonTransferTxs, dailyRates],
   );
   const expense = useMemo(
-    () => nonTransferTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
-    [nonTransferTxs],
+    () => nonTransferTxs.filter(t => t.type === 'expense').reduce((s, t) => {
+      const rates = getRatesForDate(t.date, dailyRates);
+      return s + toHUF(t.amount, (t.wallet as any)?.currency, rates);
+    }, 0),
+    [nonTransferTxs, dailyRates],
   );
   const net = income - expense;
   const animatedNet = useCountUp(net);
