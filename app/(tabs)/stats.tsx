@@ -15,6 +15,7 @@ import { useTheme, Colors } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { formatCurrency } from '@/lib/utils';
+import { getMNBRatesForPeriod, getMNBRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
 import type { Currency, Wallet } from '@/lib/types';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -146,6 +147,8 @@ export default function StatsScreen() {
   const [wallets, setWallets] = useState<(Wallet & { _balance: number })[]>([]);
   const [txs, setTxs] = useState<any[]>([]);
   const [prevTxs, setPrevTxs] = useState<any[]>([]);
+  const [dailyRates, setDailyRates] = useState<DailyRates>({});
+  const [prevDailyRates, setPrevDailyRates] = useState<DailyRates>({});
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -164,7 +167,7 @@ export default function StatsScreen() {
       supabase.from('transactions').select('wallet_id, type, amount').eq('user_id', user.id).limit(10000),
       supabase
         .from('transactions')
-        .select('type, amount, wallet_id, category:categories(id, name, icon, color)')
+        .select('type, amount, date, wallet_id, wallet:wallets(currency), category:categories(id, name, icon, color)')
         .eq('user_id', user.id)
         .gte('date', period.from)
         .lte('date', period.to)
@@ -172,13 +175,28 @@ export default function StatsScreen() {
         .limit(10000),
       supabase
         .from('transactions')
-        .select('type, amount, category:categories(id, name, icon, color)')
+        .select('type, amount, date, wallet:wallets(currency), category:categories(id, name, icon, color)')
         .eq('user_id', user.id)
         .gte('date', prevRange.from)
         .lte('date', prevRange.to)
         .is('transfer_group_id', null)
         .limit(10000),
     ]);
+
+    const fetchRates = async (from: string, to: string): Promise<DailyRates> => {
+      let rates = await getMNBRatesForPeriod(from, to);
+      if (Object.keys(rates).length === 0) {
+        const current = await getMNBRates();
+        if (Object.keys(current).length > 0) rates = { [from]: current };
+      }
+      return rates;
+    };
+    const [periodRates, prevRates] = await Promise.all([
+      fetchRates(period.from, period.to),
+      fetchRates(prevRange.from, prevRange.to),
+    ]);
+    setDailyRates(periodRates);
+    setPrevDailyRates(prevRates);
 
     const walletList = walletRows ?? [];
     const txSumList = allTxSums ?? [];
@@ -202,18 +220,26 @@ export default function StatsScreen() {
     setRefreshing(false);
   }, [load]);
 
-  // aggregates
-  const income = useMemo(() => txs.filter(t => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0), [txs]);
-  const expense = useMemo(() => txs.filter(t => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0), [txs]);
+  // Pre-convert all amounts to HUF using each transaction's own day rate
+  const txsHUF = useMemo(() => txs.map(t => ({
+    ...t,
+    amount: toHUF(t.amount, (t.wallet as any)?.currency, getRatesForDate(t.date, dailyRates)),
+  })), [txs, dailyRates]);
+
+  const prevTxsHUF = useMemo(() => prevTxs.map(t => ({
+    ...t,
+    amount: toHUF(t.amount, (t.wallet as any)?.currency, getRatesForDate(t.date, prevDailyRates)),
+  })), [prevTxs, prevDailyRates]);
+
+  // aggregates (all in HUF)
+  const income = useMemo(() => txsHUF.filter(t => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0), [txsHUF]);
+  const expense = useMemo(() => txsHUF.filter(t => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0), [txsHUF]);
   const net = income - expense;
   const txCount = txs.length;
 
-  const defaultCurrency: Currency = useMemo(() => {
-    const def = wallets.find(w => w.is_default) ?? wallets[0];
-    return (def?.currency as Currency) ?? 'HUF';
-  }, [wallets]);
+  const defaultCurrency: Currency = 'HUF';
 
-  const expenseByCategory = useMemo(() => groupByCategory(txs, 'expense'), [txs]);
+  const expenseByCategory = useMemo(() => groupByCategory(txsHUF, 'expense'), [txsHUF]);
 
   // Merge categories under 10 000 into "Other" for the chart
   const displayExpenseByCategory = useMemo(() => {
@@ -237,7 +263,7 @@ export default function StatsScreen() {
       .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
   }, [wallets]);
 
-  const prevExpenseByCategory = useMemo(() => groupByCategory(prevTxs, 'expense'), [prevTxs]);
+  const prevExpenseByCategory = useMemo(() => groupByCategory(prevTxsHUF, 'expense'), [prevTxsHUF]);
 
   const comparisonData = useMemo(() => {
     const allIds = new Set([
