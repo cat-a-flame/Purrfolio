@@ -152,20 +152,33 @@ export default function DashboardScreen() {
   // Group transactions by date
   const groups = useMemo(() => groupByDate(periodTxs), [periodTxs]);
 
+  type DayNet = { currency: Currency; net: number };
   type ListItem =
-    | { kind: 'dayHeader'; date: string; dayNet: number }
+    | { kind: 'dayHeader'; date: string; dayNets: DayNet[] }
     | { kind: 'tx'; tx: Transaction };
 
   const flat = useMemo<ListItem[]>(() => {
     const items: ListItem[] = [];
     for (const g of groups) {
-      const dayIncome = g.items.filter(t => t.type === 'income' && !t.transfer_group_id).reduce((s, t) => s + t.amount, 0);
-      const dayExpense = g.items.filter(t => t.type === 'expense' && !t.transfer_group_id).reduce((s, t) => s + t.amount, 0);
-      items.push({ kind: 'dayHeader', date: g.date, dayNet: dayIncome - dayExpense });
+      const byCurrency = new Map<string, number>();
+      for (const t of g.items) {
+        if (t.transfer_group_id) continue;
+        const cur = (t.wallet as any)?.currency ?? currency;
+        const sign = t.type === 'income' ? 1 : -1;
+        byCurrency.set(cur, (byCurrency.get(cur) ?? 0) + sign * t.amount);
+      }
+      const dayNets: DayNet[] = Array.from(byCurrency.entries())
+        .sort(([a], [b]) => {
+          if (a === currency) return -1;
+          if (b === currency) return 1;
+          return a.localeCompare(b);
+        })
+        .map(([cur, net]) => ({ currency: cur as Currency, net }));
+      items.push({ kind: 'dayHeader', date: g.date, dayNets });
       for (const tx of g.items) items.push({ kind: 'tx', tx });
     }
     return items;
-  }, [groups]);
+  }, [groups, currency]);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -180,15 +193,18 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
           if (item.kind === 'dayHeader') {
-            const positive = item.dayNet >= 0;
             return (
               <View style={styles.dayHeader}>
                 <Text style={[styles.dayDate, { color: colors.muted }]}>
                   {formatDayHeader(item.date)}
                 </Text>
-                <Text style={[styles.dayNet, { color: positive ? colors.income : colors.expense, paddingRight: 6 }]}>
-                  {positive ? '+' : '−'}{formatCurrency(Math.abs(item.dayNet), currency)}
-                </Text>
+                <View style={styles.dayNets}>
+                  {item.dayNets.map(({ currency: cur, net }) => (
+                    <Text key={cur} style={[styles.dayNet, { color: net >= 0 ? colors.income : colors.expense }]}>
+                      {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), cur)}
+                    </Text>
+                  ))}
+                </View>
               </View>
             );
           }
@@ -307,12 +323,13 @@ const styles = StyleSheet.create({
   dayHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginTop: 20,
     marginBottom: 6,
     paddingHorizontal: 2,
   },
-  dayDate: { fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
+  dayDate: { fontSize: 13, fontFamily: 'Figtree_600SemiBold', paddingTop: 1 },
+  dayNets: { alignItems: 'flex-end', gap: 2 },
   dayNet: { fontSize: 13, fontFamily: 'Figtree_700Bold' },
 
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
