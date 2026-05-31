@@ -16,9 +16,8 @@ export default function TransactionRow({ transaction: tx, onPress }: Props) {
   const isIncome = tx.type === 'income';
   const currency = tx.wallet?.currency ?? 'HUF';
 
-  // Transfers are neutral: no sign, muted colour (contrast ≥ 4.5:1 on surface in both themes)
   const amountColor = isTransfer ? colors.muted : isIncome ? colors.income : colors.expense;
-  const amountPrefix = isTransfer ? '' : isIncome ? '+' : '−';
+  const amountPrefix = isIncome ? '+' : '−';
 
   const icon = isTransfer ? null : (tx.category?.icon ?? null);
   const label = isTransfer ? 'Transfer' : (tx.category?.name ?? '—');
