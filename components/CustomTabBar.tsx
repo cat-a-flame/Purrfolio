@@ -148,8 +148,8 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
           style={{ marginBottom: -EAR_OVERLAP }}
           pointerEvents="none"
         >
-          <Path d={`M 2 ${EAR_SVG_H} L 13 2 L 24 ${EAR_SVG_H} Z`} fill="#692f7c" />
-          <Path d={`M 32 ${EAR_SVG_H} L 43 2 L 54 ${EAR_SVG_H} Z`} fill="#692f7c" />
+          <Path d={`M 2 ${EAR_SVG_H} L 9 9 Q 13 1 17 9 L 24 ${EAR_SVG_H} Z`} fill="#692f7c" transform={`rotate(-12, 13, ${EAR_SVG_H})`} />
+          <Path d={`M 32 ${EAR_SVG_H} L 39 9 Q 43 1 47 9 L 54 ${EAR_SVG_H} Z`} fill="#692f7c" transform={`rotate(12, 43, ${EAR_SVG_H})`} />
         </Svg>
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: '#692f7c' }]}
