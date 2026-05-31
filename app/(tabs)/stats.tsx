@@ -5,7 +5,9 @@ import {
   ScrollView,
   StyleSheet,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
@@ -13,8 +15,11 @@ import { useTheme, Colors } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { formatCurrency } from '@/lib/utils';
-import { useCountUp } from '@/lib/useCountUp';
 import type { Currency, Wallet } from '@/lib/types';
+
+const SCREEN_W = Dimensions.get('window').width;
+
+// ─── date helpers ─────────────────────────────────────────────────────────────
 
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -56,6 +61,8 @@ function getPrevRange(v: PeriodValue): { from: string; to: string } {
   };
 }
 
+// ─── types ────────────────────────────────────────────────────────────────────
+
 type CategoryStat = {
   id: string | null;
   name: string;
@@ -63,13 +70,6 @@ type CategoryStat = {
   color: string | null;
   amount: number;
   count: number;
-};
-
-type WalletPeriodStat = {
-  wallet: Wallet & { _balance?: number };
-  income: number;
-  expense: number;
-  net: number;
 };
 
 function groupByCategory(txs: any[], type: 'income' | 'expense'): CategoryStat[] {
@@ -88,6 +88,57 @@ function groupByCategory(txs: any[], type: 'income' | 'expense'): CategoryStat[]
   return Array.from(map.values()).sort((a, b) => b.amount - a.amount);
 }
 
+// ─── SVG donut helpers ────────────────────────────────────────────────────────
+
+function polarToCart(cx: number, cy: number, r: number, angleDeg: number) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function buildArcPath(cx: number, cy: number, outerR: number, innerR: number, startDeg: number, endDeg: number): string {
+  const s = polarToCart(cx, cy, outerR, startDeg);
+  const e = polarToCart(cx, cy, outerR, endDeg);
+  const si = polarToCart(cx, cy, innerR, endDeg);
+  const ei = polarToCart(cx, cy, innerR, startDeg);
+  const large = endDeg - startDeg > 180 ? 1 : 0;
+  return [
+    `M ${s.x.toFixed(2)} ${s.y.toFixed(2)}`,
+    `A ${outerR} ${outerR} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`,
+    `L ${si.x.toFixed(2)} ${si.y.toFixed(2)}`,
+    `A ${innerR} ${innerR} 0 ${large} 0 ${ei.x.toFixed(2)} ${ei.y.toFixed(2)}`,
+    'Z',
+  ].join(' ');
+}
+
+function DonutChart({ items, total, fallback }: { items: CategoryStat[]; total: number; fallback: string }) {
+  const size = 120;
+  const cx = size / 2, cy = size / 2;
+  const outerR = size / 2 - 4;
+  const innerR = size / 2 - 26;
+  const GAP_DEG = items.length > 1 ? 2 : 0;
+
+  if (total === 0) return null;
+
+  const segments: { path: string; color: string }[] = [];
+  let cursor = 0;
+  for (const item of items) {
+    const sweep = (item.amount / total) * 360;
+    if (sweep < 0.5) { cursor += sweep; continue; }
+    segments.push({ path: buildArcPath(cx, cy, outerR, innerR, cursor, cursor + sweep - GAP_DEG), color: item.color || fallback });
+    cursor += sweep;
+  }
+
+  return (
+    <Svg width={size} height={size}>
+      {segments.map((seg, i) => (
+        <Path key={i} d={seg.path} fill={seg.color} />
+      ))}
+    </Svg>
+  );
+}
+
+// ─── screen ───────────────────────────────────────────────────────────────────
+
 export default function StatsScreen() {
   const colors = useTheme();
   const { bottom } = useSafeAreaInsets();
@@ -95,7 +146,6 @@ export default function StatsScreen() {
   const [wallets, setWallets] = useState<(Wallet & { _balance: number })[]>([]);
   const [txs, setTxs] = useState<any[]>([]);
   const [prevTxs, setPrevTxs] = useState<any[]>([]);
-  const [currency, setCurrency] = useState<Currency>('HUF');
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -122,7 +172,7 @@ export default function StatsScreen() {
         .limit(10000),
       supabase
         .from('transactions')
-        .select('type, amount')
+        .select('type, amount, category:categories(id, name, icon, color)')
         .eq('user_id', user.id)
         .gte('date', prevRange.from)
         .lte('date', prevRange.to)
@@ -139,12 +189,7 @@ export default function StatsScreen() {
       const exp = wTxs.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
       balanceMap.set(w.id, (w.starting_balance ?? 0) + inc - exp);
     }
-    const enriched = walletList.map((w: any) => ({ ...w, _balance: balanceMap.get(w.id) ?? w.starting_balance ?? 0 }));
-    setWallets(enriched);
-
-    const defaultW = enriched.find((w: any) => w.is_default) ?? enriched[0];
-    if (defaultW?.currency) setCurrency(defaultW.currency as Currency);
-
+    setWallets(walletList.map((w: any) => ({ ...w, _balance: balanceMap.get(w.id) ?? w.starting_balance ?? 0 })));
     setTxs(periodData ?? []);
     setPrevTxs(prevData ?? []);
   }, [period.from, period.to]);
@@ -157,47 +202,41 @@ export default function StatsScreen() {
     setRefreshing(false);
   }, [load]);
 
-  // Period aggregates
-  const income = useMemo(
-    () => txs.filter(t => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0),
-    [txs],
-  );
-  const expense = useMemo(
-    () => txs.filter(t => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0),
-    [txs],
-  );
+  // aggregates
+  const income = useMemo(() => txs.filter(t => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0), [txs]);
+  const expense = useMemo(() => txs.filter(t => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0), [txs]);
   const net = income - expense;
+  const txCount = txs.length;
 
-  // Previous period for comparison
-  const prevNet = useMemo(() => {
-    const pi = prevTxs.filter(t => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
-    const pe = prevTxs.filter(t => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
-    return pi - pe;
-  }, [prevTxs]);
-
-  const vsPct = prevNet === 0 ? null : Math.round(((net - prevNet) / Math.abs(prevNet)) * 100);
-
-  // Proportional bars
-  const total = income + expense;
-  const incomePct = total > 0 ? (income / total) * 100 : 0;
-  const expensePct = total > 0 ? (expense / total) * 100 : 0;
-
-  // Per-wallet period stats
-  const walletPeriodStats: WalletPeriodStat[] = useMemo(() => {
-    return wallets
-      .map(w => {
-        const wTxs = txs.filter((t: any) => t.wallet_id === w.id);
-        const wi = wTxs.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
-        const we = wTxs.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
-        return { wallet: w, income: wi, expense: we, net: wi - we };
-      })
-      .filter(ws => ws.income > 0 || ws.expense > 0);
-  }, [wallets, txs]);
-
-  const animNet = useCountUp(Math.abs(net));
+  const defaultCurrency: Currency = useMemo(() => {
+    const def = wallets.find(w => w.is_default) ?? wallets[0];
+    return (def?.currency as Currency) ?? 'HUF';
+  }, [wallets]);
 
   const expenseByCategory = useMemo(() => groupByCategory(txs, 'expense'), [txs]);
-  const incomeByCategory  = useMemo(() => groupByCategory(txs, 'income'),  [txs]);
+
+  const balanceByCurrency = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const w of wallets) map.set(w.currency, (map.get(w.currency) ?? 0) + w._balance);
+    return Array.from(map.entries())
+      .map(([currency, balance]) => ({ currency, balance }))
+      .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+  }, [wallets]);
+
+  const prevExpenseByCategory = useMemo(() => groupByCategory(prevTxs, 'expense'), [prevTxs]);
+
+  const comparisonData = useMemo(() => {
+    const allIds = new Set([
+      ...expenseByCategory.map(c => c.id),
+      ...prevExpenseByCategory.map(c => c.id),
+    ]);
+    return Array.from(allIds).map(id => {
+      const cur = expenseByCategory.find(c => c.id === id);
+      const prv = prevExpenseByCategory.find(c => c.id === id);
+      const ref = cur ?? prv!;
+      return { id, name: ref.name, icon: ref.icon, color: ref.color, current: cur?.amount ?? 0, previous: prv?.amount ?? 0 };
+    }).sort((a, b) => b.current - a.current).slice(0, 8);
+  }, [expenseByCategory, prevExpenseByCategory]);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -208,108 +247,153 @@ export default function StatsScreen() {
       >
         <PeriodPicker value={period} onChange={setPeriod} />
 
-        {/* ── Cash flow card ───────────────────────────────────────── */}
-        <View style={[styles.cashFlowCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.cashFlowTitle, { color: colors.text }]}>Cash flow</Text>
-
-          <View style={styles.cashFlowTop}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.cashFlowPeriodLabel, { color: colors.muted }]}>{period.label}</Text>
-              <Text style={[styles.cashFlowBalance, { color: net >= 0 ? colors.income : colors.expense }]}>
-                {net >= 0 ? '+' : '−'}{formatCurrency(animNet, currency)}
-              </Text>
-            </View>
-            {vsPct !== null && (
-              <View style={[
-                styles.vsBadge,
-                { backgroundColor: vsPct >= 0 ? colors.income + '22' : colors.expense + '22' },
-              ]}>
-                <Text style={[styles.vsLabel, { color: colors.muted }]}>vs prev.</Text>
-                <Text style={[styles.vsPct, { color: vsPct >= 0 ? colors.income : colors.expense }]}>
-                  {vsPct >= 0 ? '↑' : '↓'} {Math.abs(vsPct)}%
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.cashFlowBars}>
-            <View style={styles.barBlock}>
-              <View style={styles.barMeta}>
-                <Text style={[styles.barLabel, { color: colors.muted }]}>Income</Text>
-                <Text style={[styles.barAmount, { color: colors.text }]}>{formatCurrency(income, currency)}</Text>
-              </View>
-              <View style={[styles.barTrack, { backgroundColor: colors.border }]}>
-                <View style={[styles.barFill, { width: `${incomePct}%` as any, backgroundColor: colors.income }]} />
-              </View>
-            </View>
-            <View style={styles.barBlock}>
-              <View style={styles.barMeta}>
-                <Text style={[styles.barLabel, { color: colors.muted }]}>Expenses</Text>
-                <Text style={[styles.barAmount, { color: colors.text }]}>−{formatCurrency(expense, currency)}</Text>
-              </View>
-              <View style={[styles.barTrack, { backgroundColor: colors.border }]}>
-                <View style={[styles.barFill, { width: `${expensePct}%` as any, backgroundColor: colors.expense }]} />
-              </View>
-            </View>
-          </View>
+        {/* ── Summary ──────────────────────────────────────────────────── */}
+        <View style={styles.summaryGrid}>
+          <SummaryTile label="Income" value={formatCurrency(income, defaultCurrency)} valueColor={colors.income} colors={colors} />
+          <SummaryTile label="Expenses" value={formatCurrency(expense, defaultCurrency)} valueColor={colors.expense} colors={colors} />
+          <SummaryTile
+            label="Net"
+            value={(net >= 0 ? '+' : '−') + formatCurrency(Math.abs(net), defaultCurrency)}
+            valueColor={net >= 0 ? colors.income : colors.expense}
+            colors={colors}
+          />
+          <SummaryTile label="Transactions" value={String(txCount)} valueColor={colors.accent} colors={colors} />
         </View>
 
-        {/* ── By wallet ────────────────────────────────────────────── */}
-        {walletPeriodStats.length > 0 && (
-          <View>
-            <Text style={[styles.sectionLabel, { color: colors.muted }]}>By wallet</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.walletScroll}>
-              {walletPeriodStats.map(({ wallet: w, income: wi, expense: we, net: wn }) => (
-                <View
-                  key={w.id}
-                  style={[
-                    styles.walletCard,
-                    {
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                      borderLeftColor: w.color || colors.accent,
-                    },
-                  ]}
-                >
-                  <View style={styles.walletCardHeader}>
-                    {w.icon ? <Text style={styles.walletCardIcon}>{w.icon}</Text> : null}
-                    <Text style={[styles.walletCardName, { color: colors.text }]} numberOfLines={1}>{w.name}</Text>
-                    <Text style={[styles.walletCardCurrency, { color: colors.muted }]}>{w.currency}</Text>
-                  </View>
-                  <Text style={[styles.walletCardBalance, { color: wn >= 0 ? colors.income : colors.expense }]}>
-                    {wn >= 0 ? '+' : '−'}{formatCurrency(Math.abs(wn), w.currency)}
+        {/* ── Expenses by Category ─────────────────────────────────────── */}
+        {expenseByCategory.length > 0 && (
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.muted }]}>EXPENSES BY CATEGORY</Text>
+
+            {/* donut + legend */}
+            <View style={styles.donutRow}>
+              <View style={styles.donutWrap}>
+                <DonutChart items={expenseByCategory} total={expense} fallback={colors.expense} />
+                <View style={styles.donutCenter} pointerEvents="none">
+                  <Text style={[styles.donutTotal, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
+                    {formatCurrency(expense, defaultCurrency)}
                   </Text>
-                  <View style={styles.walletCardDetails}>
-                    <Text style={[styles.walletIncome, { color: colors.income }]}>+{formatCurrency(wi, w.currency)}</Text>
-                    <Text style={[styles.walletExpense, { color: colors.expense }]}>−{formatCurrency(we, w.currency)}</Text>
+                  <Text style={[styles.donutTotalLabel, { color: colors.muted }]}>total</Text>
+                </View>
+              </View>
+              <View style={styles.donutLegend}>
+                {expenseByCategory.slice(0, 6).map((cat, i) => {
+                  const pct = expense > 0 ? Math.round((cat.amount / expense) * 100) : 0;
+                  return (
+                    <View key={cat.id ?? `null-${i}`} style={styles.legendRow}>
+                      <View style={[styles.legendDot, { backgroundColor: cat.color || colors.expense }]} />
+                      <Text style={[styles.legendName, { color: colors.text }]} numberOfLines={1}>{cat.name}</Text>
+                      <Text style={[styles.legendPct, { color: colors.muted }]}>{pct}%</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* full list */}
+            {expenseByCategory.map((cat, i) => {
+              const pct = expense > 0 ? Math.round((cat.amount / expense) * 100) : 0;
+              const barPct = expenseByCategory[0]?.amount > 0 ? (cat.amount / expenseByCategory[0].amount) * 100 : 0;
+              const dotColor = cat.color || colors.expense;
+              return (
+                <View
+                  key={cat.id ?? `null-list-${i}`}
+                  style={[styles.catRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
+                >
+                  <View style={[styles.catIconBox, { backgroundColor: dotColor + '28' }]}>
+                    {cat.icon ? <Text style={styles.catIcon}>{cat.icon}</Text> : <View style={[styles.catDot, { backgroundColor: dotColor }]} />}
+                  </View>
+                  <View style={styles.catInfo}>
+                    <View style={styles.catTopRow}>
+                      <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>{cat.name}</Text>
+                      <Text style={[styles.catAmount, { color: dotColor }]}>{formatCurrency(cat.amount, defaultCurrency)}</Text>
+                    </View>
+                    <View style={styles.catBarRow}>
+                      <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
+                        <View style={[styles.barFill, { width: `${barPct}%` as any, backgroundColor: dotColor }]} />
+                      </View>
+                      <Text style={[styles.catPct, { color: colors.muted }]}>{pct}%</Text>
+                    </View>
                   </View>
                 </View>
-              ))}
-            </ScrollView>
+              );
+            })}
           </View>
         )}
 
-        {/* ── Category breakdowns ──────────────────────────────────── */}
-        {expenseByCategory.length > 0 && (
-          <CategoryBreakdown
-            title="Expenses by category"
-            items={expenseByCategory}
-            total={expense}
-            fallbackBarColor={colors.expense}
-            currency={currency}
-            colors={colors}
-          />
+        {/* ── Balance by Currency ──────────────────────────────────────── */}
+        {balanceByCurrency.length > 0 && (
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.muted }]}>BALANCE BY CURRENCY</Text>
+            <View style={styles.currencyList}>
+              {balanceByCurrency.map(({ currency, balance }) => {
+                const maxAbs = Math.max(...balanceByCurrency.map(d => Math.abs(d.balance)), 1);
+                const pct = (Math.abs(balance) / maxAbs) * 100;
+                const barColor = balance >= 0 ? colors.income : colors.expense;
+                return (
+                  <View key={currency} style={styles.currencyRow}>
+                    <Text style={[styles.currencyCode, { color: colors.text }]}>{currency}</Text>
+                    <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
+                      <View style={[styles.barFill, { width: `${pct}%` as any, backgroundColor: barColor }]} />
+                    </View>
+                    <Text style={[styles.currencyAmount, { color: barColor }]}>
+                      {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), currency as Currency)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
         )}
 
-        {incomeByCategory.length > 0 && (
-          <CategoryBreakdown
-            title="Income by category"
-            items={incomeByCategory}
-            total={income}
-            fallbackBarColor={colors.income}
-            currency={currency}
-            colors={colors}
-          />
+        {/* ── Expense Comparison by Category ──────────────────────────── */}
+        {comparisonData.length > 0 && (
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.muted }]}>EXPENSE COMPARISON BY CATEGORY</Text>
+            <View style={styles.compLegendRow}>
+              <View style={styles.compLegendItem}>
+                <View style={[styles.compLegendDot, { backgroundColor: colors.expense }]} />
+                <Text style={[styles.compLegendText, { color: colors.muted }]}>Current period</Text>
+              </View>
+              <View style={styles.compLegendItem}>
+                <View style={[styles.compLegendDot, { backgroundColor: colors.muted + '88' }]} />
+                <Text style={[styles.compLegendText, { color: colors.muted }]}>Previous period</Text>
+              </View>
+            </View>
+            {(() => {
+              const maxVal = Math.max(...comparisonData.map(d => Math.max(d.current, d.previous)), 1);
+              return comparisonData.map((item, i) => {
+                const curPct = (item.current / maxVal) * 100;
+                const prevPct = (item.previous / maxVal) * 100;
+                const dotColor = item.color || colors.expense;
+                return (
+                  <View
+                    key={item.id ?? `null-cmp-${i}`}
+                    style={[styles.compRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
+                  >
+                    <View style={styles.compIconBox}>
+                      {item.icon ? <Text style={styles.catIcon}>{item.icon}</Text> : <View style={[styles.catDot, { backgroundColor: dotColor }]} />}
+                    </View>
+                    <View style={styles.compBars}>
+                      <Text style={[styles.compCatName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
+                      <View style={styles.compBarGroup}>
+                        <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
+                          <View style={[styles.barFill, { width: `${curPct}%` as any, backgroundColor: dotColor }]} />
+                        </View>
+                        <Text style={[styles.compBarAmt, { color: colors.text }]}>{formatCurrency(item.current, defaultCurrency)}</Text>
+                      </View>
+                      <View style={styles.compBarGroup}>
+                        <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
+                          <View style={[styles.barFill, { width: `${prevPct}%` as any, backgroundColor: colors.muted + '88' }]} />
+                        </View>
+                        <Text style={[styles.compBarAmt, { color: colors.muted }]}>{formatCurrency(item.previous, defaultCurrency)}</Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              });
+            })()}
+          </View>
         )}
 
       </ScrollView>
@@ -317,123 +401,40 @@ export default function StatsScreen() {
   );
 }
 
-// ─── CategoryBreakdown ───────────────────────────────────────────────────────
+// ─── SummaryTile ──────────────────────────────────────────────────────────────
 
-function CategoryBreakdown({ title, items, total, fallbackBarColor, currency, colors }: {
-  title: string;
-  items: CategoryStat[];
-  total: number;
-  fallbackBarColor: string;
-  currency: Currency;
-  colors: Colors;
+function SummaryTile({ label, value, valueColor, colors }: {
+  label: string; value: string; valueColor: string; colors: Colors;
 }) {
-  const maxAmount = items[0]?.amount ?? 0;
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Text style={[styles.cardTitle, { color: colors.muted }]}>{title.toUpperCase()}</Text>
-      {items.map((cat, i) => {
-        const pct = total > 0 ? Math.round((cat.amount / total) * 100) : 0;
-        const barPct = maxAmount > 0 ? (cat.amount / maxAmount) * 100 : 0;
-        const dotColor = cat.color || fallbackBarColor;
-        return (
-          <View
-            key={cat.id ?? `null-${i}`}
-            style={[
-              styles.catRow,
-              i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-            ]}
-          >
-            <View style={[styles.catIconBox, { backgroundColor: dotColor + '28' }]}>
-              {cat.icon
-                ? <Text style={styles.catIcon}>{cat.icon}</Text>
-                : <View style={[styles.catDot, { backgroundColor: dotColor }]} />}
-            </View>
-            <View style={styles.catInfo}>
-              <View style={styles.catTopRow}>
-                <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>{cat.name}</Text>
-                <Text style={[styles.catAmount, { color: dotColor }]}>{formatCurrency(cat.amount, currency)}</Text>
-              </View>
-              <View style={styles.catBarRow}>
-                <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
-                  <View style={[styles.barFill, { width: `${barPct}%` as any, backgroundColor: dotColor }]} />
-                </View>
-                <Text style={[styles.catPct, { color: colors.muted }]}>{pct}%</Text>
-              </View>
-            </View>
-          </View>
-        );
-      })}
+    <View style={[styles.summaryTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <Text style={[styles.summaryLabel, { color: colors.muted }]}>{label}</Text>
+      <Text style={[styles.summaryValue, { color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
     </View>
   );
 }
 
-// ─── styles ──────────────────────────────────────────────────────────────────
+// ─── styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: { paddingHorizontal: 16, gap: 16 },
 
-  // Cash flow card
-  cashFlowCard: {
-    borderRadius: 16,
+  // Summary
+  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  summaryTile: {
+    width: (SCREEN_W - 32 - 10) / 2,
+    borderRadius: 14,
     borderWidth: 1,
-    padding: 20,
-    gap: 16,
+    padding: 16,
+    gap: 4,
   },
-  cashFlowTitle: { fontSize: 15, fontFamily: 'Figtree_700Bold' },
-  cashFlowTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  cashFlowPeriodLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium', marginBottom: 4 },
-  cashFlowBalance: { fontSize: 30, fontFamily: 'Figtree_700Bold', lineHeight: 34 },
-  vsBadge: {
-    alignItems: 'flex-end',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 2,
-  },
-  vsLabel: { fontSize: 11, fontFamily: 'Figtree_500Medium' },
-  vsPct: { fontSize: 15, fontFamily: 'Figtree_700Bold' },
-  cashFlowBars: { gap: 14 },
-  barBlock: { gap: 6 },
-  barMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  barLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
-  barAmount: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
-  barTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
-  barFill: { height: 8, borderRadius: 4 },
+  summaryLabel: { fontSize: 12, fontFamily: 'Figtree_500Medium', textTransform: 'uppercase', letterSpacing: 0.4 },
+  summaryValue: { fontSize: 20, fontFamily: 'Figtree_700Bold', lineHeight: 26 },
 
-  // By wallet
-  sectionLabel: {
-    fontSize: 11,
-    fontFamily: 'Figtree_700Bold',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 10,
-  },
-  walletScroll: { gap: 10, paddingBottom: 2 },
-  walletCard: {
-    borderWidth: 1,
-    borderLeftWidth: 4,
-    borderRadius: 12,
-    padding: 14,
-    gap: 6,
-    minWidth: 160,
-    maxWidth: 220,
-  },
-  walletCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  walletCardIcon: { fontSize: 16 },
-  walletCardName: { flex: 1, fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
-  walletCardCurrency: { fontSize: 11, fontFamily: 'Figtree_600SemiBold', letterSpacing: 0.4 },
-  walletCardBalance: { fontSize: 20, fontFamily: 'Figtree_700Bold' },
-  walletCardDetails: { flexDirection: 'row', gap: 10 },
-  walletIncome: { fontSize: 12, fontFamily: 'Figtree_500Medium' },
-  walletExpense: { fontSize: 12, fontFamily: 'Figtree_500Medium' },
-
-  // Category breakdown
+  // Card shell
   card: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
   cardTitle: {
     fontSize: 11,
@@ -444,17 +445,22 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 10,
   },
-  catRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 10,
-  },
-  catIconBox: {
-    width: 36, height: 36, borderRadius: 9,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  },
+
+  // Donut
+  donutRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
+  donutWrap: { width: 120, height: 120, alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' },
+  donutCenter: { position: 'absolute', alignItems: 'center', justifyContent: 'center', width: 64, height: 64 },
+  donutTotal: { fontSize: 11, fontFamily: 'Figtree_700Bold', textAlign: 'center' },
+  donutTotalLabel: { fontSize: 10, fontFamily: 'Figtree_500Medium' },
+  donutLegend: { flex: 1, gap: 5 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  legendName: { flex: 1, fontSize: 12, fontFamily: 'Figtree_500Medium' },
+  legendPct: { fontSize: 12, fontFamily: 'Figtree_600SemiBold', width: 30, textAlign: 'right' },
+
+  // Category rows
+  catRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 10 },
+  catIconBox: { width: 36, height: 36, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   catIcon: { fontSize: 18 },
   catDot: { width: 10, height: 10, borderRadius: 5 },
   catInfo: { flex: 1, gap: 5 },
@@ -463,4 +469,24 @@ const styles = StyleSheet.create({
   catAmount: { fontSize: 13, fontFamily: 'Figtree_700Bold', flexShrink: 0 },
   catBarRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   catPct: { fontSize: 11, fontFamily: 'Figtree_600SemiBold', width: 32, textAlign: 'right' },
+  barTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  barFill: { height: 8, borderRadius: 4 },
+
+  // Balance by currency
+  currencyList: { paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
+  currencyRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  currencyCode: { width: 38, fontSize: 13, fontFamily: 'Figtree_700Bold' },
+  currencyAmount: { width: 110, fontSize: 13, fontFamily: 'Figtree_600SemiBold', textAlign: 'right' },
+
+  // Expense comparison
+  compLegendRow: { flexDirection: 'row', gap: 16, paddingHorizontal: 14, paddingBottom: 10 },
+  compLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  compLegendDot: { width: 10, height: 10, borderRadius: 5 },
+  compLegendText: { fontSize: 12, fontFamily: 'Figtree_500Medium' },
+  compRow: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 14, paddingVertical: 10, gap: 10 },
+  compIconBox: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 18 },
+  compBars: { flex: 1, gap: 4 },
+  compCatName: { fontSize: 13, fontFamily: 'Figtree_600SemiBold', marginBottom: 2 },
+  compBarGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  compBarAmt: { fontSize: 11, fontFamily: 'Figtree_600SemiBold', width: 80, textAlign: 'right' },
 });
