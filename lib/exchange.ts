@@ -1,22 +1,21 @@
-// MNB (Magyar Nemzeti Bank) középárfolyam — exchange rates to HUF.
-// Current-day rates cached per day; historical rates cached by date range.
+// Exchange rates via Frankfurter (ECB fixing — matches MNB középárfolyam closely).
+// getMNBRates / getMNBRatesForPeriod names kept for API compatibility.
 
 export type Rates = Record<string, number>; // e.g. { EUR: 390.5, USD: 357.25 }
 export type DailyRates = Record<string, Rates>; // YYYY-MM-DD → { EUR: ..., USD: ... }
 
-let _rates: Rates | null = null;
-let _ratesDate: string | null = null;
+const BASE = 'https://api.frankfurter.app';
 
-/** Convert an amount in `currency` to HUF using the provided MNB middle rates. */
+/** Convert an amount in `currency` to HUF using the provided rates. */
 export function toHUF(amount: number, currency: string | undefined | null, rates: Rates): number {
   if (!currency || currency === 'HUF') return amount;
   const rate = rates[currency];
-  return rate ? amount * rate : amount; // fall back to raw amount if rate unknown
+  return rate ? amount * rate : amount;
 }
 
 /**
- * Look up rates for a specific date. Falls back to the nearest prior business
- * day if the exact date has no entry (weekends / holidays).
+ * Find rates for a specific date. Falls back to nearest prior business day
+ * when the exact date has no entry (weekends / Hungarian public holidays).
  */
 export function getRatesForDate(date: string, daily: DailyRates): Rates {
   if (daily[date]) return daily[date];
@@ -28,110 +27,57 @@ export function getRatesForDate(date: string, daily: DailyRates): Rates {
   return {};
 }
 
-/** Returns today's MNB rates (fetches once, then caches for the rest of the day). */
+/** Returns today's rates (EUR→HUF, USD→HUF). */
 export async function getMNBRates(): Promise<Rates> {
-  const today = new Date().toISOString().slice(0, 10);
-  if (_rates && _ratesDate === today) return _rates;
-  const fetched = await fetchMNBRates();
-  _rates = fetched;
-  _ratesDate = today;
-  return fetched;
+  try {
+    const res = await fetch(`${BASE}/latest?from=HUF&to=EUR,USD`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    return invertRates(json.rates ?? {});
+  } catch (e) {
+    console.error('[Exchange] getMNBRates failed:', e);
+    return {};
+  }
 }
 
 /**
- * Fetch MNB középárfolyam for every day in [from, to].
- * Returns a map of date → rates so callers can use each transaction's own day rate.
+ * Fetch rates for every day in [from, to].
+ * Returns date → { EUR: HUF-rate, USD: HUF-rate } so each transaction
+ * can be converted using its own day's middle rate.
  */
 export async function getMNBRatesForPeriod(from: string, to: string): Promise<DailyRates> {
   try {
-    const res = await fetch('https://www.mnb.hu/arfolyamok.asmx', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/xml; charset=utf-8',
-        'SOAPAction':
-          'http://www.mnb.hu/webservices/MNBArfolyamServiceSoap/GetExchangeRates',
-      },
-      body: `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-               xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <GetExchangeRates xmlns="http://www.mnb.hu/webservices/">
-      <startDate>${from}</startDate>
-      <endDate>${to}</endDate>
-      <currencyNames>EUR,USD</currencyNames>
-    </GetExchangeRates>
-  </soap:Body>
-</soap:Envelope>`,
-    });
-    return parseMNBDailySoap(await res.text());
-  } catch (e) {
-    console.error('[MNB] getMNBRatesForPeriod failed:', e);
-    return {};
-  }
-}
-
-async function fetchMNBRates(): Promise<Rates> {
-  try {
-    const res = await fetch('https://www.mnb.hu/arfolyamok.asmx', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/xml; charset=utf-8',
-        'SOAPAction':
-          'http://www.mnb.hu/webservices/MNBArfolyamServiceSoap/GetCurrentExchangeRates',
-      },
-      body: `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-               xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <GetCurrentExchangeRates xmlns="http://www.mnb.hu/webservices/" />
-  </soap:Body>
-</soap:Envelope>`,
-    });
-    return parseMNBSoap(await res.text());
-  } catch (e) {
-    console.error('[MNB] GetCurrentExchangeRates failed:', e);
-    return {};
-  }
-}
-
-function parseMNBSoap(soap: string): Rates {
-  const rates: Rates = {};
-  const inner =
-    soap.match(/<GetCurrentExchangeRatesResult>([\s\S]*?)<\/GetCurrentExchangeRatesResult>/)?.[1] ?? '';
-  const decoded = inner
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&');
-  // <Rate unit="1" curr="EUR">390,50</Rate>  (Hungarian decimal comma)
-  for (const m of decoded.matchAll(/unit="(\d+)"\s+curr="([A-Z]+)">([0-9,]+)<\/Rate>/g)) {
-    const unit = Number(m[1]);
-    const currency = m[2];
-    const rate = parseFloat(m[3].replace(',', '.'));
-    if (unit > 0 && !isNaN(rate)) rates[currency] = rate / unit;
-  }
-  return rates;
-}
-
-function parseMNBDailySoap(soap: string): DailyRates {
-  const daily: DailyRates = {};
-  const inner =
-    soap.match(/<GetExchangeRatesResult>([\s\S]*?)<\/GetExchangeRatesResult>/)?.[1] ?? '';
-  const decoded = inner
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&');
-  for (const dayM of decoded.matchAll(/<Day date="(\d{4}-\d{2}-\d{2})">([\s\S]*?)<\/Day>/g)) {
-    const date = dayM[1];
-    const rates: Rates = {};
-    for (const m of dayM[2].matchAll(/unit="(\d+)"\s+curr="([A-Z]+)">([0-9,]+)<\/Rate>/g)) {
-      const unit = Number(m[1]);
-      const curr = m[2];
-      const rate = parseFloat(m[3].replace(',', '.'));
-      if (unit > 0 && !isNaN(rate)) rates[curr] = rate / unit;
+    const res = await fetch(`${BASE}/${from}..${to}?from=HUF&to=EUR,USD`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const daily: DailyRates = {};
+    const raw = json.rates ?? {};
+    for (const [key, val] of Object.entries(raw)) {
+      if (val && typeof val === 'object') {
+        // Multi-date: key is a date string, val is { EUR: 0.00254, ... }
+        daily[key] = invertRates(val as Record<string, number>);
+      }
     }
-    daily[date] = rates;
+    // Single-date fallback (from === to returns flat rates)
+    if (Object.keys(daily).length === 0 && json.date) {
+      daily[json.date] = invertRates(raw as Record<string, number>);
+    }
+    if (Object.keys(daily).length === 0) {
+      console.error('[Exchange] getMNBRatesForPeriod returned empty for', from, '..', to);
+    }
+    return daily;
+  } catch (e) {
+    console.error('[Exchange] getMNBRatesForPeriod failed:', e);
+    return {};
   }
-  return daily;
+}
+
+// Frankfurter gives rates relative to HUF (1 HUF = 0.00254 EUR).
+// Invert to get how many HUF per 1 EUR.
+function invertRates(hufBased: Record<string, number>): Rates {
+  const out: Rates = {};
+  for (const [curr, rate] of Object.entries(hufBased)) {
+    if (rate > 0) out[curr] = 1 / rate;
+  }
+  return out;
 }

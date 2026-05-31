@@ -113,14 +113,9 @@ export default function DashboardScreen() {
 
     let periodRates = await getMNBRatesForPeriod(period.from, period.to);
     if (Object.keys(periodRates).length === 0) {
-      // GetExchangeRates failed or returned nothing — fall back to today's rates
-      console.warn('[MNB] GetExchangeRates returned empty, falling back to GetCurrentExchangeRates');
       const current = await getMNBRates();
       if (Object.keys(current).length > 0) {
-        // Seed every date in the period with the same current rate so getRatesForDate finds them
         periodRates = { [period.from]: current };
-      } else {
-        console.error('[MNB] Both rate endpoints returned empty — currency conversion unavailable');
       }
     }
     setDailyRates(periodRates);
