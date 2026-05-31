@@ -1,4 +1,3 @@
-import React from 'react';
 import { Text, TextProps, StyleSheet } from 'react-native';
 import { useTheme } from '@/lib/theme';
 

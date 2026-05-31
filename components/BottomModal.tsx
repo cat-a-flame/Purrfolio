@@ -1,4 +1,4 @@
-import React from 'react';
+import { type ReactNode } from 'react';
 import {
   Modal,
   View,
@@ -15,7 +15,7 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   title?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export default function BottomModal({ visible, onClose, title, children }: Props) {

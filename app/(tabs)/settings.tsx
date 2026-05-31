@@ -1,4 +1,4 @@
-import React from 'react';
+import { Fragment } from 'react';
 import {
   View,
   Text,
@@ -69,7 +69,7 @@ export default function SettingsScreen() {
             </Text>
             <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               {section.items.map((item, idx) => (
-                <React.Fragment key={item.label}>
+                <Fragment key={item.label}>
                   {idx > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
                   <TouchableOpacity
                     style={styles.row}
@@ -88,7 +88,7 @@ export default function SettingsScreen() {
                       <Ionicons name="chevron-forward" size={20} color={colors.muted} />
                     )}
                   </TouchableOpacity>
-                </React.Fragment>
+                </Fragment>
               ))}
             </View>
           </View>

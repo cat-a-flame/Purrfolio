@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import {
   View,
   Text,
@@ -571,7 +571,7 @@ function PaymentModal({
   onClose: () => void;
   title: string;
   form: EditForm;
-  setForm: React.Dispatch<React.SetStateAction<EditForm>>;
+  setForm: Dispatch<SetStateAction<EditForm>>;
   formError: string;
   saving: boolean;
   onSave: () => void;

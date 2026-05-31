@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import { useTheme, useDarkMode } from '@/lib/theme';
 
 interface Props {
   title: string;
-  leftAction?: React.ReactNode;
+  leftAction?: ReactNode;
 }
 
 const DRAWER_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);

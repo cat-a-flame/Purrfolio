@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, type ReactNode } from 'react';
 import {
   View,
   Text,
@@ -75,7 +75,7 @@ function DropBtn({
 function ModalRow({
   label, selected, onPress, colors, icon,
 }: {
-  label: string; selected: boolean; onPress: () => void; colors: any; icon?: React.ReactNode;
+  label: string; selected: boolean; onPress: () => void; colors: any; icon?: ReactNode;
 }) {
   return (
     <TouchableOpacity

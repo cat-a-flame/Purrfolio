@@ -1,4 +1,3 @@
-import React from 'react';
 import { TextInput, TextInputProps, StyleSheet, View, Text } from 'react-native';
 import { useTheme } from '@/lib/theme';
 

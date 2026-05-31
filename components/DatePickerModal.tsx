@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -33,7 +33,7 @@ const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
 
 function Column({ items, selected, onSelect }: { items: (string | number)[]; selected: number; onSelect: (i: number) => void }) {
   const colors = useTheme();
-  const scrollRef = React.useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: selected * ITEM_HEIGHT, animated: false });

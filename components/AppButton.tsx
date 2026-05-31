@@ -1,4 +1,4 @@
-import React from 'react';
+import { type ReactNode } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -12,7 +12,7 @@ type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 interface Props {
   onPress?: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
   variant?: Variant;
   loading?: boolean;
   disabled?: boolean;
