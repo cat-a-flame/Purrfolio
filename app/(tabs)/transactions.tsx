@@ -110,7 +110,10 @@ export default function TransactionsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent) {
+      setLoading(true);
+      setTransactions([]);
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
