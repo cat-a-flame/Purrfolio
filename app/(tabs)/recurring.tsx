@@ -588,6 +588,7 @@ function PaymentModal({
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showLabelModal, setShowLabelModal] = useState(false);
+  const [showFrequencyModal, setShowFrequencyModal] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
@@ -595,6 +596,7 @@ function PaymentModal({
   useEffect(() => {
     if (!visible) {
       setShowWalletModal(false);
+      setShowFrequencyModal(false);
       setShowCategoryModal(false);
       setShowLabelModal(false);
       setShowStartDatePicker(false);
@@ -734,23 +736,15 @@ function PaymentModal({
             {/* Frequency */}
             <View style={styles.fieldGroup}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>Frequency</Text>
-              <View style={styles.chips}>
-                {FREQUENCIES.map((f) => (
-                  <TouchableOpacity
-                    key={f}
-                    style={[
-                      styles.chip,
-                      { borderColor: colors.border, backgroundColor: colors.surface },
-                      form.frequency === f && { borderColor: colors.accent, backgroundColor: colors.accent + '22' },
-                    ]}
-                    onPress={() => setField('frequency', f)}
-                  >
-                    <Text style={[styles.chipText, { color: form.frequency === f ? colors.accent : colors.text }]}>
-                      {frequencyLabel(f)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <TouchableOpacity
+                style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                onPress={() => setShowFrequencyModal(true)}
+              >
+                <Text style={[styles.pickerBtnText, { color: colors.text }]}>
+                  {frequencyLabel(form.frequency)}
+                </Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+              </TouchableOpacity>
             </View>
 
             {/* Category */}
@@ -876,6 +870,26 @@ function PaymentModal({
                 {w.name}
               </Text>
               {form.wallet_id === w.id && <Text style={{ color: colors.accent }}>✓</Text>}
+            </TouchableOpacity>
+          ))}
+        </BottomModal>
+
+        {/* Frequency picker */}
+        <BottomModal visible={showFrequencyModal} onClose={() => setShowFrequencyModal(false)} title="Frequency">
+          {FREQUENCIES.map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[
+                styles.modalRow,
+                { borderBottomColor: colors.border },
+                form.frequency === f && { backgroundColor: colors.accent + '11' },
+              ]}
+              onPress={() => { setField('frequency', f); setShowFrequencyModal(false); }}
+            >
+              <Text style={[styles.modalRowText, { color: form.frequency === f ? colors.accent : colors.text }]}>
+                {frequencyLabel(f)}
+              </Text>
+              {form.frequency === f && <Text style={{ color: colors.accent }}>✓</Text>}
             </TouchableOpacity>
           ))}
         </BottomModal>
@@ -1038,14 +1052,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, borderWidth: 1,
   },
   pickerBtnText: { fontSize: 15, flex: 1 },
-
-  // Frequency chips
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
-  },
-  chipText: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
 
   // More options (matches [id].tsx)
   moreToggle: {
