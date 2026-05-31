@@ -1,5 +1,12 @@
 import { View, TouchableOpacity, StyleSheet, useColorScheme, Dimensions } from 'react-native';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+type Route = { key: string; name: string };
+type TabBarProps = {
+  state: { routes: Route[]; index: number };
+  navigation: {
+    emit: (e: { type: string; target: string; canPreventDefault: boolean }) => { defaultPrevented: boolean };
+    navigate: (name: string) => void;
+  };
+};
 import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -75,7 +82,7 @@ const TAB_ICONS: Record<string, string> = {
 };
 
 
-export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
+export default function CustomTabBar({ state, navigation }: TabBarProps) {
   const scheme = useColorScheme();
   const colors = scheme === 'dark' ? darkColors : lightColors;
   const { bottom } = useSafeAreaInsets();
