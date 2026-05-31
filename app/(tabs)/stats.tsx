@@ -228,16 +228,13 @@ export default function StatsScreen() {
     ];
   }, [expenseByCategory]);
 
-  // Group wallets by currency; bars are normalized within each currency group
-  const walletsByCurrency = useMemo(() => {
-    const map = new Map<string, (Wallet & { _balance: number })[]>();
-    for (const w of wallets) {
-      if (!map.has(w.currency)) map.set(w.currency, []);
-      map.get(w.currency)!.push(w);
-    }
+  // One entry per currency; bars use log scale so EUR/USD are visible next to HUF
+  const balanceByCurrency = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const w of wallets) map.set(w.currency, (map.get(w.currency) ?? 0) + w._balance);
     return Array.from(map.entries())
-      .map(([currency, ws]) => ({ currency, wallets: ws.sort((a, b) => b._balance - a._balance) }))
-      .sort((a, b) => b.wallets.reduce((s, w) => s + w._balance, 0) - a.wallets.reduce((s, w) => s + w._balance, 0));
+      .map(([currency, balance]) => ({ currency, balance }))
+      .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
   }, [wallets]);
 
   const prevExpenseByCategory = useMemo(() => groupByCategory(prevTxs, 'expense'), [prevTxs]);
@@ -339,41 +336,37 @@ export default function StatsScreen() {
         )}
 
         {/* ── Balance by Currency ──────────────────────────────────────── */}
-        {walletsByCurrency.length > 0 && (
+        {balanceByCurrency.length > 0 && (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.muted }]}>BALANCE BY CURRENCY</Text>
-            {walletsByCurrency.map(({ currency, wallets: ws }, groupIdx) => {
-              const maxAbs = Math.max(...ws.map(w => Math.abs(w._balance)), 1);
-              return (
-                <View key={currency}>
-                  <Text style={[
-                    styles.currencyGroupHeader,
-                    { color: colors.muted, borderTopColor: colors.border },
-                    groupIdx > 0 && { borderTopWidth: StyleSheet.hairlineWidth },
-                  ]}>
-                    {currency}
-                  </Text>
-                  {ws.map(w => {
-                    const pct = (Math.abs(w._balance) / maxAbs) * 100;
-                    const barColor = w._balance >= 0 ? colors.income : colors.expense;
-                    return (
-                      <View key={w.id} style={styles.currencyRow}>
-                        {w.icon
-                          ? <Text style={styles.currencyIcon}>{w.icon}</Text>
-                          : <View style={[styles.currencyIconPlaceholder, { backgroundColor: (w.color ?? colors.accent) + '33' }]} />}
-                        <Text style={[styles.currencyWalletName, { color: colors.text }]} numberOfLines={1}>{w.name}</Text>
-                        <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
-                          <View style={[styles.barFill, { width: `${pct}%` as any, backgroundColor: barColor }]} />
-                        </View>
+            <Text style={[styles.currencySubtitle, { color: colors.muted }]}>Current total across all wallets</Text>
+            {(() => {
+              // Log-scale so EUR/USD bars are visible alongside large HUF values
+              const logVals = balanceByCurrency.map(d => Math.log10(Math.abs(d.balance) + 1));
+              const maxLog = Math.max(...logVals, 1);
+              return balanceByCurrency.map(({ currency, balance }, i) => {
+                const pct = (Math.log10(Math.abs(balance) + 1) / maxLog) * 100;
+                const barColor = balance >= 0 ? colors.income : colors.expense;
+                return (
+                  <View
+                    key={currency}
+                    style={[styles.currencyRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
+                  >
+                    <View style={styles.currencyRowInner}>
+                      <View style={styles.currencyTop}>
+                        <Text style={[styles.currencyCode, { color: colors.text }]}>{currency}</Text>
                         <Text style={[styles.currencyAmount, { color: barColor }]}>
-                          {w._balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(w._balance), currency as Currency)}
+                          {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), currency as Currency)}
                         </Text>
                       </View>
-                    );
-                  })}
-                </View>
-              );
-            })}
+                      <View style={[styles.barTrack, { backgroundColor: colors.border }]}>
+                        <View style={[styles.barFill, { width: `${pct}%` as any, backgroundColor: barColor }]} />
+                      </View>
+                    </View>
+                  </View>
+                );
+              });
+            })()}
             <View style={{ height: 4 }} />
           </View>
         )}
@@ -505,20 +498,12 @@ const styles = StyleSheet.create({
   barFill: { height: 8, borderRadius: 4 },
 
   // Balance by currency
-  currencyGroupHeader: {
-    fontSize: 11,
-    fontFamily: 'Figtree_700Bold',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 6,
-  },
-  currencyRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 7, gap: 8 },
-  currencyIcon: { fontSize: 16, width: 22, textAlign: 'center' },
-  currencyIconPlaceholder: { width: 22, height: 22, borderRadius: 6 },
-  currencyWalletName: { fontSize: 13, fontFamily: 'Figtree_500Medium', flex: 1 },
-  currencyAmount: { width: 110, fontSize: 13, fontFamily: 'Figtree_600SemiBold', textAlign: 'right' },
+  currencySubtitle: { fontSize: 12, fontFamily: 'Figtree_500Medium', paddingHorizontal: 14, marginTop: -6, marginBottom: 10 },
+  currencyRow: { paddingHorizontal: 14, paddingVertical: 10 },
+  currencyRowInner: { gap: 6 },
+  currencyTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  currencyCode: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
+  currencyAmount: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
 
   // Expense comparison
   compLegendRow: { flexDirection: 'row', gap: 16, paddingHorizontal: 14, paddingBottom: 10 },
