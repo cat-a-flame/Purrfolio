@@ -123,8 +123,10 @@ export default function TransactionsScreen() {
         .from('transactions')
         .select('*, wallet:wallets(*), category:categories(*), labels:transaction_labels(label:labels(*))')
         .eq('user_id', user.id)
+        .gte('date', period.from)
+        .lte('date', period.to)
         .order('date', { ascending: false })
-        .limit(500),
+        .limit(10000),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
       supabase.from('labels').select('*').eq('user_id', user.id).order('name'),
     ]);
@@ -137,7 +139,7 @@ export default function TransactionsScreen() {
       labels: (tx.labels ?? []).map((l: any) => l.label).filter(Boolean),
     })));
     setLoading(false);
-  }, []);
+  }, [period.from, period.to]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -165,8 +167,6 @@ export default function TransactionsScreen() {
       if (walletFilter && tx.wallet_id !== walletFilter) return false;
       if (categoryFilter && tx.category_id !== categoryFilter) return false;
       if (labelFilter && !tx.labels?.some((l: Label) => l.id === labelFilter)) return false;
-      if (period?.from && tx.date < period.from) return false;
-      if (period?.to && tx.date > period.to) return false;
       if (q) {
         const inNotes = tx.notes?.toLowerCase().includes(q) ?? false;
         const inPayer = tx.payer?.toLowerCase().includes(q) ?? false;
