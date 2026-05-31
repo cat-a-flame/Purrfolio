@@ -65,7 +65,8 @@ export async function getMNBRatesForPeriod(from: string, to: string): Promise<Da
 </soap:Envelope>`,
     });
     return parseMNBDailySoap(await res.text());
-  } catch {
+  } catch (e) {
+    console.error('[MNB] getMNBRatesForPeriod failed:', e);
     return {};
   }
 }
@@ -89,7 +90,8 @@ async function fetchMNBRates(): Promise<Rates> {
 </soap:Envelope>`,
     });
     return parseMNBSoap(await res.text());
-  } catch {
+  } catch (e) {
+    console.error('[MNB] GetCurrentExchangeRates failed:', e);
     return {};
   }
 }

@@ -16,7 +16,7 @@ import TransactionRow from '@/components/TransactionRow';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Currency } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
-import { getMNBRatesForPeriod, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import { getMNBRatesForPeriod, getMNBRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
 import { useCountUp } from '@/lib/useCountUp';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -111,8 +111,19 @@ export default function DashboardScreen() {
     }));
     setPeriodTxs(normalized);
 
-    const rates = await getMNBRatesForPeriod(period.from, period.to);
-    setDailyRates(rates);
+    let periodRates = await getMNBRatesForPeriod(period.from, period.to);
+    if (Object.keys(periodRates).length === 0) {
+      // GetExchangeRates failed or returned nothing — fall back to today's rates
+      console.warn('[MNB] GetExchangeRates returned empty, falling back to GetCurrentExchangeRates');
+      const current = await getMNBRates();
+      if (Object.keys(current).length > 0) {
+        // Seed every date in the period with the same current rate so getRatesForDate finds them
+        periodRates = { [period.from]: current };
+      } else {
+        console.error('[MNB] Both rate endpoints returned empty — currency conversion unavailable');
+      }
+    }
+    setDailyRates(periodRates);
 
     const pList = prevTxs ?? [];
     const pInc = pList.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
