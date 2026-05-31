@@ -3,7 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  ScrollView,
   StyleSheet,
   RefreshControl,
 } from 'react-native';
@@ -190,44 +189,6 @@ export default function DashboardScreen() {
     return items;
   }, [groups, dailyRates]);
 
-  if (loading) {
-    return (
-      <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-        <AppHeader title="Dashboard" />
-        <ScrollView
-          style={{ paddingTop: 16 }}
-          contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
-        >
-          {/* Cashflow card skeleton */}
-          <SkeletonBox style={{ height: 190, borderRadius: 10, marginBottom: 8, marginTop: 6 }} />
-          {/* Period picker stays interactive */}
-          <PeriodPicker value={period} onChange={setPeriod} />
-          {/* Skeleton transaction groups */}
-          {[3, 2, 2].map((count, gi) => (
-            <View key={gi}>
-              <View style={[styles.dayHeader, { marginTop: 20, marginBottom: 10 }]}>
-                <SkeletonBox style={{ height: 13, width: 130, borderRadius: 4 }} />
-                <SkeletonBox style={{ height: 13, width: 65, borderRadius: 4 }} />
-              </View>
-              {Array.from({ length: count }).map((_, ri) => (
-                <View key={ri} style={{ marginBottom: 6 }}>
-                  <View style={[styles.skeletonRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <SkeletonBox style={{ width: 40, height: 40, borderRadius: 10 }} />
-                    <View style={{ flex: 1, gap: 7, paddingTop: 3 }}>
-                      <SkeletonBox style={{ height: 13, width: `${50 + (ri * 13) % 25}%`, borderRadius: 4 }} />
-                      <SkeletonBox style={{ height: 11, width: `${30 + (ri * 17) % 20}%`, borderRadius: 4 }} />
-                    </View>
-                    <SkeletonBox style={{ height: 13, width: 68, borderRadius: 4, marginTop: 3 }} />
-                  </View>
-                </View>
-              ))}
-            </View>
-          ))}
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <AppHeader title="Dashboard" />
@@ -277,15 +238,9 @@ export default function DashboardScreen() {
               {/* Title row + VS badge */}
               <View style={styles.cashFlowHeader}>
                 <Text style={[styles.cashFlowTitle, { color: '#fff' }]}>Cash Flow</Text>
-                {vsPct !== null && (
-                  <View style={[
-                    styles.vsBadge,
-                    { backgroundColor: '#ffffff33' },
-                  ]}>
-                    <Text style={[
-                      styles.vsText,
-                      { color: '#fff' },
-                    ]}>
+                {!loading && vsPct !== null && (
+                  <View style={[styles.vsBadge, { backgroundColor: '#ffffff33' }]}>
+                    <Text style={[styles.vsText, { color: '#fff' }]}>
                       {vsPct >= 0 ? '↑' : '↓'} {Math.abs(vsPct)}%
                     </Text>
                   </View>
@@ -293,17 +248,21 @@ export default function DashboardScreen() {
               </View>
 
               {/* Net */}
-              <Text style={[styles.cashFlowNet, { color: net >= 0 ? '#fff' : '#ffcaca' }]}>
-                {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), 'HUF')}
-              </Text>
+              {loading
+                ? <SkeletonBox style={{ height: 34, width: 170, borderRadius: 6, backgroundColor: '#ffffff40' }} />
+                : <Text style={[styles.cashFlowNet, { color: net >= 0 ? '#fff' : '#ffcaca' }]}>
+                    {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), 'HUF')}
+                  </Text>
+              }
 
               {/* Income bar */}
               <View style={[styles.barSection, { marginBottom: 12 }]}>
                 <View style={styles.barLabelRow}>
                   <Text style={[styles.cashFlowLabel, { color: '#fff' }]}>Income</Text>
-                  <Text style={[styles.cashFlowValue, { color: '#fff' }]}>
-                    +{formatCurrency(income, 'HUF')}
-                  </Text>
+                  {loading
+                    ? <SkeletonBox style={{ height: 13, width: 90, borderRadius: 4, backgroundColor: '#ffffff40' }} />
+                    : <Text style={[styles.cashFlowValue, { color: '#fff' }]}>+{formatCurrency(income, 'HUF')}</Text>
+                  }
                 </View>
                 <View style={[styles.barTrack, { backgroundColor: '#ffffff94' }]}>
                   <View style={[styles.barFill, { width: `${incomePct}%` as any, backgroundColor: '#449f90' }]} />
@@ -314,9 +273,10 @@ export default function DashboardScreen() {
               <View style={styles.barSection}>
                 <View style={styles.barLabelRow}>
                   <Text style={[styles.cashFlowLabel, { color: '#fff' }]}>Expenses</Text>
-                  <Text style={[styles.cashFlowValue, { color: '#fee5e5' }]}>
-                    −{formatCurrency(expense, 'HUF')}
-                  </Text>
+                  {loading
+                    ? <SkeletonBox style={{ height: 13, width: 90, borderRadius: 4, backgroundColor: '#ffffff40' }} />
+                    : <Text style={[styles.cashFlowValue, { color: '#fee5e5' }]}>−{formatCurrency(expense, 'HUF')}</Text>
+                  }
                 </View>
                 <View style={[styles.barTrack, { backgroundColor: '#ffffff94' }]}>
                   <View style={[styles.barFill, { width: `${expensePct}%` as any, backgroundColor: '#f44c4c' }]} />
@@ -329,7 +289,32 @@ export default function DashboardScreen() {
           </View>
         }
         ListEmptyComponent={
-          <Text style={[styles.empty, { color: colors.muted }]}>No transactions in this period.</Text>
+          loading ? (
+            <View style={{ gap: 6, marginTop: 4 }}>
+              {[3, 2, 2].map((count, gi) => (
+                <View key={gi}>
+                  <View style={[styles.dayHeader, { marginTop: 20, marginBottom: 10 }]}>
+                    <SkeletonBox style={{ height: 13, width: 130, borderRadius: 4 }} />
+                    <SkeletonBox style={{ height: 13, width: 65, borderRadius: 4 }} />
+                  </View>
+                  {Array.from({ length: count }).map((_, ri) => (
+                    <View key={ri} style={{ marginBottom: 6 }}>
+                      <View style={[styles.skeletonRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        <SkeletonBox style={{ width: 40, height: 40, borderRadius: 10 }} />
+                        <View style={{ flex: 1, gap: 7, paddingTop: 3 }}>
+                          <SkeletonBox style={{ height: 13, width: `${50 + (ri * 13) % 25}%`, borderRadius: 4 }} />
+                          <SkeletonBox style={{ height: 11, width: `${30 + (ri * 17) % 20}%`, borderRadius: 4 }} />
+                        </View>
+                        <SkeletonBox style={{ height: 13, width: 68, borderRadius: 4, marginTop: 3 }} />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={[styles.empty, { color: colors.muted }]}>No transactions in this period.</Text>
+          )
         }
         ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />
