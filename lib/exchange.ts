@@ -1,5 +1,4 @@
-// Exchange rates via Frankfurter (ECB fixing — matches MNB középárfolyam closely).
-// getMNBRates / getMNBRatesForPeriod names kept for API compatibility.
+// Exchange rates via Frankfurter (ECB fixing).
 
 export type Rates = Record<string, number>; // e.g. { EUR: 390.5, USD: 357.25 }
 export type DailyRates = Record<string, Rates>; // YYYY-MM-DD → { EUR: ..., USD: ... }
@@ -28,7 +27,7 @@ export function getRatesForDate(date: string, daily: DailyRates): Rates {
 }
 
 /** Returns today's rates (EUR→HUF, USD→HUF). */
-export async function getMNBRates(): Promise<Rates> {
+export async function getExchangeRates(): Promise<Rates> {
   try {
     const res = await fetch(`${BASE}/latest?from=HUF&to=EUR,USD`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -45,7 +44,7 @@ export async function getMNBRates(): Promise<Rates> {
  * Returns date → { EUR: HUF-rate, USD: HUF-rate } so each transaction
  * can be converted using its own day's middle rate.
  */
-export async function getMNBRatesForPeriod(from: string, to: string): Promise<DailyRates> {
+export async function getExchangeRatesForPeriod(from: string, to: string): Promise<DailyRates> {
   try {
     const res = await fetch(`${BASE}/${from}..${to}?from=HUF&to=EUR,USD`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -63,7 +62,7 @@ export async function getMNBRatesForPeriod(from: string, to: string): Promise<Da
       daily[json.date] = invertRates(raw as Record<string, number>);
     }
     if (Object.keys(daily).length === 0) {
-      console.error('[Exchange] getMNBRatesForPeriod returned empty for', from, '..', to);
+      console.error('[Exchange] getExchangeRatesForPeriod returned empty for', from, '..', to);
     }
     return daily;
   } catch (e) {

@@ -56,9 +56,6 @@ export default function BottomModal({ visible, onClose, title, children }: Props
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    zIndex: 0,
-  },
   keyboardView: {
     flex: 1,
     justifyContent: 'flex-end',

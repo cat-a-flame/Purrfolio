@@ -15,7 +15,7 @@ import { useTheme, Colors } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { formatCurrency } from '@/lib/utils';
-import { getMNBRatesForPeriod, getMNBRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
 import SkeletonBox from '@/components/SkeletonBox';
 import type { Currency, Wallet } from '@/lib/types';
 
@@ -187,9 +187,9 @@ export default function StatsScreen() {
     ]);
 
     const fetchRates = async (from: string, to: string): Promise<DailyRates> => {
-      let rates = await getMNBRatesForPeriod(from, to);
+      let rates = await getExchangeRatesForPeriod(from, to);
       if (Object.keys(rates).length === 0) {
-        const current = await getMNBRates();
+        const current = await getExchangeRates();
         if (Object.keys(current).length > 0) rates = { [from]: current };
       }
       return rates;

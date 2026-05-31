@@ -122,6 +122,5 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   rowLabel: { fontSize: 16 },
-  chevron: { fontSize: 20 },
   divider: { height: 1, marginHorizontal: 16 },
 });

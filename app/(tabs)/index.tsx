@@ -16,7 +16,7 @@ import SkeletonBox from '@/components/SkeletonBox';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Currency } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
-import { getMNBRatesForPeriod, getMNBRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
 import { Events } from '@/lib/events';
 import Toast from '@/components/Toast';
 import { useRouter } from 'expo-router';
@@ -118,9 +118,9 @@ export default function DashboardScreen() {
     }));
     setPeriodTxs(normalized);
 
-    let periodRates = await getMNBRatesForPeriod(period.from, period.to);
+    let periodRates = await getExchangeRatesForPeriod(period.from, period.to);
     if (Object.keys(periodRates).length === 0) {
-      const current = await getMNBRates();
+      const current = await getExchangeRates();
       if (Object.keys(current).length > 0) {
         periodRates = { [period.from]: current };
       }
