@@ -215,12 +215,29 @@ export default function StatsScreen() {
 
   const expenseByCategory = useMemo(() => groupByCategory(txs, 'expense'), [txs]);
 
-  const balanceByCurrency = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const w of wallets) map.set(w.currency, (map.get(w.currency) ?? 0) + w._balance);
+  // Merge categories under 10 000 into "Other" for the chart
+  const displayExpenseByCategory = useMemo(() => {
+    const THRESHOLD = 10000;
+    const main = expenseByCategory.filter(c => c.amount >= THRESHOLD);
+    const small = expenseByCategory.filter(c => c.amount < THRESHOLD);
+    const otherAmount = small.reduce((s, c) => s + c.amount, 0);
+    if (otherAmount === 0) return main;
+    return [
+      ...main,
+      { id: '__other__' as string | null, name: 'Other', icon: null, color: '#94a3b8', amount: otherAmount, count: small.reduce((s, c) => s + c.count, 0) },
+    ];
+  }, [expenseByCategory]);
+
+  // Group wallets by currency; bars are normalized within each currency group
+  const walletsByCurrency = useMemo(() => {
+    const map = new Map<string, (Wallet & { _balance: number })[]>();
+    for (const w of wallets) {
+      if (!map.has(w.currency)) map.set(w.currency, []);
+      map.get(w.currency)!.push(w);
+    }
     return Array.from(map.entries())
-      .map(([currency, balance]) => ({ currency, balance }))
-      .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+      .map(([currency, ws]) => ({ currency, wallets: ws.sort((a, b) => b._balance - a._balance) }))
+      .sort((a, b) => b.wallets.reduce((s, w) => s + w._balance, 0) - a.wallets.reduce((s, w) => s + w._balance, 0));
   }, [wallets]);
 
   const prevExpenseByCategory = useMemo(() => groupByCategory(prevTxs, 'expense'), [prevTxs]);
@@ -261,14 +278,14 @@ export default function StatsScreen() {
         </View>
 
         {/* ── Expenses by Category ─────────────────────────────────────── */}
-        {expenseByCategory.length > 0 && (
+        {displayExpenseByCategory.length > 0 && (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.muted }]}>EXPENSES BY CATEGORY</Text>
 
             {/* donut + legend */}
             <View style={styles.donutRow}>
               <View style={styles.donutWrap}>
-                <DonutChart items={expenseByCategory} total={expense} fallback={colors.expense} />
+                <DonutChart items={displayExpenseByCategory} total={expense} fallback={colors.expense} />
                 <View style={styles.donutCenter} pointerEvents="none">
                   <Text style={[styles.donutTotal, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
                     {formatCurrency(expense, defaultCurrency)}
@@ -277,7 +294,7 @@ export default function StatsScreen() {
                 </View>
               </View>
               <View style={styles.donutLegend}>
-                {expenseByCategory.slice(0, 6).map((cat, i) => {
+                {displayExpenseByCategory.slice(0, 6).map((cat, i) => {
                   const pct = expense > 0 ? Math.round((cat.amount / expense) * 100) : 0;
                   return (
                     <View key={cat.id ?? `null-${i}`} style={styles.legendRow}>
@@ -291,9 +308,9 @@ export default function StatsScreen() {
             </View>
 
             {/* full list */}
-            {expenseByCategory.map((cat, i) => {
+            {displayExpenseByCategory.map((cat, i) => {
               const pct = expense > 0 ? Math.round((cat.amount / expense) * 100) : 0;
-              const barPct = expenseByCategory[0]?.amount > 0 ? (cat.amount / expenseByCategory[0].amount) * 100 : 0;
+              const barPct = displayExpenseByCategory[0]?.amount > 0 ? (cat.amount / displayExpenseByCategory[0].amount) * 100 : 0;
               const dotColor = cat.color || colors.expense;
               return (
                 <View
@@ -322,27 +339,42 @@ export default function StatsScreen() {
         )}
 
         {/* ── Balance by Currency ──────────────────────────────────────── */}
-        {balanceByCurrency.length > 0 && (
+        {walletsByCurrency.length > 0 && (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.muted }]}>BALANCE BY CURRENCY</Text>
-            <View style={styles.currencyList}>
-              {balanceByCurrency.map(({ currency, balance }) => {
-                const maxAbs = Math.max(...balanceByCurrency.map(d => Math.abs(d.balance)), 1);
-                const pct = (Math.abs(balance) / maxAbs) * 100;
-                const barColor = balance >= 0 ? colors.income : colors.expense;
-                return (
-                  <View key={currency} style={styles.currencyRow}>
-                    <Text style={[styles.currencyCode, { color: colors.text }]}>{currency}</Text>
-                    <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
-                      <View style={[styles.barFill, { width: `${pct}%` as any, backgroundColor: barColor }]} />
-                    </View>
-                    <Text style={[styles.currencyAmount, { color: barColor }]}>
-                      {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), currency as Currency)}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
+            {walletsByCurrency.map(({ currency, wallets: ws }, groupIdx) => {
+              const maxAbs = Math.max(...ws.map(w => Math.abs(w._balance)), 1);
+              return (
+                <View key={currency}>
+                  <Text style={[
+                    styles.currencyGroupHeader,
+                    { color: colors.muted, borderTopColor: colors.border },
+                    groupIdx > 0 && { borderTopWidth: StyleSheet.hairlineWidth },
+                  ]}>
+                    {currency}
+                  </Text>
+                  {ws.map(w => {
+                    const pct = (Math.abs(w._balance) / maxAbs) * 100;
+                    const barColor = w._balance >= 0 ? colors.income : colors.expense;
+                    return (
+                      <View key={w.id} style={styles.currencyRow}>
+                        {w.icon
+                          ? <Text style={styles.currencyIcon}>{w.icon}</Text>
+                          : <View style={[styles.currencyIconPlaceholder, { backgroundColor: (w.color ?? colors.accent) + '33' }]} />}
+                        <Text style={[styles.currencyWalletName, { color: colors.text }]} numberOfLines={1}>{w.name}</Text>
+                        <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
+                          <View style={[styles.barFill, { width: `${pct}%` as any, backgroundColor: barColor }]} />
+                        </View>
+                        <Text style={[styles.currencyAmount, { color: barColor }]}>
+                          {w._balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(w._balance), currency as Currency)}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })}
+            <View style={{ height: 4 }} />
           </View>
         )}
 
@@ -378,7 +410,7 @@ export default function StatsScreen() {
                       <Text style={[styles.compCatName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
                       <View style={styles.compBarGroup}>
                         <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
-                          <View style={[styles.barFill, { width: `${curPct}%` as any, backgroundColor: dotColor }]} />
+                          <View style={[styles.barFill, { width: `${curPct}%` as any, backgroundColor: colors.expense }]} />
                         </View>
                         <Text style={[styles.compBarAmt, { color: colors.text }]}>{formatCurrency(item.current, defaultCurrency)}</Text>
                       </View>
@@ -473,9 +505,19 @@ const styles = StyleSheet.create({
   barFill: { height: 8, borderRadius: 4 },
 
   // Balance by currency
-  currencyList: { paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
-  currencyRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  currencyCode: { width: 38, fontSize: 13, fontFamily: 'Figtree_700Bold' },
+  currencyGroupHeader: {
+    fontSize: 11,
+    fontFamily: 'Figtree_700Bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  currencyRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 7, gap: 8 },
+  currencyIcon: { fontSize: 16, width: 22, textAlign: 'center' },
+  currencyIconPlaceholder: { width: 22, height: 22, borderRadius: 6 },
+  currencyWalletName: { fontSize: 13, fontFamily: 'Figtree_500Medium', flex: 1 },
   currencyAmount: { width: 110, fontSize: 13, fontFamily: 'Figtree_600SemiBold', textAlign: 'right' },
 
   // Expense comparison
