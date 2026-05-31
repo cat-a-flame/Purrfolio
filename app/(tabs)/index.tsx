@@ -17,7 +17,6 @@ import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Currency } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
 import { getMNBRatesForPeriod, getMNBRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
-import { useCountUp } from '@/lib/useCountUp';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -154,9 +153,6 @@ export default function DashboardScreen() {
     [nonTransferTxs, dailyRates],
   );
   const net = income - expense;
-  const animatedNet = useCountUp(net);
-  const animatedIncome = useCountUp(income);
-  const animatedExpense = useCountUp(expense);
 
   const vsPct = prevNet === null || prevNet === 0
     ? null
@@ -254,9 +250,9 @@ export default function DashboardScreen() {
                 )}
               </View>
 
-              {/* Animated net */}
-              <Text style={[styles.cashFlowNet, { color: animatedNet >= 0 ? '#fff' : '#ffcaca' }]}>
-                {animatedNet >= 0 ? '+' : '−'}{formatCurrency(Math.abs(animatedNet), currency)}
+              {/* Net */}
+              <Text style={[styles.cashFlowNet, { color: net >= 0 ? '#fff' : '#ffcaca' }]}>
+                {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), 'HUF')}
               </Text>
 
               {/* Income bar */}
@@ -264,7 +260,7 @@ export default function DashboardScreen() {
                 <View style={styles.barLabelRow}>
                   <Text style={[styles.cashFlowLabel, { color: '#fff' }]}>Income</Text>
                   <Text style={[styles.cashFlowValue, { color: '#fff' }]}>
-                    +{formatCurrency(animatedIncome, currency)}
+                    +{formatCurrency(income, 'HUF')}
                   </Text>
                 </View>
                 <View style={[styles.barTrack, { backgroundColor: '#ffffff94' }]}>
@@ -277,7 +273,7 @@ export default function DashboardScreen() {
                 <View style={styles.barLabelRow}>
                   <Text style={[styles.cashFlowLabel, { color: '#fff' }]}>Expenses</Text>
                   <Text style={[styles.cashFlowValue, { color: '#fee5e5' }]}>
-                    −{formatCurrency(animatedExpense, currency)}
+                    −{formatCurrency(expense, 'HUF')}
                   </Text>
                 </View>
                 <View style={[styles.barTrack, { backgroundColor: '#ffffff94' }]}>
