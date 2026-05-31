@@ -13,7 +13,7 @@ import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
-import TransactionRow from '@/components/TransactionRow';
+import TransactionRow from '@/components/TransactionsTransactionRow';
 import CategoryPickerModal from '@/components/CategoryPickerModal';
 import BottomModal from '@/components/BottomModal';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';

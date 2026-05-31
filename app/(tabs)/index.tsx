@@ -11,7 +11,7 @@ import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
-import TransactionRow from '@/components/TransactionRow';
+import TransactionRow from '@/components/DashboardTransactionRow';
 import SkeletonBox from '@/components/SkeletonBox';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Currency } from '@/lib/types';
