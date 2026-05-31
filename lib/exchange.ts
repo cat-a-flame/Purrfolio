@@ -34,7 +34,7 @@ export async function getExchangeRates(): Promise<Rates> {
     const json = await res.json();
     return invertRates(json.rates ?? {});
   } catch (e) {
-    console.error('[Exchange] getMNBRates failed:', e);
+    console.error('[Exchange] getExchangeRates failed:', e);
     return {};
   }
 }
@@ -66,7 +66,7 @@ export async function getExchangeRatesForPeriod(from: string, to: string): Promi
     }
     return daily;
   } catch (e) {
-    console.error('[Exchange] getMNBRatesForPeriod failed:', e);
+    console.error('[Exchange] getExchangeRatesForPeriod failed:', e);
     return {};
   }
 }
