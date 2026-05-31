@@ -21,6 +21,7 @@ import CategoryPickerModal from '@/components/CategoryPickerModal';
 import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { todayInputDate } from '@/lib/utils';
+import { Events } from '@/lib/events';
 
 function formatAmountDisplay(raw: string): string {
   if (!raw) return '';
@@ -222,6 +223,7 @@ export default function AddTransactionScreen() {
       ]);
 
       if (txErr) {
+        Events.emit('transaction-saved', { success: false, message: txErr.message });
         setError(txErr.message);
         setLoading(false);
         return;
@@ -243,6 +245,7 @@ export default function AddTransactionScreen() {
         .single();
 
       if (txErr) {
+        Events.emit('transaction-saved', { success: false, message: txErr.message });
         setError(txErr.message);
         setLoading(false);
         return;
@@ -255,6 +258,7 @@ export default function AddTransactionScreen() {
       }
     }
 
+    Events.emit('transaction-saved', { success: true });
     setLoading(false);
     router.back();
   }

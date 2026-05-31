@@ -17,6 +17,8 @@ import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Currency } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
 import { getMNBRatesForPeriod, getMNBRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import { Events } from '@/lib/events';
+import Toast from '@/components/Toast';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -71,6 +73,7 @@ export default function DashboardScreen() {
   const [dailyRates, setDailyRates] = useState<DailyRates>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '', success: true });
 
   const load = useCallback(async (silent = false) => {
     if (!silent) {
@@ -138,6 +141,17 @@ export default function DashboardScreen() {
     await load(true);
     setRefreshing(false);
   }, [load]);
+
+  const loadRef = useRef(load);
+  useEffect(() => { loadRef.current = load; }, [load]);
+
+  useEffect(() => {
+    return Events.on('transaction-saved', ({ success, message }: { success: boolean; message?: string }) => {
+      loadRef.current(true);
+      setToast({ visible: true, message: success ? 'Transaction saved!' : (message ?? 'Failed to save.'), success });
+      setTimeout(() => setToast(t => ({ ...t, visible: false })), 3000);
+    });
+  }, []);
 
   // Cash flow — exclude transfers; convert each transaction to HUF using its day's rate
   const nonTransferTxs = useMemo(
@@ -322,6 +336,12 @@ export default function DashboardScreen() {
         ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />
 
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        success={toast.success}
+        bottomOffset={TAB_BAR_HEIGHT + bottom + 12}
+      />
     </SafeAreaView>
   );
 }

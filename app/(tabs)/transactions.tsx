@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { groupByDate, formatDate } from '@/lib/utils';
 import SkeletonBox from '@/components/SkeletonBox';
+import Toast from '@/components/Toast';
+import { Events } from '@/lib/events';
 import { useRouter } from 'expo-router';
 
 type TypeFilter = 'all' | TransactionType;
@@ -108,6 +110,7 @@ export default function TransactionsScreen() {
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '', success: true });
 
   const load = useCallback(async (silent = false) => {
     if (!silent) {
@@ -148,6 +151,17 @@ export default function TransactionsScreen() {
     await load(true);
     setRefreshing(false);
   }, [load]);
+
+  const loadRef = useRef(load);
+  useEffect(() => { loadRef.current = load; }, [load]);
+
+  useEffect(() => {
+    return Events.on('transaction-saved', ({ success, message }: { success: boolean; message?: string }) => {
+      loadRef.current(true);
+      setToast({ visible: true, message: success ? 'Transaction saved!' : (message ?? 'Failed to save.'), success });
+      setTimeout(() => setToast(t => ({ ...t, visible: false })), 3000);
+    });
+  }, []);
 
   function resetFilters() {
     setSearch('');
@@ -353,6 +367,12 @@ export default function TransactionsScreen() {
         onSelect={(id) => { setCategoryFilter(id); setShowCategoryPicker(false); }}
       />
 
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        success={toast.success}
+        bottomOffset={TAB_BAR_HEIGHT + bottom + 12}
+      />
     </SafeAreaView>
   );
 }
