@@ -399,10 +399,9 @@ export default function StatsScreen() {
             <Text style={[styles.cardTitle, { color: colors.muted }]}>BALANCE BY CURRENCY</Text>
             <Text style={[styles.currencySubtitle, { color: colors.muted }]}>Current total across all wallets</Text>
             {(() => {
-              const logVals = balanceByCurrency.map(d => Math.log10(Math.abs(d.balanceHUF) + 1));
-              const maxLog = Math.max(...logVals, 1);
+              const maxHUF = Math.max(...balanceByCurrency.map(d => Math.abs(d.balanceHUF)), 1);
               return balanceByCurrency.map(({ currency, balance, balanceHUF }, i) => {
-                const pct = (Math.log10(Math.abs(balanceHUF) + 1) / maxLog) * 100;
+                const pct = (Math.abs(balanceHUF) / maxHUF) * 100;
                 const barColor = balance >= 0 ? colors.income : colors.expense;
                 return (
                   <View
