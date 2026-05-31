@@ -16,6 +16,7 @@ import TransactionRow from '@/components/TransactionRow';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Currency } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
+import { getMNBRatesForPeriod, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
 import { useCountUp } from '@/lib/useCountUp';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -68,6 +69,7 @@ export default function DashboardScreen() {
   const [currency, setCurrency] = useState<Currency>('HUF');
   const [periodTxs, setPeriodTxs] = useState<Transaction[]>([]);
   const [prevNet, setPrevNet] = useState<number | null>(null);
+  const [dailyRates, setDailyRates] = useState<DailyRates>({});
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -108,6 +110,9 @@ export default function DashboardScreen() {
       labels: (tx.labels ?? []).map((l: any) => l.label).filter(Boolean),
     }));
     setPeriodTxs(normalized);
+
+    const rates = await getMNBRatesForPeriod(period.from, period.to);
+    setDailyRates(rates);
 
     const pList = prevTxs ?? [];
     const pInc = pList.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
@@ -152,33 +157,26 @@ export default function DashboardScreen() {
   // Group transactions by date
   const groups = useMemo(() => groupByDate(periodTxs), [periodTxs]);
 
-  type DayNet = { currency: Currency; net: number };
   type ListItem =
-    | { kind: 'dayHeader'; date: string; dayNets: DayNet[] }
+    | { kind: 'dayHeader'; date: string; dayNet: number }
     | { kind: 'tx'; tx: Transaction };
 
   const flat = useMemo<ListItem[]>(() => {
     const items: ListItem[] = [];
     for (const g of groups) {
-      const byCurrency = new Map<string, number>();
+      const rates = getRatesForDate(g.date, dailyRates);
+      let dayNet = 0;
       for (const t of g.items) {
         if (t.transfer_group_id) continue;
-        const cur = (t.wallet as any)?.currency ?? currency;
-        const sign = t.type === 'income' ? 1 : -1;
-        byCurrency.set(cur, (byCurrency.get(cur) ?? 0) + sign * t.amount);
+        const cur = (t.wallet as any)?.currency;
+        const huf = toHUF(t.amount, cur, rates);
+        dayNet += t.type === 'income' ? huf : -huf;
       }
-      const dayNets: DayNet[] = Array.from(byCurrency.entries())
-        .sort(([a], [b]) => {
-          if (a === currency) return -1;
-          if (b === currency) return 1;
-          return a.localeCompare(b);
-        })
-        .map(([cur, net]) => ({ currency: cur as Currency, net }));
-      items.push({ kind: 'dayHeader', date: g.date, dayNets });
+      items.push({ kind: 'dayHeader', date: g.date, dayNet });
       for (const tx of g.items) items.push({ kind: 'tx', tx });
     }
     return items;
-  }, [groups, currency]);
+  }, [groups, dailyRates]);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -193,18 +191,15 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
           if (item.kind === 'dayHeader') {
+            const positive = item.dayNet >= 0;
             return (
               <View style={styles.dayHeader}>
                 <Text style={[styles.dayDate, { color: colors.muted }]}>
                   {formatDayHeader(item.date)}
                 </Text>
-                <View style={styles.dayNets}>
-                  {item.dayNets.map(({ currency: cur, net }) => (
-                    <Text key={cur} style={[styles.dayNet, { color: net >= 0 ? colors.income : colors.expense }]}>
-                      {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), cur)}
-                    </Text>
-                  ))}
-                </View>
+                <Text style={[styles.dayNet, { color: positive ? colors.income : colors.expense }]}>
+                  {positive ? '+' : '−'}{formatCurrency(Math.abs(item.dayNet), 'HUF')}
+                </Text>
               </View>
             );
           }
@@ -323,13 +318,12 @@ const styles = StyleSheet.create({
   dayHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginTop: 20,
     marginBottom: 6,
     paddingHorizontal: 2,
   },
-  dayDate: { fontSize: 13, fontFamily: 'Figtree_600SemiBold', paddingTop: 1 },
-  dayNets: { alignItems: 'flex-end', gap: 2 },
+  dayDate: { fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
   dayNet: { fontSize: 13, fontFamily: 'Figtree_700Bold' },
 
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
