@@ -150,6 +150,7 @@ export default function StatsScreen() {
   const [prevTxs, setPrevTxs] = useState<any[]>([]);
   const [dailyRates, setDailyRates] = useState<DailyRates>({});
   const [prevDailyRates, setPrevDailyRates] = useState<DailyRates>({});
+  const [currentRates, setCurrentRates] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -194,12 +195,14 @@ export default function StatsScreen() {
       }
       return rates;
     };
-    const [periodRates, prevRates] = await Promise.all([
+    const [periodRates, prevRates, todayRates] = await Promise.all([
       fetchRates(period.from, period.to),
       fetchRates(prevRange.from, prevRange.to),
+      getExchangeRates(),
     ]);
     setDailyRates(periodRates);
     setPrevDailyRates(prevRates);
+    setCurrentRates(todayRates);
 
     const walletList = walletRows ?? [];
     const txSumList = allTxSums ?? [];
@@ -258,14 +261,18 @@ export default function StatsScreen() {
     ];
   }, [expenseByCategory]);
 
-  // One entry per currency; bars use log scale so EUR/USD are visible next to HUF
+  // One entry per currency; bars are sized by HUF-equivalent so EUR/USD align correctly
   const balanceByCurrency = useMemo(() => {
     const map = new Map<string, number>();
     for (const w of wallets) map.set(w.currency, (map.get(w.currency) ?? 0) + w._balance);
     return Array.from(map.entries())
-      .map(([currency, balance]) => ({ currency, balance }))
-      .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
-  }, [wallets]);
+      .map(([currency, balance]) => ({
+        currency,
+        balance,
+        balanceHUF: toHUF(balance, currency, currentRates),
+      }))
+      .sort((a, b) => Math.abs(b.balanceHUF) - Math.abs(a.balanceHUF));
+  }, [wallets, currentRates]);
 
   const prevExpenseByCategory = useMemo(() => groupByCategory(prevTxsHUF, 'expense'), [prevTxsHUF]);
 
@@ -392,11 +399,10 @@ export default function StatsScreen() {
             <Text style={[styles.cardTitle, { color: colors.muted }]}>BALANCE BY CURRENCY</Text>
             <Text style={[styles.currencySubtitle, { color: colors.muted }]}>Current total across all wallets</Text>
             {(() => {
-              // Log-scale so EUR/USD bars are visible alongside large HUF values
-              const logVals = balanceByCurrency.map(d => Math.log10(Math.abs(d.balance) + 1));
+              const logVals = balanceByCurrency.map(d => Math.log10(Math.abs(d.balanceHUF) + 1));
               const maxLog = Math.max(...logVals, 1);
-              return balanceByCurrency.map(({ currency, balance }, i) => {
-                const pct = (Math.log10(Math.abs(balance) + 1) / maxLog) * 100;
+              return balanceByCurrency.map(({ currency, balance, balanceHUF }, i) => {
+                const pct = (Math.log10(Math.abs(balanceHUF) + 1) / maxLog) * 100;
                 const barColor = balance >= 0 ? colors.income : colors.expense;
                 return (
                   <View
