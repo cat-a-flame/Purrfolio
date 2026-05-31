@@ -15,6 +15,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { Events } from '@/lib/events';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
 import BottomModal from '@/components/BottomModal';
@@ -173,6 +174,7 @@ export default function EditTransactionScreen() {
     }
 
     setLoading(false);
+    Events.emit('transaction-saved', { success: true, message: 'Transaction updated.' });
     router.back();
   }
 
@@ -182,8 +184,12 @@ export default function EditTransactionScreen() {
       {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
-          await supabase.from('transaction_labels').delete().eq('transaction_id', id);
-          await supabase.from('transactions').delete().eq('id', id);
+          const { error: labelsErr } = await supabase.from('transaction_labels').delete().eq('transaction_id', id);
+          const { error: txErr } = await supabase.from('transactions').delete().eq('id', id);
+          Events.emit('transaction-saved', {
+            success: !txErr,
+            message: txErr ? (txErr.message ?? 'Failed to delete.') : 'Transaction deleted.',
+          });
           router.back();
         },
       },
