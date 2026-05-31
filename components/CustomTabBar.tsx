@@ -11,6 +11,8 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const FAB_R = 28;           // FAB radius (diameter 56)
 const BAR_H = 50;           // visual bar height (excludes safe-area inset)
+const EAR_SVG_H = 24;       // height of the ears SVG canvas
+const EAR_OVERLAP = 12;     // how much the circle overlaps (hides) the ear bases
 
 // Screens should add TAB_BAR_HEIGHT + useSafeAreaInsets().bottom as bottom padding
 // so content isn't hidden behind the floating tab bar.
@@ -139,6 +141,16 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 
       {/* FAB sits 20 px below bar top, inside the notch */}
       <View style={[styles.fabWrap, { bottom: barHeight - FAB_R - NOTCH_Y - FAB_EXTRA_Y }]}>
+        {/* Cat ears — rendered above the circle; circle covers the ear bases */}
+        <Svg
+          width={FAB_R * 2}
+          height={EAR_SVG_H}
+          style={{ marginBottom: -EAR_OVERLAP }}
+          pointerEvents="none"
+        >
+          <Path d={`M 2 ${EAR_SVG_H} L 13 2 L 24 ${EAR_SVG_H} Z`} fill="#692f7c" />
+          <Path d={`M 32 ${EAR_SVG_H} L 43 2 L 54 ${EAR_SVG_H} Z`} fill="#692f7c" />
+        </Svg>
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: '#692f7c' }]}
           onPress={() => router.push('/transaction/add')}
