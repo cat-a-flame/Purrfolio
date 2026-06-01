@@ -26,6 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { RecurringPayment, Wallet, Category, Label, RecurrenceFrequency } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { generateDueDates, nextDueDate, frequencyLabel, isoDate, monthBounds } from '@/lib/recurringUtils';
+import { useRecurring } from '@/lib/recurringContext';
 
 function formatAmountDisplay(raw: string): string {
   if (!raw) return '';
@@ -63,6 +64,7 @@ const EMPTY_FORM: EditForm = {
 export default function RecurringScreen() {
   const colors = useTheme();
   const { bottom } = useSafeAreaInsets();
+  const { setHasDueToday } = useRecurring();
 
   const [payments, setPayments] = useState<RecurringPayment[]>([]);
   const [occurrences, setOccurrences] = useState<any[]>([]);
@@ -134,8 +136,11 @@ export default function RecurringScreen() {
     return items.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
   }, [payments, occurrences, viewYear, viewMonth]);
 
-  const overdueItems = dueItems.filter(i => i.dueDate < today && isoDate(i.dueDate) !== isoDate(today));
-  const upcomingItems = dueItems.filter(i => i.dueDate >= today || isoDate(i.dueDate) === isoDate(today));
+  const overdueItems = dueItems.filter(i => isoDate(i.dueDate) < isoDate(today));
+  const todayItems = dueItems.filter(i => isoDate(i.dueDate) === isoDate(today));
+  const upcomingItems = dueItems.filter(i => isoDate(i.dueDate) > isoDate(today));
+
+  useEffect(() => { setHasDueToday(todayItems.length > 0); }, [todayItems.length]);
 
   function prevMonth() {
     if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
@@ -350,9 +355,30 @@ export default function RecurringScreen() {
             </>
           )}
 
+          {todayItems.length > 0 && (
+            <>
+              <Text style={[styles.dueGroupLabel, { color: colors.text }]}>Today</Text>
+              {todayItems.map(({ payment, dueDate }) => {
+                const key = `${payment.id}|${isoDate(dueDate)}`;
+                return (
+                  <DueCard
+                    key={key}
+                    payment={payment}
+                    dueDate={dueDate}
+                    today={today}
+                    loading={actionLoading === key}
+                    onPay={() => handlePay(payment, dueDate)}
+                    onSkip={() => handleSkip(payment, dueDate)}
+                    colors={colors}
+                  />
+                );
+              })}
+            </>
+          )}
+
           {upcomingItems.length > 0 && (
             <>
-              {overdueItems.length > 0 && (
+              {(overdueItems.length > 0 || todayItems.length > 0) && (
                 <Text style={[styles.dueGroupLabel, { color: colors.muted }]}>Upcoming</Text>
               )}
               {upcomingItems.map(({ payment, dueDate }) => {
@@ -467,21 +493,22 @@ function DueCard({
   colors: any;
 }) {
   const currency = payment.wallet?.currency ?? 'HUF';
-  const isOverdue = dueDate < today && isoDate(dueDate) !== isoDate(today);
+  const isOverdue = isoDate(dueDate) < isoDate(today);
+  const isToday = isoDate(dueDate) === isoDate(today);
   const diff = Math.round((dueDate.getTime() - today.getTime()) / 86400000);
-  const label = isoDate(dueDate) === isoDate(today) ? 'Today'
+  const label = isToday ? 'Today'
     : diff === 1 ? 'Tomorrow'
     : diff < 0 ? `${Math.abs(diff)}d overdue`
     : diff < 7 ? `In ${diff} days`
     : dueDate.toLocaleDateString('default', { month: 'short', day: 'numeric' });
 
   return (
-    <View style={[styles.dueCard, { borderColor: isOverdue ? colors.danger + '44' : colors.border }]}>
+    <View style={[styles.dueCard, { borderColor: isOverdue ? colors.danger + '44' : isToday ? colors.border2 : colors.border }]}>
       <View style={styles.dueMeta}>
         {payment.category?.icon ? <Text style={styles.dueIcon}>{payment.category.icon}</Text> : null}
         <View style={{ flex: 1 }}>
           <Text style={[styles.dueName, { color: colors.text }]}>{payment.name}</Text>
-          <Text style={[styles.dueSub, { color: isOverdue ? colors.danger : colors.muted }]}>{label}</Text>
+          <Text style={[styles.dueSub, { color: isOverdue ? colors.danger : isToday ? colors.text : colors.muted }]}>{label}</Text>
         </View>
       </View>
       <View style={styles.dueRight}>

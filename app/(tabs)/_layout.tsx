@@ -1,8 +1,10 @@
 import { Tabs } from 'expo-router';
 import CustomTabBar from '@/components/CustomTabBar';
+import { RecurringProvider } from '@/lib/recurringContext';
 
 export default function TabsLayout() {
   return (
+    <RecurringProvider>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -16,5 +18,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="stats" options={{ title: 'Statistics' }} />
       <Tabs.Screen name="settings" options={{ href: null }} />
     </Tabs>
+    </RecurringProvider>
   );
 }
