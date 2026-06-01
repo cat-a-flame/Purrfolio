@@ -93,6 +93,7 @@ export default function AddTransactionScreen() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showToWalletModal, setShowToWalletModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateUserSelected, setDateUserSelected] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
 
   useEffect(() => {
@@ -444,8 +445,8 @@ export default function AddTransactionScreen() {
             style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
             onPress={() => setShowDatePicker(true)}
           >
-            <Text style={[styles.pickerBtnText, { color: form.date ? colors.text : colors.muted }]}>
-              {form.date || 'Select date…'}
+            <Text style={[styles.pickerBtnText, { color: colors.text }]}>
+              {dateUserSelected ? form.date : 'Today'}
             </Text>
             <Ionicons name="calendar" size={18} color={colors.muted} />
           </TouchableOpacity>
@@ -454,7 +455,7 @@ export default function AddTransactionScreen() {
         <DatePickerModal
           visible={showDatePicker}
           value={form.date || todayInputDate()}
-          onConfirm={(d) => setField('date', d)}
+          onConfirm={(d) => { setField('date', d); setDateUserSelected(true); }}
           onClose={() => setShowDatePicker(false)}
         />
 
