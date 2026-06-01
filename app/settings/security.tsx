@@ -203,6 +203,7 @@ export default function SecurityScreen() {
   // ── Idle: settings list ─────────────────────────────────────────────────────
 
   const bioLabel = bioType === 'face' ? 'Face ID' : 'Fingerprint';
+  const bioAvailable = bioType !== null;
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -237,15 +238,25 @@ export default function SecurityScreen() {
           </View>
         </View>
 
-        {pinEnabled && bioType !== null && (
+        {pinEnabled && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.muted }]}>BIOMETRICS</Text>
             <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.row}>
-                <Text style={[styles.rowLabel, { color: colors.text }]}>Use {bioLabel}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rowLabel, { color: bioAvailable ? colors.text : colors.muted }]}>
+                    Use {bioLabel}
+                  </Text>
+                  {!bioAvailable && (
+                    <Text style={[styles.rowHint, { color: colors.muted }]}>
+                      Requires a development build
+                    </Text>
+                  )}
+                </View>
                 <Switch
                   value={bioEnabled}
-                  onValueChange={handleBioToggle}
+                  onValueChange={bioAvailable ? handleBioToggle : undefined}
+                  disabled={!bioAvailable}
                   trackColor={{ true: colors.accent }}
                   thumbColor="#fff"
                 />
@@ -282,5 +293,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   rowLabel: { fontSize: 16 },
+  rowHint: { fontSize: 12, marginTop: 2 },
   divider: { height: 1, marginHorizontal: 16 },
 });
