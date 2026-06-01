@@ -81,13 +81,29 @@ export default function RecurringScreen() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ visible: boolean; message: string; success: boolean }>({ visible: false, message: '', success: true });
+  const [toast, setToast] = useState<{ visible: boolean; message: string; success: boolean; undoable: boolean }>({ visible: false, message: '', success: true, undoable: false });
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastPay = useRef<{ transactionId: string; paymentId: string; dueDate: string } | null>(null);
 
-  function showToast(message: string, success: boolean) {
+  function showToast(message: string, success: boolean, undoable = false) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast({ visible: true, message, success });
-    toastTimer.current = setTimeout(() => setToast(t => ({ ...t, visible: false })), 3000);
+    setToast({ visible: true, message, success, undoable });
+    toastTimer.current = setTimeout(() => { setToast(t => ({ ...t, visible: false })); lastPay.current = null; }, 3000);
+  }
+
+  async function handleUndo() {
+    const ref = lastPay.current;
+    if (!ref) return;
+    lastPay.current = null;
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(t => ({ ...t, visible: false }));
+    await Promise.all([
+      supabase.from('transactions').delete().eq('id', ref.transactionId),
+      supabase.from('recurring_occurrences').delete()
+        .eq('recurring_payment_id', ref.paymentId)
+        .eq('due_date', ref.dueDate),
+    ]);
+    load();
   }
 
   const load = useCallback(async () => {
@@ -190,7 +206,8 @@ export default function RecurringScreen() {
         status: 'paid',
         transaction_id: txData.id,
       });
-      showToast('Payment confirmed!', true);
+      lastPay.current = { transactionId: txData.id, paymentId: payment.id, dueDate: isoDate(dueDate) };
+      showToast('Payment confirmed!', true, true);
     } else {
       showToast('Failed to confirm payment.', false);
     }
@@ -492,6 +509,7 @@ export default function RecurringScreen() {
         message={toast.message}
         success={toast.success}
         bottomOffset={TAB_BAR_HEIGHT + bottom + 16}
+        onUndo={toast.undoable ? handleUndo : undefined}
       />
     </SafeAreaView>
   );

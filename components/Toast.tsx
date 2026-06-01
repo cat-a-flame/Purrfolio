@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 type Props = {
@@ -7,9 +7,10 @@ type Props = {
   message: string;
   success: boolean;
   bottomOffset?: number;
+  onUndo?: () => void;
 };
 
-export default function Toast({ visible, message, success, bottomOffset = 100 }: Props) {
+export default function Toast({ visible, message, success, bottomOffset = 100, onUndo }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(16)).current;
 
@@ -30,7 +31,7 @@ export default function Toast({ visible, message, success, bottomOffset = 100 }:
 
   return (
     <Animated.View
-      pointerEvents="none"
+      pointerEvents={visible ? 'box-none' : 'none'}
       style={[
         styles.toast,
         {
@@ -47,6 +48,11 @@ export default function Toast({ visible, message, success, bottomOffset = 100 }:
         color="#fff"
       />
       <Text style={styles.text}>{message}</Text>
+      {onUndo && (
+        <TouchableOpacity onPress={onUndo} hitSlop={8}>
+          <Text style={styles.undoBtn}>Undo</Text>
+        </TouchableOpacity>
+      )}
     </Animated.View>
   );
 }
@@ -73,5 +79,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontFamily: 'Figtree_500Medium',
+  },
+  undoBtn: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Figtree_700Bold',
+    textDecorationLine: 'underline',
+    opacity: 0.9,
   },
 });
