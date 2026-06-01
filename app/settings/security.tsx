@@ -197,7 +197,7 @@ export default function SecurityScreen() {
   if (phase !== 'idle') {
     return (
       <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-        <AppHeader title="Security" onBack={cancelPhase} />
+        <AppHeader title="Security" showBack onBack={cancelPhase} />
         <PinPad
           title={phaseTitle[phase]}
           subtitle={phaseSubtitle[phase]}
@@ -219,7 +219,7 @@ export default function SecurityScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AppHeader title="Security" />
+      <AppHeader title="Security" showBack />
       <View style={styles.container}>
 
         <View style={styles.section}>

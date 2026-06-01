@@ -72,7 +72,7 @@ export default function AccountScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AppHeader title="Account" />
+      <AppHeader title="Account" showBack />
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
         <View style={styles.section}>

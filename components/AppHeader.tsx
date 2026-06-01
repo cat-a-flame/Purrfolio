@@ -19,11 +19,13 @@ import { useTheme, useDarkMode } from '@/lib/theme';
 interface Props {
   title: string;
   rightAction?: ReactNode;
+  showBack?: boolean;
+  onBack?: () => void;
 }
 
 const DRAWER_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);
 
-export default function AppHeader({ title, rightAction }: Props) {
+export default function AppHeader({ title, rightAction, showBack, onBack }: Props) {
   const colors = useTheme();
   const { isDark, setIsDark } = useDarkMode();
   const router = useRouter();
@@ -77,9 +79,15 @@ export default function AppHeader({ title, rightAction }: Props) {
       {/* ── Fixed top bar ────────────────────────────────────────────── */}
       <View style={[styles.bar, { backgroundColor: colors.bg }]}>
         <View style={styles.side}>
-          <TouchableOpacity onPress={openDrawer} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="menu" size={26} color={colors.text} />
-          </TouchableOpacity>
+          {showBack ? (
+            <TouchableOpacity onPress={onBack ?? (() => router.back())} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="arrow-back" size={24} color={colors.accent} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={openDrawer} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="menu" size={26} color={colors.text} />
+            </TouchableOpacity>
+          )}
         </View>
         <Text style={[styles.barTitle, { color: colors.text }]}>{title}</Text>
         <View style={[styles.side, styles.sideRight]}>
