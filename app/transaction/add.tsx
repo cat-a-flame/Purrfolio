@@ -473,8 +473,20 @@ export default function AddTransactionScreen() {
               </View>
 
               <View style={styles.row}>
+                {/* Account */}
+                <View style={styles.rowFieldGroup}>
+                  <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
+                    <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
+                      {selectedWallet
+                        ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
+                        : 'Select wallet…'}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                  </TouchableOpacity>
+                </View>
+
                 {/* Category */}
-                <View style={styles.fieldGroup}>
+                <View style={styles.rowFieldGroup}>
                   <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
                     <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]}>
                       {selectedCategory
@@ -484,18 +496,6 @@ export default function AddTransactionScreen() {
                     <Ionicons name="chevron-forward" size={18} color={colors.muted} />
                   </TouchableOpacity>
                 </View>
-              </View>
-
-              {/* Account */}
-              <View style={styles.fieldGroup}>
-                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
-                  <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
-                    {selectedWallet
-                      ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
-                      : 'Select wallet…'}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-                </TouchableOpacity>
               </View>
 
               {/* More options */}
@@ -740,6 +740,7 @@ const styles = StyleSheet.create({
     marginTop: -12,
   },
   rowFieldGroup: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
