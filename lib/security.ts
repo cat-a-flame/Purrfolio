@@ -9,9 +9,9 @@ try {
   LA = null;
 }
 
-const KEY_PIN = '@purrfolio/pin';
-const KEY_PIN_ENABLED = '@purrfolio/pin_enabled';
-const KEY_BIOMETRICS_ENABLED = '@purrfolio/biometrics_enabled';
+const KEY_PIN = 'purrfolio_pin';
+const KEY_PIN_ENABLED = 'purrfolio_pin_enabled';
+const KEY_BIOMETRICS_ENABLED = 'purrfolio_biometrics_enabled';
 
 export async function isPinEnabled(): Promise<boolean> {
   return (await SecureStore.getItemAsync(KEY_PIN_ENABLED)) === 'true';
