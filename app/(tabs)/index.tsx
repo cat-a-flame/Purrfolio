@@ -20,6 +20,7 @@ import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, ty
 import { Events } from '@/lib/events';
 import Toast from '@/components/Toast';
 import { useRouter } from 'expo-router';
+import { useRecurring } from '@/lib/recurringContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
 function isoDate(d: Date): string {
@@ -66,6 +67,7 @@ export default function DashboardScreen() {
   const colors = useTheme();
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
+  const { refreshDueToday } = useRecurring();
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
   const [currency, setCurrency] = useState<Currency>('HUF');
   const [periodTxs, setPeriodTxs] = useState<Transaction[]>([]);
@@ -139,13 +141,13 @@ export default function DashboardScreen() {
     }
   }, [period.from, period.to]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); refreshDueToday(); }, [load, refreshDueToday]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load(true);
+    await Promise.all([load(true), refreshDueToday()]);
     setRefreshing(false);
-  }, [load]);
+  }, [load, refreshDueToday]);
 
   const loadRef = useRef(load);
   useEffect(() => { loadRef.current = load; }, [load]);
@@ -153,10 +155,11 @@ export default function DashboardScreen() {
   useEffect(() => {
     return Events.on('transaction-saved', ({ success, message }: { success: boolean; message?: string }) => {
       loadRef.current(true);
+      refreshDueToday();
       setToast({ visible: true, message: message ?? (success ? 'Done.' : 'Something went wrong.'), success });
       setTimeout(() => setToast(t => ({ ...t, visible: false })), 3000);
     });
-  }, []);
+  }, [refreshDueToday]);
 
   // Cash flow — exclude transfers; convert each transaction to HUF using its day's rate
   const nonTransferTxs = useMemo(
