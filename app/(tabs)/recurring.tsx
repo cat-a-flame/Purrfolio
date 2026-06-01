@@ -27,6 +27,7 @@ import type { RecurringPayment, Wallet, Category, Label, RecurrenceFrequency } f
 import { formatCurrency } from '@/lib/utils';
 import { generateDueDates, nextDueDate, frequencyLabel, isoDate, monthBounds } from '@/lib/recurringUtils';
 import { useRecurring } from '@/lib/recurringContext';
+import Toast from '@/components/Toast';
 
 function formatAmountDisplay(raw: string): string {
   if (!raw) return '';
@@ -80,6 +81,14 @@ export default function RecurringScreen() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ visible: boolean; message: string; success: boolean }>({ visible: false, message: '', success: true });
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showToast(message: string, success: boolean) {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ visible: true, message, success });
+    toastTimer.current = setTimeout(() => setToast(t => ({ ...t, visible: false })), 3000);
+  }
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -181,6 +190,9 @@ export default function RecurringScreen() {
         status: 'paid',
         transaction_id: txData.id,
       });
+      showToast('Payment confirmed!', true);
+    } else {
+      showToast('Failed to confirm payment.', false);
     }
     setActionLoading(null);
     load();
@@ -475,6 +487,12 @@ export default function RecurringScreen() {
           isActive={editing.is_active}
         />
       )}
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        success={toast.success}
+        bottomOffset={TAB_BAR_HEIGHT + bottom + 16}
+      />
     </SafeAreaView>
   );
 }
