@@ -104,9 +104,9 @@ export default function DatePickerModal({ visible, value, onConfirm, onClose }: 
     <BottomModal visible={visible} onClose={onClose} title="Select date">
       <View style={styles.picker}>
         <Column
-          items={days}
-          selected={clampedDay - 1}
-          onSelect={(i) => setDay(i + 1)}
+          items={years}
+          selected={years.indexOf(year) >= 0 ? years.indexOf(year) : 5}
+          onSelect={(i) => setYear(years[i])}
         />
         <Column
           items={MONTHS}
@@ -114,9 +114,9 @@ export default function DatePickerModal({ visible, value, onConfirm, onClose }: 
           onSelect={(i) => setMonth(i + 1)}
         />
         <Column
-          items={years}
-          selected={years.indexOf(year) >= 0 ? years.indexOf(year) : 5}
-          onSelect={(i) => setYear(years[i])}
+          items={days}
+          selected={clampedDay - 1}
+          onSelect={(i) => setDay(i + 1)}
         />
       </View>
       <TouchableOpacity
