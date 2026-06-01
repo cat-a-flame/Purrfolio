@@ -110,6 +110,7 @@ export default function RootLayout() {
         <Stack.Screen name="settings/labels" options={{ headerShown: false }} />
         <Stack.Screen name="settings/templates" options={{ headerShown: false }} />
         <Stack.Screen name="settings/security" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/account" options={{ headerShown: false }} />
       </Stack>
     </SafeAreaProvider>
   );

@@ -65,13 +65,6 @@ export default function AppHeader({ title, rightAction }: Props) {
 
   function navigate(route: string) { closeDrawer(() => router.push(route as any)); }
 
-  async function handleSignOut() {
-    closeDrawer(async () => {
-      await supabase.auth.signOut();
-      router.replace('/(auth)/login');
-    });
-  }
-
   const appSettingsItems = [
     { label: 'Accounts',   route: '/settings/wallets',    icon: 'wallet-outline'   },
     { label: 'Categories', route: '/settings/categories', icon: 'grid-outline'     },
@@ -129,30 +122,17 @@ export default function AppHeader({ title, rightAction }: Props) {
                 {/* ── Account Settings ───────────────────────── */}
                 <Text style={[styles.sectionLabel, { color: colors.muted }]}>Account Settings</Text>
                 <View style={[styles.group, { borderColor: colors.border }]}>
-                  {/* Username */}
-                  <View style={[styles.row, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+                  <TouchableOpacity style={styles.row} onPress={() => navigate('/settings/account')} activeOpacity={0.7}>
                     <Ionicons name="person-outline" size={18} color={colors.muted} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.rowSubLabel, { color: colors.muted }]}>Username</Text>
                       <Text style={[styles.rowText, { color: colors.text }]} numberOfLines={1}>
-                        {username ?? '—'}
+                        {username || email || 'My Account'}
                       </Text>
+                      {username && email ? (
+                        <Text style={[styles.rowSubLabel, { color: colors.muted }]} numberOfLines={1}>{email}</Text>
+                      ) : null}
                     </View>
-                  </View>
-                  {/* Email */}
-                  <View style={[styles.row, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
-                    <Ionicons name="mail-outline" size={18} color={colors.muted} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.rowSubLabel, { color: colors.muted }]}>Email address</Text>
-                      <Text style={[styles.rowText, { color: colors.text }]} numberOfLines={1}>
-                        {email ?? '—'}
-                      </Text>
-                    </View>
-                  </View>
-                  {/* Sign out */}
-                  <TouchableOpacity style={styles.row} onPress={handleSignOut} activeOpacity={0.7}>
-                    <Ionicons name="log-out-outline" size={18} color={colors.danger} />
-                    <Text style={[styles.rowText, { color: colors.danger }]}>Sign out</Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.muted} />
                   </TouchableOpacity>
                 </View>
 
