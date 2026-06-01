@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useKeyboardVisible } from '@/lib/useKeyboardVisible';
 import {
   View,
   Text,
@@ -63,6 +64,7 @@ export default function AddTransactionScreen() {
   const colors = useTheme();
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
+  const keyboardVisible = useKeyboardVisible();
 
   const [form, setForm] = useState<Form>({
     type: 'expense',
@@ -533,7 +535,7 @@ export default function AddTransactionScreen() {
 
       </ScrollView>
 
-      <View style={[styles.stickyFooter, { paddingBottom: bottom + 16, borderTopColor: colors.border }]}>
+      <View style={[styles.stickyFooter, { paddingBottom: keyboardVisible ? 8 : bottom + 16, borderTopColor: colors.border }]}>
         <AppButton onPress={handleSave} loading={loading} fullWidth>
           Save transaction
         </AppButton>
