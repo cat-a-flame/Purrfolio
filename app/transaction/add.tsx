@@ -317,10 +317,10 @@ export default function AddTransactionScreen() {
               <View style={styles.fieldGroup}>
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>From account</Text>
                 <TouchableOpacity
-                  style={[styles.pickerBtn, styles.pickerBtnInline, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
                   onPress={() => setShowWalletModal(true)}
                 >
-                  <Text style={[styles.pickerBtnInlineText, { color: selectedWallet ? colors.text : colors.muted }]}>
+                  <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
                     {selectedWallet
                       ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
                       : 'Select wallet…'}
@@ -364,10 +364,10 @@ export default function AddTransactionScreen() {
               <View style={styles.fieldGroup}>
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>To account</Text>
                 <TouchableOpacity
-                  style={[styles.pickerBtn, styles.pickerBtnInline, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
                   onPress={() => setShowToWalletModal(true)}
                 >
-                  <Text style={[styles.pickerBtnInlineText, { color: selectedToWallet ? colors.text : colors.muted }]}>
+                  <Text style={[styles.pickerBtnText, { color: selectedToWallet ? colors.text : colors.muted }]}>
                     {selectedToWallet
                       ? `${selectedToWallet.icon ? selectedToWallet.icon + ' ' : ''}${selectedToWallet.name}`
                       : 'Select wallet…'}
@@ -410,10 +410,10 @@ export default function AddTransactionScreen() {
               <View style={styles.fieldGroup}>
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>Date</Text>
                 <TouchableOpacity
-                  style={[styles.pickerBtn, styles.pickerBtnInline, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
                   onPress={() => setShowDatePicker(true)}
                 >
-                  <Text style={[styles.pickerBtnInlineText, { color: colors.text }]}>{dateLabel}</Text>
+                  <Text style={[styles.pickerBtnText, { color: colors.text }]}>{dateLabel}</Text>
                   <Ionicons name="calendar" size={18} color={colors.muted} />
                 </TouchableOpacity>
               </View>
