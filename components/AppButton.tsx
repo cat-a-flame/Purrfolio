@@ -77,7 +77,7 @@ export default function AppButton({
 const styles = StyleSheet.create({
   base: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 18,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   text: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: 'Figtree_600SemiBold',
   },
 });
