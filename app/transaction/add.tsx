@@ -277,9 +277,9 @@ export default function AddTransactionScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
+      <View style={[styles.headerBar]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="close" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>New transaction</Text>
         <View style={{ width: 40 }} />
@@ -444,7 +444,7 @@ export default function AddTransactionScreen() {
             /* ── Income / Expense layout ── */
             <>
               {/* Amount */}
-              <View style={styles.fieldGroup}>
+              <View>
                 <TouchableOpacity
                   activeOpacity={1}
                   style={[styles.amountRow, { backgroundColor: colors.bg }]}
@@ -464,37 +464,35 @@ export default function AddTransactionScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.row}>
-                {/* Account */}
-                <View style={styles.rowFieldGroup}>
-                  <TouchableOpacity style={{ backgroundColor: colors.bg }} onPress={() => setShowWalletModal(true)}>
-                    <Text style={[styles.pickerBtnInlineText, { color: selectedWallet ? colors.text : colors.muted }]}>
-                      {selectedWallet
-                        ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
-                        : 'Select wallet…'} •
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+              {/* Date */}
+              <View style={styles.rowFieldGroup}>
+                <TouchableOpacity style={[styles.pickerBtnBorderless, { backgroundColor: colors.bg }]} onPress={() => setShowDatePicker(true)}>
+                  <Ionicons name="calendar" size={13} color={colors.muted} />
+                  <Text style={[styles.pickerBtnInlineText, { color: colors.text }]}>{dateLabel}</Text>
+                </TouchableOpacity>
+              </View>
 
-                {/* Date */}
-                <View style={styles.rowFieldGroup}>
-                  <TouchableOpacity style={[styles.pickerBtnBorderless, { backgroundColor: colors.surface }]} onPress={() => setShowDatePicker(true)}>
-                    <Ionicons name="calendar" size={12} color={colors.muted} />
-                    <Text style={[styles.pickerBtnInlineText, { color: colors.text }]}>{dateLabel}</Text>
+              <View style={styles.row}>
+                {/* Category */}
+                <View style={styles.fieldGroup}>
+                  <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
+                    <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]}>
+                      {selectedCategory
+                        ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
+                        : 'Select category…'}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.muted} />
                   </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Category */}
+              {/* Account */}
               <View style={styles.fieldGroup}>
-                <TouchableOpacity
-                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                  onPress={() => setShowCategoryModal(true)}
-                >
-                  <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]}>
-                    {selectedCategory
-                      ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
-                      : 'Select category…'}
+                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
+                  <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
+                    {selectedWallet
+                      ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
+                      : 'Select wallet…'}
                   </Text>
                   <Ionicons name="chevron-forward" size={18} color={colors.muted} />
                 </TouchableOpacity>
@@ -634,7 +632,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
   },
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontFamily: 'Figtree_600SemiBold' },
@@ -660,13 +657,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   typeBtnText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
-  fieldGroup: { gap: 8 },
+  fieldGroup: { gap: 8, flexDirection: 'row' },
   fieldLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
   amountRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingVertical: 12,
+    paddingTop: 12,
     justifyContent: 'center',
+    borderWidth: 1,
   },
   amountInput: {
     fontSize: 52,
@@ -685,14 +683,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderStyle: 'dashed',
   },
-  moreToggleText: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
+  moreToggleText: { fontSize: 16, fontFamily: 'Figtree_500Medium' },
   pickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
     justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -739,12 +735,15 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   row: {
-    gap: 2,
     flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: -12,
   },
   rowFieldGroup: {
-    flexShrink: 1,
-    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   pickerBtnBorderless: {
     flexDirection: 'row',
