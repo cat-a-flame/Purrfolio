@@ -18,10 +18,14 @@ SplashScreen.preventAutoHideAsync();
 (Text as any).defaultProps = (Text as any).defaultProps || {};
 (Text as any).defaultProps.style = { fontFamily: 'Figtree_400Regular' };
 
+const MIN_LOADING_MS = 3000;
+
 export default function RootLayout() {
   const { isDark } = useDarkMode();
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
+  const [minTimeReady, setMinTimeReady] = useState(false);
+  const loading = !authReady || !minTimeReady;
   const router = useRouter();
   const segments = useSegments();
 
@@ -44,9 +48,14 @@ export default function RootLayout() {
   useEffect(() => { loadThemePreference(); }, []);
 
   useEffect(() => {
+    const timer = setTimeout(() => setMinTimeReady(true), MIN_LOADING_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setLoading(false);
+      setAuthReady(true);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -57,14 +66,14 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (loading) return;
+    if (!authReady || !minTimeReady) return;
     const inAuth = segments[0] === '(auth)';
     if (!session && !inAuth) {
       router.replace('/(auth)/login');
     } else if (session && inAuth) {
       router.replace('/(tabs)');
     }
-  }, [session, loading, segments]);
+  }, [session, authReady, minTimeReady, segments]);
 
   if (!fontsLoaded) {
     return null;
