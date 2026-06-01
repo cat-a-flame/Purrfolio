@@ -476,7 +476,7 @@ export default function AddTransactionScreen() {
                 {/* Category */}
                 <View style={styles.fieldGroup2}>
                   <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
-                    <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]}>
+                    <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
                       {selectedCategory
                         ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
                         : 'Select category…'}
@@ -488,7 +488,7 @@ export default function AddTransactionScreen() {
                 {/* Account */}
                 <View style={styles.fieldGroup2}>
                   <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
-                    <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
+                    <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
                       {selectedWallet
                         ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
                         : 'Select wallet…'}
