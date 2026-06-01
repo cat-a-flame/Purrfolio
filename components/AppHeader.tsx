@@ -23,16 +23,6 @@ interface Props {
 
 const DRAWER_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);
 
-type NavItem = { label: string; route: string; icon: string };
-
-const SETTINGS_ITEMS: NavItem[] = [
-  { label: 'Accounts',   route: '/settings/wallets',    icon: 'wallet-outline'      },
-  { label: 'Categories', route: '/settings/categories', icon: 'grid-outline'        },
-  { label: 'Labels',     route: '/settings/labels',     icon: 'pricetag-outline'    },
-  { label: 'Templates',  route: '/settings/templates',  icon: 'copy-outline'        },
-  { label: 'Security',   route: '/settings/security',   icon: 'lock-closed-outline' },
-];
-
 export default function AppHeader({ title, rightAction }: Props) {
   const colors = useTheme();
   const { isDark, setIsDark } = useDarkMode();
@@ -40,11 +30,15 @@ export default function AppHeader({ title, rightAction }: Props) {
   const { top, bottom } = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setEmail(user?.email ?? null));
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setEmail(user?.email ?? null);
+      setUsername(user?.user_metadata?.name ?? user?.user_metadata?.full_name ?? null);
+    });
   }, []);
 
   function openDrawer() {
@@ -60,7 +54,6 @@ export default function AppHeader({ title, rightAction }: Props) {
     ]).start(() => { setOpen(false); cb?.(); });
   }
 
-  // Start the open animation after the Modal has rendered
   useEffect(() => {
     if (open) {
       Animated.parallel([
@@ -79,6 +72,13 @@ export default function AppHeader({ title, rightAction }: Props) {
     });
   }
 
+  const appSettingsItems = [
+    { label: 'Accounts',   route: '/settings/wallets',    icon: 'wallet-outline'   },
+    { label: 'Categories', route: '/settings/categories', icon: 'grid-outline'     },
+    { label: 'Labels',     route: '/settings/labels',     icon: 'pricetag-outline' },
+    { label: 'Templates',  route: '/settings/templates',  icon: 'copy-outline'     },
+  ];
+
   return (
     <>
       {/* ── Fixed top bar ────────────────────────────────────────────── */}
@@ -96,43 +96,26 @@ export default function AppHeader({ title, rightAction }: Props) {
 
       {/* ── Slide-in drawer ──────────────────────────────────────────── */}
       <Modal visible={open} transparent animationType="none" onRequestClose={() => closeDrawer()}>
-        {/* Backdrop */}
         <Animated.View
           style={[StyleSheet.absoluteFill, { backgroundColor: colors.overlay, opacity: fadeAnim }]}
           pointerEvents="none"
         />
 
-        {/* Drawer on left, dismiss area on right */}
         <View style={styles.drawerRow}>
           <Animated.View style={[
             styles.drawer,
             { backgroundColor: colors.surface, borderRightColor: colors.border, transform: [{ translateX: slideAnim }] },
           ]}>
             <View style={[styles.drawerInner, { paddingTop: top || 16 }]}>
+              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-              {/* Scrollable content */}
-              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-
-                {/* User email */}
-                {email && (
-                  <View style={[styles.emailRow, { borderBottomColor: colors.border }]}>
-                    <View style={[styles.emailAvatar, { backgroundColor: colors.accent + '22' }]}>
-                      <Ionicons name="person-outline" size={18} color={colors.accent} />
-                    </View>
-                    <Text style={[styles.emailText, { color: colors.muted }]} numberOfLines={1}>{email}</Text>
-                  </View>
-                )}
-
-                {/* Settings */}
-                <Text style={[styles.sectionLabel, { color: colors.muted }]}>Settings</Text>
+                {/* ── App Settings ───────────────────────────── */}
+                <Text style={[styles.sectionLabel, { color: colors.muted }]}>App Settings</Text>
                 <View style={[styles.group, { borderColor: colors.border }]}>
-                  {SETTINGS_ITEMS.map((item, i) => (
+                  {appSettingsItems.map((item, i) => (
                     <TouchableOpacity
                       key={item.route}
-                      style={[
-                        styles.row,
-                        i < SETTINGS_ITEMS.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-                      ]}
+                      style={[styles.row, i < appSettingsItems.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
                       onPress={() => navigate(item.route)}
                       activeOpacity={0.7}
                     >
@@ -143,12 +126,43 @@ export default function AppHeader({ title, rightAction }: Props) {
                   ))}
                 </View>
 
-                {/* Account */}
-                <Text style={[styles.sectionLabel, { color: colors.muted }]}>Account</Text>
+                {/* ── Account Settings ───────────────────────── */}
+                <Text style={[styles.sectionLabel, { color: colors.muted }]}>Account Settings</Text>
                 <View style={[styles.group, { borderColor: colors.border }]}>
+                  {/* Username */}
+                  <View style={[styles.row, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+                    <Ionicons name="person-outline" size={18} color={colors.muted} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.rowSubLabel, { color: colors.muted }]}>Username</Text>
+                      <Text style={[styles.rowText, { color: colors.text }]} numberOfLines={1}>
+                        {username ?? '—'}
+                      </Text>
+                    </View>
+                  </View>
+                  {/* Email */}
+                  <View style={[styles.row, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+                    <Ionicons name="mail-outline" size={18} color={colors.muted} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.rowSubLabel, { color: colors.muted }]}>Email address</Text>
+                      <Text style={[styles.rowText, { color: colors.text }]} numberOfLines={1}>
+                        {email ?? '—'}
+                      </Text>
+                    </View>
+                  </View>
+                  {/* Sign out */}
                   <TouchableOpacity style={styles.row} onPress={handleSignOut} activeOpacity={0.7}>
                     <Ionicons name="log-out-outline" size={18} color={colors.danger} />
                     <Text style={[styles.rowText, { color: colors.danger }]}>Sign out</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* ── Security ───────────────────────────────── */}
+                <Text style={[styles.sectionLabel, { color: colors.muted }]}>Security</Text>
+                <View style={[styles.group, { borderColor: colors.border }]}>
+                  <TouchableOpacity style={styles.row} onPress={() => navigate('/settings/security')} activeOpacity={0.7}>
+                    <Ionicons name="lock-closed-outline" size={18} color={colors.muted} />
+                    <Text style={[styles.rowText, { color: colors.text }]}>Security</Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.muted} />
                   </TouchableOpacity>
                 </View>
 
@@ -165,7 +179,6 @@ export default function AppHeader({ title, rightAction }: Props) {
                   thumbColor={isDark ? colors.accent : '#f4f4f4'}
                 />
               </View>
-
             </View>
           </Animated.View>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => closeDrawer()} />
@@ -197,24 +210,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
   },
   drawerInner: { flex: 1 },
-
-  emailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    marginBottom: 4,
-  },
-  emailAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emailText: { flex: 1, fontSize: 13 },
+  scrollContent: { paddingBottom: 8 },
 
   sectionLabel: {
     fontSize: 11,
@@ -222,7 +218,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 20,
     paddingBottom: 6,
   },
   group: {
@@ -239,6 +235,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
   },
   rowText: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
+  rowSubLabel: { fontSize: 11, fontFamily: 'Figtree_400Regular', marginBottom: 1 },
 
   darkRow: {
     flexDirection: 'row',
