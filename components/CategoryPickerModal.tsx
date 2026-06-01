@@ -158,14 +158,6 @@ export default function CategoryPickerModal({ visible, onClose, categories, sele
               nestedScrollEnabled
               keyboardShouldPersistTaps="handled"
             >
-              <TouchableOpacity
-                style={[styles.row, { borderBottomColor: colors.border }, !selectedId && { backgroundColor: colors.accent + '11' }]}
-                onPress={() => selectItem('')}
-              >
-                <Text style={[styles.rowText, { color: !selectedId ? colors.accent : colors.text }]}>— None</Text>
-                {!selectedId && <Ionicons name="checkmark" size={18} color={colors.accent} />}
-              </TouchableOpacity>
-
               {roots.map((cat) => {
                 const hasChildren = childrenOf(cat.id).length > 0;
                 const isSelected = selectedId === cat.id;
