@@ -11,12 +11,10 @@ import { useFonts } from 'expo-font';
 import { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold } from '@expo-google-fonts/figtree';
 import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
 import * as SplashScreen from 'expo-splash-screen';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 SplashScreen.preventAutoHideAsync();
 
-// Set Figtree as the default font for all Text elements.
-// This runs at module level; no Text renders before fonts are loaded
-// because we return null until fontsLoaded is true.
 (Text as any).defaultProps = (Text as any).defaultProps || {};
 (Text as any).defaultProps.style = { fontFamily: 'Figtree_400Regular' };
 
@@ -70,6 +68,10 @@ export default function RootLayout() {
 
   if (!fontsLoaded) {
     return null;
+  }
+
+  if (loading) {
+    return <LoadingScreen />;
   }
 
   return (
