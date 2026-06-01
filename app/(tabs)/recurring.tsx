@@ -11,6 +11,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Alert,
+  AppState,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
@@ -140,6 +141,13 @@ export default function RecurringScreen() {
   }, [viewYear, viewMonth]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') load();
+    });
+    return () => sub.remove();
+  }, [load]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
