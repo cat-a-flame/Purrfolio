@@ -468,7 +468,7 @@ export default function AddTransactionScreen() {
                 {/* Account */}
                 <View style={styles.rowFieldGroup}>
                   <TouchableOpacity style={{ backgroundColor: colors.bg }} onPress={() => setShowWalletModal(true)}>
-                    <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
+                    <Text style={[styles.pickerBtnInlineText, { color: selectedWallet ? colors.text : colors.muted }]}>
                       {selectedWallet
                         ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
                         : 'Select wallet…'} •
@@ -480,7 +480,7 @@ export default function AddTransactionScreen() {
                 <View style={styles.rowFieldGroup}>
                   <TouchableOpacity style={[styles.pickerBtnBorderless, { backgroundColor: colors.surface }]} onPress={() => setShowDatePicker(true)}>
                     <Ionicons name="calendar" size={12} color={colors.muted} />
-                    <Text style={[styles.pickerBtnText, { color: colors.text }]}>{dateLabel}</Text>
+                    <Text style={[styles.pickerBtnInlineText, { color: colors.text }]}>{dateLabel}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -743,7 +743,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   rowFieldGroup: {
-    flexGrow: 1,
     flexShrink: 1,
     gap: 8,
   },
