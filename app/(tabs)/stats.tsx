@@ -373,7 +373,7 @@ export default function StatsScreen() {
             label="Expenses"
             value={formatCurrency(expense, defaultCurrency)}
             valueColor={colors.expense}
-            projected={projExpense > 0 ? `+${formatCurrency(projExpense, defaultCurrency)}` : undefined}
+            projected={projExpense > 0 ? formatCurrency(expense + projExpense, defaultCurrency) : undefined}
             colors={colors}
           />
           <SummaryTile
@@ -381,9 +381,9 @@ export default function StatsScreen() {
             value={(net >= 0 ? '+' : '−') + formatCurrency(Math.abs(net), defaultCurrency)}
             valueColor={net >= 0 ? colors.income : colors.expense}
             projected={(() => {
-              const projNet = projIncome - projExpense;
-              if (projNet === 0) return undefined;
-              return (projNet >= 0 ? '+' : '−') + formatCurrency(Math.abs(projNet), defaultCurrency);
+              if (projIncome === 0 && projExpense === 0) return undefined;
+              const projectedNet = net + projIncome - projExpense;
+              return (projectedNet >= 0 ? '+' : '−') + formatCurrency(Math.abs(projectedNet), defaultCurrency);
             })()}
             colors={colors}
           />
