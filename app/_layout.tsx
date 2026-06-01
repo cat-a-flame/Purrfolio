@@ -43,11 +43,10 @@ export default function RootLayout() {
     Lora_700Bold,
   });
 
+  // Hide the native splash immediately so the animated LoadingScreen takes over
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
+    SplashScreen.hideAsync();
+  }, []);
 
   useEffect(() => { loadThemePreference(); }, []);
 
@@ -85,11 +84,7 @@ export default function RootLayout() {
     }
   }, [session, authReady, minTimeReady, pinRequired, unlocked, segments]);
 
-  if (!fontsLoaded) {
-    return null;
-  }
-
-  if (loading) {
+  if (!fontsLoaded || loading) {
     return <LoadingScreen />;
   }
 
