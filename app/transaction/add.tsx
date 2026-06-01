@@ -314,7 +314,7 @@ export default function AddTransactionScreen() {
             /* ── Transfer layout ── */
             <>
               {/* From account */}
-              <View style={styles.fieldGroup}>
+              <View style={styles.fieldGroup3}>
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>From account</Text>
                 <TouchableOpacity
                   style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
@@ -330,7 +330,7 @@ export default function AddTransactionScreen() {
               </View>
 
               {/* Amount sent */}
-              <View style={styles.fieldGroup}>
+              <View style={styles.fieldGroup3}>
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount sent</Text>
                 <TouchableOpacity
                   activeOpacity={1}
@@ -361,7 +361,7 @@ export default function AddTransactionScreen() {
               </View>
 
               {/* To account */}
-              <View style={styles.fieldGroup}>
+              <View style={styles.fieldGroup3}>
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>To account</Text>
                 <TouchableOpacity
                   style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
@@ -378,7 +378,7 @@ export default function AddTransactionScreen() {
 
               {/* Amount received — only when currencies differ */}
               {!sameCurrency ? (
-                <View style={styles.fieldGroup}>
+                <View style={styles.fieldGroup3}>
                   <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount received</Text>
                   <TouchableOpacity
                     activeOpacity={1}
@@ -407,7 +407,7 @@ export default function AddTransactionScreen() {
               )}
 
               {/* Date */}
-              <View style={styles.fieldGroup}>
+              <View style={styles.fieldGroup3}>
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>Date</Text>
                 <TouchableOpacity
                   style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
@@ -473,18 +473,6 @@ export default function AddTransactionScreen() {
               </View>
 
               <View style={styles.row}>
-                {/* Category */}
-                <View style={styles.fieldGroup2}>
-                  <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
-                    <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
-                      {selectedCategory
-                        ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
-                        : 'Select category…'}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-                  </TouchableOpacity>
-                </View>
-
                 {/* Account */}
                 <View style={styles.fieldGroup2}>
                   <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
@@ -492,6 +480,18 @@ export default function AddTransactionScreen() {
                       {selectedWallet
                         ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
                         : 'Select wallet…'}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Category */}
+                <View style={styles.fieldGroup2}>
+                  <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
+                    <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
+                      {selectedCategory
+                        ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
+                        : 'Select category'}
                     </Text>
                     <Ionicons name="chevron-forward" size={18} color={colors.muted} />
                   </TouchableOpacity>
@@ -512,15 +512,14 @@ export default function AddTransactionScreen() {
                 <>
                   {labels.length > 0 && (
                     <View style={styles.fieldGroup}>
-                      <Text style={[styles.fieldLabel, { color: colors.muted }]}>Labels</Text>
                       <TouchableOpacity
-                        style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                        style={[styles.pickerBtn2, { borderColor: colors.border, backgroundColor: colors.surface }]}
                         onPress={() => setShowLabelModal(true)}
                       >
                         <Text style={[styles.pickerBtnText, { color: selectedLabels.length ? colors.text : colors.muted }]}>
                           {selectedLabels.length > 0
                             ? selectedLabels.map((l) => l.name).join(', ')
-                            : 'Select labels…'}
+                            : 'Select labels'}
                         </Text>
                         <Ionicons name="chevron-forward" size={18} color={colors.muted} />
                       </TouchableOpacity>
@@ -528,17 +527,15 @@ export default function AddTransactionScreen() {
                   )}
 
                   <AppInput
-                    label="Payer (optional)"
                     value={form.payer}
                     onChangeText={(v) => setField('payer', v)}
-                    placeholder="Who paid?"
+                    placeholder="Payee name"
                   />
 
                   <AppInput
-                    label="Notes (optional)"
                     value={form.notes}
                     onChangeText={(v) => setField('notes', v)}
-                    placeholder="Add a note…"
+                    placeholder="Notes"
                     multiline
                     numberOfLines={3}
                     style={{ minHeight: 80, textAlignVertical: 'top' }}
@@ -645,7 +642,7 @@ const styles = StyleSheet.create({
   typeToggle: {
     flexDirection: 'row',
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0,
     overflow: 'hidden',
     padding: 4,
     gap: 4,
@@ -657,12 +654,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   typeBtnText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
-  fieldGroup: { gap: 8, flexDirection: 'row' },
+  fieldGroup: { gap: 8, flexDirection: 'row', },
+  fieldGroup3: { gap: 8, flexDirection: 'column' },
   fieldLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
   amountRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingTop: 12,
+    paddingBottom: 60,
     justifyContent: 'center',
   },
   amountInput: {
@@ -691,9 +690,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 1,
   },
   pickerBtnText: { fontSize: 15, flex: 1 },
+  pickerBtn2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    flexGrow: 1,
+    flexShrink: 0
+  },
   pickerBtnInline: { alignSelf: 'flex-start' },
   pickerBtnInlineText: { fontSize: 15 },
   modalRow: {
@@ -708,16 +716,15 @@ const styles = StyleSheet.create({
   modalRowText: { flex: 1, fontSize: 15 },
   labelDot: { width: 12, height: 12, borderRadius: 6 },
   arrowRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  arrowLine: { flex: 1, height: 1 },
+  arrowLine: { flexGrow: 1, flexShrink: 1, height: 1 },
   arrowCircle: {
-    width: 32, height: 32, borderRadius: 16, borderWidth: 1,
+    width: 32, height: 32, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
   },
   sameHint: { fontSize: 13, textAlign: 'center', marginTop: -8 },
   transferAmountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 12,
     minHeight: 46,
@@ -745,8 +752,8 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 12,
-    borderWidth: 1,
+    gap: 8,
+    marginTop: 8,
   },
   fieldGroup2: {
     flexShrink: 1,

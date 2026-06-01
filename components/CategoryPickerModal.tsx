@@ -91,7 +91,7 @@ export default function CategoryPickerModal({ visible, onClose, categories, sele
         <Ionicons name="search" size={16} color={colors.muted} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search categories…"
+          placeholder="Search categories"
           placeholderTextColor={colors.muted}
           value={search}
           onChangeText={setSearch}
