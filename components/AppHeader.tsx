@@ -26,10 +26,11 @@ const DRAWER_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);
 type NavItem = { label: string; route: string; icon: string };
 
 const SETTINGS_ITEMS: NavItem[] = [
-  { label: 'Accounts',   route: '/settings/wallets',    icon: 'wallet-outline'   },
-  { label: 'Categories', route: '/settings/categories', icon: 'grid-outline'     },
-  { label: 'Labels',     route: '/settings/labels',     icon: 'pricetag-outline' },
-  { label: 'Templates',  route: '/settings/templates',  icon: 'copy-outline'     },
+  { label: 'Accounts',   route: '/settings/wallets',    icon: 'wallet-outline'      },
+  { label: 'Categories', route: '/settings/categories', icon: 'grid-outline'        },
+  { label: 'Labels',     route: '/settings/labels',     icon: 'pricetag-outline'    },
+  { label: 'Templates',  route: '/settings/templates',  icon: 'copy-outline'        },
+  { label: 'Security',   route: '/settings/security',   icon: 'lock-closed-outline' },
 ];
 
 export default function AppHeader({ title, rightAction }: Props) {
