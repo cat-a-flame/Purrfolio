@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { lightColors, darkColors } from '@/lib/theme';
+import { useRecurring } from '@/lib/recurringContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -85,6 +86,7 @@ const TAB_ICONS: Record<string, { outline: string; filled: string }> = {
 export default function CustomTabBar({ state, navigation }: TabBarProps) {
   const scheme = useColorScheme();
   const colors = scheme === 'dark' ? darkColors : lightColors;
+  const { hasDueToday } = useRecurring();
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
 
@@ -106,6 +108,7 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
     const icons = TAB_ICONS[route.name] ?? { outline: 'ellipse-outline', filled: 'ellipse' };
     const iconName = isFocused ? icons.filled : icons.outline;
     const color = isFocused ? '#692f7c' : '#998aa7';
+    const showDot = route.name === 'recurring' && hasDueToday;
     return (
       <TouchableOpacity
         key={route.key}
@@ -117,6 +120,7 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
       >
         <View style={styles.iconWrap}>
           <Ionicons name={iconName as any} size={24} color={color} />
+          {showDot && <View style={styles.notifDot} />}
         </View>
       </TouchableOpacity>
     );
@@ -205,6 +209,15 @@ const styles = StyleSheet.create({
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  notifDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#e53935',
   },
   fabWrap: {
     position: 'absolute',
