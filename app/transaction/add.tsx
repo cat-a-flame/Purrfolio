@@ -687,12 +687,13 @@ const styles = StyleSheet.create({
   pickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'stretch',
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
   },
-  pickerBtnText: { fontSize: 15, flexGrow: 1, flexShrink: 0 },
+  pickerBtnText: { fontSize: 15, flex: 1 },
   pickerBtnInline: { alignSelf: 'flex-start' },
   pickerBtnInlineText: { fontSize: 15 },
   modalRow: {
