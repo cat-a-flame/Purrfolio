@@ -16,6 +16,7 @@ import AppHeader from '@/components/AppHeader';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { formatCurrency } from '@/lib/utils';
 import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import { generateDueDates, isoDate as recurringIsoDate } from '@/lib/recurringUtils';
 import SkeletonBox from '@/components/SkeletonBox';
 import type { Currency, Wallet } from '@/lib/types';
 
@@ -155,6 +156,8 @@ export default function StatsScreen() {
   const [currentRates, setCurrentRates] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [recurringPayments, setRecurringPayments] = useState<any[]>([]);
+  const [recurringOccurrences, setRecurringOccurrences] = useState<any[]>([]);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -169,6 +172,8 @@ export default function StatsScreen() {
       { data: allTxSums },
       { data: periodData },
       { data: prevData },
+      { data: recurringRows },
+      { data: occurrenceRows },
     ] = await Promise.all([
       supabase.from('wallets').select('*').eq('user_id', user.id).order('is_default', { ascending: false }),
       supabase.from('transactions').select('wallet_id, type, amount').eq('user_id', user.id).limit(10000),
@@ -188,6 +193,17 @@ export default function StatsScreen() {
         .lte('date', prevRange.to)
         .filter('transfer_group_id', 'is', null)
         .limit(10000),
+      supabase
+        .from('recurring_payments')
+        .select('id, type, amount, frequency, start_date, end_date, is_active, wallet:wallets(currency)')
+        .eq('user_id', user.id)
+        .eq('is_active', true),
+      supabase
+        .from('recurring_occurrences')
+        .select('recurring_payment_id, due_date')
+        .eq('user_id', user.id)
+        .gte('due_date', period.from)
+        .lte('due_date', period.to),
     ]);
 
     const fetchRates = async (from: string, to: string): Promise<DailyRates> => {
@@ -219,6 +235,8 @@ export default function StatsScreen() {
     setWallets(walletList.map((w: any) => ({ ...w, _balance: balanceMap.get(w.id) ?? w.starting_balance ?? 0 })));
     setTxs(periodData ?? []);
     setPrevTxs(prevData ?? []);
+    setRecurringPayments(recurringRows ?? []);
+    setRecurringOccurrences(occurrenceRows ?? []);
     } catch (e) {
       console.error('[Stats] load error:', e);
     } finally {
@@ -252,6 +270,22 @@ export default function StatsScreen() {
   const txCount = txs.length;
 
   const defaultCurrency: Currency = 'HUF';
+
+  const { projIncome, projExpense } = useMemo(() => {
+    const actionedKeys = new Set(recurringOccurrences.map((o: any) => `${o.recurring_payment_id}|${o.due_date}`));
+    const from = new Date(period.from + 'T00:00:00');
+    const to = new Date(period.to + 'T23:59:59');
+    let projIncome = 0, projExpense = 0;
+    for (const p of recurringPayments) {
+      for (const date of generateDueDates(p, from, to)) {
+        if (actionedKeys.has(`${p.id}|${recurringIsoDate(date)}`)) continue;
+        const amtHUF = toHUF(p.amount, (p.wallet as any)?.currency, currentRates);
+        if (p.type === 'income') projIncome += amtHUF;
+        else projExpense += amtHUF;
+      }
+    }
+    return { projIncome, projExpense };
+  }, [recurringPayments, recurringOccurrences, period.from, period.to, currentRates]);
 
   const expenseByCategory = useMemo(() => groupByCategory(txsHUF, 'expense'), [txsHUF]);
 
@@ -328,12 +362,29 @@ export default function StatsScreen() {
 
         {/* ── Summary ──────────────────────────────────────────────────── */}
         <View style={styles.summaryGrid}>
-          <SummaryTile label="Income" value={formatCurrency(income, defaultCurrency)} valueColor={colors.income} colors={colors} />
-          <SummaryTile label="Expenses" value={formatCurrency(expense, defaultCurrency)} valueColor={colors.expense} colors={colors} />
+          <SummaryTile
+            label="Income"
+            value={formatCurrency(income, defaultCurrency)}
+            valueColor={colors.income}
+            projected={projIncome > 0 ? `+${formatCurrency(projIncome, defaultCurrency)}` : undefined}
+            colors={colors}
+          />
+          <SummaryTile
+            label="Expenses"
+            value={formatCurrency(expense, defaultCurrency)}
+            valueColor={colors.expense}
+            projected={projExpense > 0 ? `+${formatCurrency(projExpense, defaultCurrency)}` : undefined}
+            colors={colors}
+          />
           <SummaryTile
             label="Net"
             value={(net >= 0 ? '+' : '−') + formatCurrency(Math.abs(net), defaultCurrency)}
             valueColor={net >= 0 ? colors.income : colors.expense}
+            projected={(() => {
+              const projNet = projIncome - projExpense;
+              if (projNet === 0) return undefined;
+              return (projNet >= 0 ? '+' : '−') + formatCurrency(Math.abs(projNet), defaultCurrency);
+            })()}
             colors={colors}
           />
           <SummaryTile label="Transactions" value={String(txCount)} valueColor={colors.accent} colors={colors} />
@@ -491,8 +542,8 @@ export default function StatsScreen() {
 
 // ─── SummaryTile ──────────────────────────────────────────────────────────────
 
-function SummaryTile({ label, value, valueColor, colors }: {
-  label: string; value: string; valueColor: string; colors: Colors;
+function SummaryTile({ label, value, valueColor, projected, colors }: {
+  label: string; value: string; valueColor: string; projected?: string; colors: Colors;
 }) {
   return (
     <View style={[styles.summaryTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -500,6 +551,11 @@ function SummaryTile({ label, value, valueColor, colors }: {
       <Text style={[styles.summaryValue, { color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>
         {value}
       </Text>
+      {projected && (
+        <Text style={[styles.summaryProjected, { color: colors.muted }]} numberOfLines={1} adjustsFontSizeToFit>
+          {projected} projected
+        </Text>
+      )}
     </View>
   );
 }
@@ -521,6 +577,7 @@ const styles = StyleSheet.create({
   },
   summaryLabel: { fontSize: 12, fontFamily: 'Figtree_500Medium', textTransform: 'uppercase', letterSpacing: 0.4 },
   summaryValue: { fontSize: 20, fontFamily: 'Figtree_700Bold', lineHeight: 26 },
+  summaryProjected: { fontSize: 11, fontFamily: 'Figtree_500Medium', marginTop: 2 },
 
   // Card shell
   card: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
