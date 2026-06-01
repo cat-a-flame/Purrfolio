@@ -158,7 +158,7 @@ export default function EditTransactionScreen() {
         category_id: form.category_id || null,
         date: form.date,
         notes: form.notes || null,
-        payer: form.payer || null,
+        payer: isTransfer ? null : (form.payer || null),
       })
       .eq('id', id);
 
@@ -186,7 +186,7 @@ export default function EditTransactionScreen() {
       {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
-          const { error: labelsErr } = await supabase.from('transaction_labels').delete().eq('transaction_id', id);
+          await supabase.from('transaction_labels').delete().eq('transaction_id', id);
           const { error: txErr } = await supabase.from('transactions').delete().eq('id', id);
           Events.emit('transaction-saved', {
             success: !txErr,
@@ -230,171 +230,246 @@ export default function EditTransactionScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-      <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 24 }]} keyboardShouldPersistTaps="handled">
-        {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
+        <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 24 }]} keyboardShouldPersistTaps="handled">
+          {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
 
-        {/* Type toggle — hidden for transfers */}
-        {!isTransfer && (
-          <View style={[styles.typeToggle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            {(['expense', 'income'] as TransactionType[]).map((t) => (
-              <TouchableOpacity
-                key={t}
-                style={[
-                  styles.typeBtn,
-                  form.type === t && {
-                    backgroundColor: t === 'income' ? colors.income : colors.expense,
-                  },
-                ]}
-                onPress={() => { setField('type', t); setField('category_id', ''); }}
-              >
-                <Text style={[styles.typeBtnText, { color: form.type === t ? '#fff' : colors.muted }]}>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+          {isTransfer ? (
+            /* ── Transfer layout ── */
+            <>
+              {/* Read-only transfer label */}
+              <View style={[styles.transferBadge, { backgroundColor: colors.accent + '18', borderColor: colors.accent + '40' }]}>
+                <Ionicons name="swap-horizontal" size={15} color={colors.accent} />
+                <Text style={[styles.transferBadgeText, { color: colors.accent }]}>Transfer</Text>
+              </View>
 
-        {/* Wallet */}
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Wallet</Text>
-          <TouchableOpacity
-            style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            onPress={() => setShowWalletModal(true)}
-          >
-            <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
-              {selectedWallet
-                ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
-                : 'Select wallet…'}
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Amount */}
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
-          <TouchableOpacity
-            activeOpacity={1}
-            style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            onPress={() => amountRef.current?.focus()}
-          >
-            <TextInput
-              ref={amountRef}
-              value={formatAmountDisplay(form.amount)}
-              onChangeText={(v) => setField('amount', parseAmountInput(v))}
-              keyboardType="decimal-pad"
-              placeholder="0"
-              placeholderTextColor={colors.placeholder}
-              style={[styles.amountInput, { color: colors.text }]}
-              textAlign="right"
-            />
-            {currency ? (
-              <Text style={[styles.currencyLabel, { color: colors.accent }]}>{currency}</Text>
-            ) : null}
-          </TouchableOpacity>
-        </View>
-
-        {/* Date */}
-        <View style={styles.fieldGroup}>
-          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Date</Text>
-          <TouchableOpacity
-            style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={[styles.pickerBtnText, { color: form.date ? colors.text : colors.muted }]}>
-              {form.date || 'Select date…'}
-            </Text>
-            <Ionicons name="calendar" size={18} color={colors.muted} />
-          </TouchableOpacity>
-        </View>
-
-        <DatePickerModal
-          visible={showDatePicker}
-          value={form.date}
-          onConfirm={(d) => setField('date', d)}
-          onClose={() => setShowDatePicker(false)}
-        />
-
-        {/* Category */}
-        {!isTransfer && (
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Category</Text>
-            <TouchableOpacity
-              style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-              onPress={() => setShowCategoryModal(true)}
-            >
-              <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]}>
-                {selectedCategory
-                  ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
-                  : 'Select category…'}
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* More options — collapsible */}
-        <TouchableOpacity
-          style={[styles.moreToggle, { borderColor: colors.border }]}
-          onPress={() => setMoreExpanded((v) => !v)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.moreToggleText, { color: colors.muted }]}>More options</Text>
-          <Ionicons
-            name={moreExpanded ? 'chevron-up' : 'chevron-down'}
-            size={16}
-            color={colors.muted}
-          />
-        </TouchableOpacity>
-
-        {moreExpanded && (
-          <>
-            {/* Labels */}
-            {labels.length > 0 && (
+              {/* Account */}
               <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Labels</Text>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Account</Text>
                 <TouchableOpacity
                   style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                  onPress={() => setShowLabelModal(true)}
+                  onPress={() => setShowWalletModal(true)}
                 >
-                  <Text style={[styles.pickerBtnText, { color: selectedLabels.length ? colors.text : colors.muted }]}>
-                    {selectedLabels.length > 0 ? selectedLabels.map((l) => l.name).join(', ') : 'Select labels…'}
+                  <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
+                    {selectedWallet
+                      ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
+                      : 'Select wallet…'}
                   </Text>
                   <Ionicons name="chevron-forward" size={18} color={colors.muted} />
                 </TouchableOpacity>
               </View>
-            )}
 
-            <AppInput
-              label="Payer (optional)"
-              value={form.payer}
-              onChangeText={(v) => setField('payer', v)}
-              placeholder="Who paid?"
-            />
+              {/* Amount */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
+                <TouchableOpacity
+                  activeOpacity={1}
+                  style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => amountRef.current?.focus()}
+                >
+                  <TextInput
+                    ref={amountRef}
+                    value={formatAmountDisplay(form.amount)}
+                    onChangeText={(v) => setField('amount', parseAmountInput(v))}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor={colors.placeholder}
+                    style={[styles.amountInput, { color: colors.text }]}
+                    textAlign="right"
+                  />
+                  {currency ? <Text style={[styles.currencyLabel, { color: colors.accent }]}>{currency}</Text> : null}
+                </TouchableOpacity>
+              </View>
 
-            <AppInput
-              label="Notes (optional)"
-              value={form.notes}
-              onChangeText={(v) => setField('notes', v)}
-              placeholder="Add a note…"
-              multiline
-              numberOfLines={3}
-              style={{ minHeight: 80, textAlignVertical: 'top' }}
-            />
-          </>
-        )}
+              {/* Date */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Date</Text>
+                <TouchableOpacity
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={[styles.pickerBtnText, { color: form.date ? colors.text : colors.muted }]}>
+                    {form.date || 'Select date…'}
+                  </Text>
+                  <Ionicons name="calendar" size={18} color={colors.muted} />
+                </TouchableOpacity>
+              </View>
 
-      </ScrollView>
+              {/* More options */}
+              <TouchableOpacity
+                style={[styles.moreToggle, { borderColor: colors.border }]}
+                onPress={() => setMoreExpanded((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.moreToggleText, { color: colors.muted }]}>More options</Text>
+                <Ionicons name={moreExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
+              </TouchableOpacity>
 
-      <View style={[styles.stickyFooter, { paddingBottom: keyboardVisible ? 8 : bottom + 16, borderTopColor: colors.border }]}>
-        <AppButton onPress={handleSave} loading={loading} fullWidth>
-          Save changes
-        </AppButton>
-      </View>
+              {moreExpanded && (
+                <AppInput
+                  label="Notes (optional)"
+                  value={form.notes}
+                  onChangeText={(v) => setField('notes', v)}
+                  placeholder="Add a note…"
+                  multiline
+                  numberOfLines={3}
+                  style={{ minHeight: 80, textAlignVertical: 'top' }}
+                />
+              )}
+            </>
+          ) : (
+            /* ── Income / Expense layout ── */
+            <>
+              {/* Type toggle */}
+              <View style={[styles.typeToggle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                {(['expense', 'income'] as TransactionType[]).map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[
+                      styles.typeBtn,
+                      form.type === t && {
+                        backgroundColor: t === 'income' ? colors.income : colors.expense,
+                      },
+                    ]}
+                    onPress={() => { setField('type', t); setField('category_id', ''); }}
+                  >
+                    <Text style={[styles.typeBtnText, { color: form.type === t ? '#fff' : colors.muted }]}>
+                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Account */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Account</Text>
+                <TouchableOpacity
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => setShowWalletModal(true)}
+                >
+                  <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
+                    {selectedWallet
+                      ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
+                      : 'Select wallet…'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Amount */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
+                <TouchableOpacity
+                  activeOpacity={1}
+                  style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => amountRef.current?.focus()}
+                >
+                  <TextInput
+                    ref={amountRef}
+                    value={formatAmountDisplay(form.amount)}
+                    onChangeText={(v) => setField('amount', parseAmountInput(v))}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor={colors.placeholder}
+                    style={[styles.amountInput, { color: colors.text }]}
+                    textAlign="right"
+                  />
+                  {currency ? <Text style={[styles.currencyLabel, { color: colors.accent }]}>{currency}</Text> : null}
+                </TouchableOpacity>
+              </View>
+
+              {/* Date */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Date</Text>
+                <TouchableOpacity
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={[styles.pickerBtnText, { color: form.date ? colors.text : colors.muted }]}>
+                    {form.date || 'Select date…'}
+                  </Text>
+                  <Ionicons name="calendar" size={18} color={colors.muted} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Category */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Category</Text>
+                <TouchableOpacity
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => setShowCategoryModal(true)}
+                >
+                  <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]}>
+                    {selectedCategory
+                      ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
+                      : 'Select category…'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                </TouchableOpacity>
+              </View>
+
+              {/* More options */}
+              <TouchableOpacity
+                style={[styles.moreToggle, { borderColor: colors.border }]}
+                onPress={() => setMoreExpanded((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.moreToggleText, { color: colors.muted }]}>More options</Text>
+                <Ionicons name={moreExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
+              </TouchableOpacity>
+
+              {moreExpanded && (
+                <>
+                  {labels.length > 0 && (
+                    <View style={styles.fieldGroup}>
+                      <Text style={[styles.fieldLabel, { color: colors.muted }]}>Labels</Text>
+                      <TouchableOpacity
+                        style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                        onPress={() => setShowLabelModal(true)}
+                      >
+                        <Text style={[styles.pickerBtnText, { color: selectedLabels.length ? colors.text : colors.muted }]}>
+                          {selectedLabels.length > 0 ? selectedLabels.map((l) => l.name).join(', ') : 'Select labels…'}
+                        </Text>
+                        <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  <AppInput
+                    label="Payer (optional)"
+                    value={form.payer}
+                    onChangeText={(v) => setField('payer', v)}
+                    placeholder="Who paid?"
+                  />
+
+                  <AppInput
+                    label="Notes (optional)"
+                    value={form.notes}
+                    onChangeText={(v) => setField('notes', v)}
+                    placeholder="Add a note…"
+                    multiline
+                    numberOfLines={3}
+                    style={{ minHeight: 80, textAlignVertical: 'top' }}
+                  />
+                </>
+              )}
+            </>
+          )}
+        </ScrollView>
+
+        <View style={[styles.stickyFooter, { paddingBottom: keyboardVisible ? 8 : bottom + 16, borderTopColor: colors.border }]}>
+          <AppButton onPress={handleSave} loading={loading} fullWidth>
+            Save changes
+          </AppButton>
+        </View>
       </KeyboardAvoidingView>
 
-      {/* Wallet picker modal */}
+      <DatePickerModal
+        visible={showDatePicker}
+        value={form.date}
+        onConfirm={(d) => setField('date', d)}
+        onClose={() => setShowDatePicker(false)}
+      />
+
       <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title="Select account">
         {wallets.map((w) => (
           <TouchableOpacity
@@ -404,14 +479,11 @@ export default function EditTransactionScreen() {
           >
             {w.icon ? <Text style={styles.modalRowIcon}>{w.icon}</Text> : <View style={{ width: 28 }} />}
             <Text style={[styles.modalRowText, { color: form.wallet_id === w.id ? colors.accent : colors.text }]}>{w.name}</Text>
-            {form.wallet_id === w.id && <Text style={{ color: colors.accent }}>
-              <Ionicons name="checkmark" size={18} color={colors.accent} />  
-            </Text>}
+            {form.wallet_id === w.id && <Ionicons name="checkmark" size={18} color={colors.accent} />}
           </TouchableOpacity>
         ))}
       </BottomModal>
 
-      {/* Category picker modal */}
       <CategoryPickerModal
         visible={showCategoryModal}
         onClose={() => setShowCategoryModal(false)}
@@ -431,7 +503,7 @@ export default function EditTransactionScreen() {
             >
               <View style={[styles.labelDot, { backgroundColor: l.color }]} />
               <Text style={[styles.modalRowText, { color: selected ? l.color : colors.text }]}>{l.name}</Text>
-              {selected && <Text style={{ color: l.color }}><Ionicons name="checkmark" size={18} color={l.color} /></Text>}
+              {selected && <Ionicons name="checkmark" size={18} color={l.color} />}
             </TouchableOpacity>
           );
         })}
@@ -463,6 +535,17 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   error: { fontSize: 14, textAlign: 'center' },
+  transferBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  transferBadgeText: { fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
   typeToggle: {
     flexDirection: 'row',
     borderRadius: 12,
