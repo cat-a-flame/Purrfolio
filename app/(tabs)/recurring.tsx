@@ -27,6 +27,7 @@ import type { RecurringPayment, Wallet, Category, Label, RecurrenceFrequency } f
 import { formatCurrency } from '@/lib/utils';
 import { generateDueDates, nextDueDate, frequencyLabel, isoDate, monthBounds } from '@/lib/recurringUtils';
 import { useRecurring } from '@/lib/recurringContext';
+import { Events } from '@/lib/events';
 import Toast from '@/components/Toast';
 
 function formatAmountDisplay(raw: string): string {
@@ -103,6 +104,7 @@ export default function RecurringScreen() {
         .eq('recurring_payment_id', ref.paymentId)
         .eq('due_date', ref.dueDate),
     ]);
+    Events.emit('transaction-saved', { success: true });
     load();
   }
 
@@ -207,6 +209,7 @@ export default function RecurringScreen() {
         transaction_id: txData.id,
       });
       lastPay.current = { transactionId: txData.id, paymentId: payment.id, dueDate: isoDate(dueDate) };
+      Events.emit('transaction-saved', { success: true });
       showToast('Payment confirmed!', true, true);
     } else {
       showToast('Failed to confirm payment.', false);
