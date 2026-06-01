@@ -334,7 +334,7 @@ export default function AddTransactionScreen() {
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount sent</Text>
                 <TouchableOpacity
                   activeOpacity={1}
-                  style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  style={[styles.transferAmountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
                   onPress={() => amountRef.current?.focus()}
                 >
                   <TextInput
@@ -344,10 +344,10 @@ export default function AddTransactionScreen() {
                     keyboardType="decimal-pad"
                     placeholder="0"
                     placeholderTextColor={colors.placeholder}
-                    style={[styles.amountInput, { color: colors.text }]}
+                    style={[styles.transferAmountInput, { color: colors.text }]}
                     textAlign="right"
                   />
-                  {currency ? <Text style={[styles.currencyLabel, { color: colors.accent }]}>{currency}</Text> : null}
+                  {currency ? <Text style={[styles.transferCurrencyLabel, { color: colors.accent }]}>{currency}</Text> : null}
                 </TouchableOpacity>
               </View>
 
@@ -382,7 +382,7 @@ export default function AddTransactionScreen() {
                   <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount received</Text>
                   <TouchableOpacity
                     activeOpacity={1}
-                    style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                    style={[styles.transferAmountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
                     onPress={() => toAmountRef.current?.focus()}
                   >
                     <TextInput
@@ -392,11 +392,11 @@ export default function AddTransactionScreen() {
                       keyboardType="decimal-pad"
                       placeholder="0"
                       placeholderTextColor={colors.placeholder}
-                      style={[styles.amountInput, { color: colors.text }]}
+                      style={[styles.transferAmountInput, { color: colors.text }]}
                       textAlign="right"
                     />
                     {selectedToWallet?.currency ? (
-                      <Text style={[styles.currencyLabel, { color: colors.accent }]}>{selectedToWallet.currency}</Text>
+                      <Text style={[styles.transferCurrencyLabel, { color: colors.accent }]}>{selectedToWallet.currency}</Text>
                     ) : null}
                   </TouchableOpacity>
                 </View>
@@ -443,28 +443,11 @@ export default function AddTransactionScreen() {
           ) : (
             /* ── Income / Expense layout ── */
             <>
-              {/* Account */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Account</Text>
-                <TouchableOpacity
-                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                  onPress={() => setShowWalletModal(true)}
-                >
-                  <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
-                    {selectedWallet
-                      ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
-                      : 'Select wallet…'}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-                </TouchableOpacity>
-              </View>
-
               {/* Amount */}
               <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
                 <TouchableOpacity
                   activeOpacity={1}
-                  style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  style={[styles.amountRow, { backgroundColor: colors.bg }]}
                   onPress={() => amountRef.current?.focus()}
                 >
                   <TextInput
@@ -481,21 +464,29 @@ export default function AddTransactionScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Date */}
-              <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Date</Text>
-                <TouchableOpacity
-                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Text style={[styles.pickerBtnText, { color: colors.text }]}>{dateLabel}</Text>
-                  <Ionicons name="calendar" size={18} color={colors.muted} />
-                </TouchableOpacity>
+              <View style={styles.row}>
+                {/* Account */}
+                <View style={styles.rowFieldGroup}>
+                  <TouchableOpacity style={{ backgroundColor: colors.bg }} onPress={() => setShowWalletModal(true)}>
+                    <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
+                      {selectedWallet
+                        ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
+                        : 'Select wallet…'} •
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Date */}
+                <View style={styles.rowFieldGroup}>
+                  <TouchableOpacity style={[styles.pickerBtnBorderless, { backgroundColor: colors.surface }]} onPress={() => setShowDatePicker(true)}>
+                    <Ionicons name="calendar" size={12} color={colors.muted} />
+                    <Text style={[styles.pickerBtnText, { color: colors.text }]}>{dateLabel}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Category */}
               <View style={styles.fieldGroup}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Category</Text>
                 <TouchableOpacity
                   style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
                   onPress={() => setShowCategoryModal(true)}
@@ -673,21 +664,20 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
   amountRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    minHeight: 46,
+    alignItems: 'flex-end',
+    paddingVertical: 12,
+    justifyContent: 'center',
   },
   amountInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: 10,
+    fontSize: 52,
+    paddingVertical: 0,
+    fontFamily: 'Lora_400Regular',
   },
   currencyLabel: {
     fontSize: 15,
     fontFamily: 'Figtree_700Bold',
-    marginLeft: 10,
+    marginLeft: 2,
+    marginBottom: 12,
   },
   moreToggle: {
     flexDirection: 'row',
@@ -728,4 +718,36 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   sameHint: { fontSize: 13, textAlign: 'center', marginTop: -8 },
+  transferAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    minHeight: 46,
+  },
+  transferAmountInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 10,
+  },
+  transferCurrencyLabel: {
+    fontSize: 15,
+    fontFamily: 'Figtree_700Bold',
+    marginLeft: 6,
+  },
+  row: {
+    gap: 2,
+    flexDirection: 'row',
+  },
+  rowFieldGroup: {
+    flexGrow: 1,
+    flexShrink: 1,
+    gap: 8,
+  },
+  pickerBtnBorderless: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
 });
