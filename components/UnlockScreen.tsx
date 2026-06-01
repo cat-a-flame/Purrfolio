@@ -4,7 +4,7 @@ import { PinPad } from '@/components/PinPad';
 import {
   verifyPin,
   isBiometricsEnabled,
-  getBiometricsType,
+  getSupportedBiometrics,
   authenticateWithBiometrics,
 } from '@/lib/security';
 import { useTheme } from '@/lib/theme';
@@ -25,14 +25,12 @@ export function UnlockScreen({ onUnlocked }: Props) {
   useEffect(() => {
     let cancelled = false;
     async function init() {
-      const enabled = await isBiometricsEnabled();
-      const type = await getBiometricsType();
+      const [enabled, sup] = await Promise.all([isBiometricsEnabled(), getSupportedBiometrics()]);
+      const hardwareAvailable = sup.face || sup.fingerprint;
       if (cancelled) return;
-      setBiometricsEnabled(enabled && type !== null);
-      setBiometricsType(type);
-      if (enabled && type !== null) {
-        tryBiometrics();
-      }
+      setBiometricsEnabled(enabled && hardwareAvailable);
+      setBiometricsType(sup.face ? 'face' : sup.fingerprint ? 'fingerprint' : null);
+      if (enabled && hardwareAvailable) tryBiometrics();
     }
     init();
     return () => { cancelled = true; };

@@ -17,9 +17,11 @@ import {
   verifyPin,
   savePin,
   disablePin,
-  isBiometricsEnabled,
-  setBiometricsEnabled,
-  getBiometricsType,
+  isFaceEnabled,
+  setFaceEnabled,
+  isFingerprintEnabled,
+  setFingerprintEnabled,
+  getSupportedBiometrics,
 } from '@/lib/security';
 
 type Phase =
@@ -38,8 +40,9 @@ export default function SecurityScreen() {
   const router = useRouter();
 
   const [pinEnabled, setPinEnabled] = useState(false);
-  const [bioEnabled, setBioEnabled] = useState(false);
-  const [bioType, setBioType] = useState<'face' | 'fingerprint' | null>(null);
+  const [faceEnabled, setFaceEnabledState] = useState(false);
+  const [fingerprintEnabled, setFingerprintEnabledState] = useState(false);
+  const [supported, setSupported] = useState({ face: false, fingerprint: false });
   const [phase, setPhase] = useState<Phase>('idle');
   const [pin, setPin] = useState('');
   const [newPin, setNewPin] = useState('');
@@ -50,14 +53,16 @@ export default function SecurityScreen() {
   }, []);
 
   async function load() {
-    const [pe, be, bt] = await Promise.all([
+    const [pe, fe, fpe, sup] = await Promise.all([
       isPinEnabled(),
-      isBiometricsEnabled(),
-      getBiometricsType(),
+      isFaceEnabled(),
+      isFingerprintEnabled(),
+      getSupportedBiometrics(),
     ]);
     setPinEnabled(pe);
-    setBioEnabled(be);
-    setBioType(bt);
+    setFaceEnabledState(fe);
+    setFingerprintEnabledState(fpe);
+    setSupported(sup);
   }
 
   // ── PIN toggle ──────────────────────────────────────────────────────────────
@@ -72,11 +77,16 @@ export default function SecurityScreen() {
     }
   }
 
-  // ── Biometrics toggle ───────────────────────────────────────────────────────
+  // ── Biometrics toggles ──────────────────────────────────────────────────────
 
-  async function handleBioToggle(value: boolean) {
-    await setBiometricsEnabled(value);
-    setBioEnabled(value);
+  async function handleFaceToggle(value: boolean) {
+    await setFaceEnabled(value);
+    setFaceEnabledState(value);
+  }
+
+  async function handleFingerprintToggle(value: boolean) {
+    await setFingerprintEnabled(value);
+    setFingerprintEnabledState(value);
   }
 
   // ── Key input ───────────────────────────────────────────────────────────────
@@ -202,8 +212,10 @@ export default function SecurityScreen() {
 
   // ── Idle: settings list ─────────────────────────────────────────────────────
 
-  const bioLabel = bioType === 'face' ? 'Face ID' : 'Fingerprint';
-  const bioAvailable = bioType !== null;
+  const bioOptions = [
+    { key: 'face',        label: 'Face ID',     available: supported.face,        enabled: faceEnabled,        onToggle: handleFaceToggle },
+    { key: 'fingerprint', label: 'Fingerprint', available: supported.fingerprint, enabled: fingerprintEnabled, onToggle: handleFingerprintToggle },
+  ];
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -242,25 +254,30 @@ export default function SecurityScreen() {
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.muted }]}>BIOMETRICS</Text>
             <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={styles.row}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.rowLabel, { color: bioAvailable ? colors.text : colors.muted }]}>
-                    Use {bioLabel}
-                  </Text>
-                  {!bioAvailable && (
-                    <Text style={[styles.rowHint, { color: colors.muted }]}>
-                      Requires a development build
-                    </Text>
-                  )}
-                </View>
-                <Switch
-                  value={bioEnabled}
-                  onValueChange={bioAvailable ? handleBioToggle : undefined}
-                  disabled={!bioAvailable}
-                  trackColor={{ true: colors.accent }}
-                  thumbColor="#fff"
-                />
-              </View>
+              {bioOptions.map((opt, idx) => (
+                <React.Fragment key={opt.key}>
+                  {idx > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
+                  <View style={styles.row}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.rowLabel, { color: opt.available ? colors.text : colors.muted }]}>
+                        {opt.label}
+                      </Text>
+                      {!opt.available && (
+                        <Text style={[styles.rowHint, { color: colors.muted }]}>
+                          Requires a development build
+                        </Text>
+                      )}
+                    </View>
+                    <Switch
+                      value={opt.enabled}
+                      onValueChange={opt.available ? opt.onToggle : undefined}
+                      disabled={!opt.available}
+                      trackColor={{ true: colors.accent }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                </React.Fragment>
+              ))}
             </View>
           </View>
         )}
