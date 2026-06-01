@@ -133,6 +133,7 @@ export default function TransactionsScreen() {
         .gte('date', period.from)
         .lte('date', period.to)
         .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(10000),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
       supabase.from('labels').select('*').eq('user_id', user.id).order('name'),

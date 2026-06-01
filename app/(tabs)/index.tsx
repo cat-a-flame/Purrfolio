@@ -100,6 +100,7 @@ export default function DashboardScreen() {
           .gte('date', period.from)
           .lte('date', period.to)
           .order('date', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(10000),
         // Previous period transactions for vs% (exclude transfers)
         supabase
