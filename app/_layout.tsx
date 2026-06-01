@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Text } from 'react-native';
 import { Stack } from 'expo-router';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
@@ -70,6 +71,10 @@ export default function RootLayout() {
 
   if (!fontsLoaded) {
     return null;
+  }
+
+  if (loading) {
+    return <LoadingScreen />;
   }
 
   return (
