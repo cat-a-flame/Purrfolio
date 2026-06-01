@@ -50,6 +50,12 @@ export default function SettingsScreen() {
       ],
     },
     {
+      title: 'Security',
+      items: [
+        { label: 'Security', route: '/settings/security' },
+      ],
+    },
+    {
       title: 'Account',
       items: [
         { label: 'Sign out', onPress: handleSignOut, danger: true },

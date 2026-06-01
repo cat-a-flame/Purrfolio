@@ -12,6 +12,8 @@ import { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700
 import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
 import * as SplashScreen from 'expo-splash-screen';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { UnlockScreen } from '@/components/UnlockScreen';
+import { isPinEnabled } from '@/lib/security';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -25,6 +27,8 @@ export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [minTimeReady, setMinTimeReady] = useState(false);
+  const [pinRequired, setPinRequired] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
   const loading = !authReady || !minTimeReady;
   const router = useRouter();
   const segments = useSegments();
@@ -53,6 +57,12 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    isPinEnabled().then(enabled => {
+      setPinRequired(enabled);
+    });
+  }, []);
+
+  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setAuthReady(true);
@@ -66,14 +76,14 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!authReady || !minTimeReady) return;
+    if (!authReady || !minTimeReady || (pinRequired && !unlocked)) return;
     const inAuth = segments[0] === '(auth)';
     if (!session && !inAuth) {
       router.replace('/(auth)/login');
     } else if (session && inAuth) {
       router.replace('/(tabs)');
     }
-  }, [session, authReady, minTimeReady, segments]);
+  }, [session, authReady, minTimeReady, pinRequired, unlocked, segments]);
 
   if (!fontsLoaded) {
     return null;
@@ -81,6 +91,10 @@ export default function RootLayout() {
 
   if (loading) {
     return <LoadingScreen />;
+  }
+
+  if (pinRequired && !unlocked) {
+    return <UnlockScreen onUnlocked={() => setUnlocked(true)} />;
   }
 
   return (
@@ -95,6 +109,7 @@ export default function RootLayout() {
         <Stack.Screen name="settings/categories" options={{ headerShown: false }} />
         <Stack.Screen name="settings/labels" options={{ headerShown: false }} />
         <Stack.Screen name="settings/templates" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/security" options={{ headerShown: false }} />
       </Stack>
     </SafeAreaProvider>
   );
