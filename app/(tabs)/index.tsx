@@ -217,7 +217,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AppHeader title="Dashboard" />
+      <AppHeader title="Dashaboard" />
       <FlatList
         style={{ paddingTop: 16 }}
         data={flat}

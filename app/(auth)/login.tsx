@@ -50,7 +50,7 @@ export default function LoginScreen() {
         <View style={styles.header}>
           <Text style={[styles.logo, { color: colors.accent }]}>Purrfolio</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>
-            Your personal budget tracker
+            Your personal budget pawsisstant
           </Text>
         </View>
 
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 36,
-    fontFamily: 'Figtree_700Bold',
+    fontFamily: 'Lora_700Bold',
   },
   subtitle: {
     fontSize: 15,

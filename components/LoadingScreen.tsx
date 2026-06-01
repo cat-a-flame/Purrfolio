@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { View, Animated, StyleSheet } from 'react-native';
 import Svg, { Ellipse, Path } from 'react-native-svg';
 import { useTheme } from '@/lib/theme';
 
@@ -8,15 +8,11 @@ const PAW_COUNT = 6;
 const CYCLE_MS = 2050;
 const VISIBLE_MS = CYCLE_MS / 2;
 
-// Matches the original CSS:
-// odd  (0-indexed even)  → rotate(-10deg)
-// even (0-indexed odd)   → rotate(10deg) translateX(125%)
 const pawConfigs = Array.from({ length: PAW_COUNT }, (_, i) => {
   const isOdd = (i + 1) % 2 !== 0; // 1-indexed odd
   return {
     rotate: isOdd ? '-10deg' : '10deg',
     translateX: isOdd ? 0 : PAW_SIZE * 1.25,
-    // delay: ((i+1 * -1) + 6) * 0.25s  → converted to ms, positive for sequence
     delay: ((-(i + 1) + 6) * 0.25) * 1000,
   };
 });
@@ -70,9 +66,7 @@ export function LoadingScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
-      <Text style={[styles.title, { color: colors.accent }]}>Purrfolio</Text>
 
-      {/* Container rotated 45° — paws stacked vertically inside */}
       <View style={styles.loaderWrapper}>
         <View style={styles.loader}>
           {pawAnims.map((anim, i) => {
@@ -103,13 +97,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  title: {
-    fontSize: 40,
-    fontFamily: 'Lora_700Bold',
-    textAlign: 'center',
-    marginTop: 72,
-    letterSpacing: 1,
-  },
   loaderWrapper: {
     flex: 1,
     alignItems: 'center',
@@ -117,7 +104,6 @@ const styles = StyleSheet.create({
   },
   loader: {
     width: PAW_SIZE,
-    // 45° rotation on the stacked column → diagonal walking path
     transform: [{ rotate: '45deg' }],
   },
   paw: {
