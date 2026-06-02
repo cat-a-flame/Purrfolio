@@ -131,15 +131,16 @@ export default function EditTransactionScreen() {
   );
 
   const [pendingAction, setPendingAction] = useState<any>(null);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
-      if (!isDirty) return;
+      if (!isDirty || saved) return;
       e.preventDefault();
       setPendingAction(e.data.action);
     });
     return unsubscribe;
-  }, [navigation, isDirty]);
+  }, [navigation, isDirty, saved]);
 
   function setField<K extends keyof Form>(key: K, value: Form[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -220,6 +221,7 @@ export default function EditTransactionScreen() {
     }
 
     setLoading(false);
+    setSaved(true);
     Events.emit('transaction-saved', { success: true, message: 'Record updated.' });
     router.back();
   }
@@ -236,6 +238,7 @@ export default function EditTransactionScreen() {
             success: !txErr,
             message: txErr ? (txErr.message ?? 'Failed to delete.') : 'Record deleted.',
           });
+          setSaved(true);
           router.back();
         },
       },
