@@ -155,13 +155,13 @@ export default function WalletScreen() {
             placeholder="0"
           />
 
-          <View style={[styles.row, { justifyContent: 'space-between' }]}>
-            <Text style={[styles.rowLabel, { color: colors.muted }]}>Currency</Text>
+          <View style={styles.currencyWrapper}>
+            <Text style={[styles.currencyLabel, { color: colors.muted }]}>Currency</Text>
             <TouchableOpacity
               onPress={() => setCurrencyPickerVisible(true)}
               style={[styles.currencyDropdown, { borderColor: colors.border, backgroundColor: colors.surface }]}
             >
-              <Text style={{ color: colors.text, fontFamily: 'Figtree_600SemiBold', fontSize: 14 }}>{form.currency}</Text>
+              <Text style={{ color: colors.text, fontFamily: 'Figtree_600SemiBold', fontSize: 15 }}>{form.currency}</Text>
               <Ionicons name="chevron-down" size={14} color={colors.muted} />
             </TouchableOpacity>
           </View>
@@ -222,14 +222,23 @@ const styles = StyleSheet.create({
   iconNameRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowLabel: { fontSize: 14 },
+  currencyWrapper: {
+    gap: 4,
+  },
+  currencyLabel: {
+    fontSize: 13,
+    fontFamily: 'Figtree_500Medium',
+    marginBottom: 2,
+  },
   currencyDropdown: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
+    minHeight: 42,
   },
   currencyRow: {
     flexDirection: 'row',
