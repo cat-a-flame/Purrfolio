@@ -474,27 +474,24 @@ export default function RecurringScreen() {
             .map(f => (
               <View key={f}>
                 <Text style={[styles.freqLabel, { color: colors.muted }]}>{frequencyLabel(f).toUpperCase()}</Text>
-                <View style={[styles.paymentGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  {payments.filter(p => p.frequency === f).map((p, i) => (
-                    <PaymentRow
-                      key={p.id}
-                      payment={p}
-                      isFirst={i === 0}
-                      colors={colors}
-                      onPress={() => {
-                        setForm({
-                          name: p.name, type: p.type, amount: String(p.amount),
-                          wallet_id: p.wallet_id ?? '', category_id: p.category_id ?? '',
-                          frequency: p.frequency, start_date: p.start_date,
-                          end_date: p.end_date ?? '', payer: p.payer ?? '', notes: p.notes ?? '',
-                          labelIds: [],
-                        });
-                        setFormError('');
-                        setEditing(p);
-                      }}
-                    />
-                  ))}
-                </View>
+                {payments.filter(p => p.frequency === f).map((p) => (
+                  <PaymentRow
+                    key={p.id}
+                    payment={p}
+                    colors={colors}
+                    onPress={() => {
+                      setForm({
+                        name: p.name, type: p.type, amount: String(p.amount),
+                        wallet_id: p.wallet_id ?? '', category_id: p.category_id ?? '',
+                        frequency: p.frequency, start_date: p.start_date,
+                        end_date: p.end_date ?? '', payer: p.payer ?? '', notes: p.notes ?? '',
+                        labelIds: [],
+                      });
+                      setFormError('');
+                      setEditing(p);
+                    }}
+                  />
+                ))}
               </View>
             ))
           }
@@ -638,47 +635,37 @@ function DueCard({
 // ─── PaymentRow ──────────────────────────────────────────────────────────────
 
 function PaymentRow({
-  payment, colors, onPress, isFirst,
+  payment, colors, onPress,
 }: {
   payment: RecurringPayment;
   colors: any;
   onPress: () => void;
-  isFirst?: boolean;
 }) {
   const currency = payment.wallet?.currency ?? 'HUF';
   const next = nextDueDate(payment);
-  const dotColor = payment.category?.color || colors.muted;
+  const subText = !payment.is_active
+    ? 'Paused'
+    : next
+      ? next.toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' })
+      : '';
   return (
     <TouchableOpacity
-      style={[styles.paymentRow, { borderTopColor: colors.border }, isFirst && { borderTopWidth: 0 }]}
+      style={[styles.dueCard, { backgroundColor: colors.surface }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.paymentIcon, { backgroundColor: dotColor + '28' }]}>
-        {payment.category?.icon
-          ? <Text style={{ fontSize: 16 }}>{payment.category.icon}</Text>
-          : <View style={[styles.paymentDot, { backgroundColor: dotColor }]} />}
+      <View style={styles.dueMeta}>
+        <View style={[styles.iconBox, { backgroundColor: '#fcf1ff' }]}>
+          {payment.category?.icon ? <Text style={styles.dueIcon}>{payment.category.icon}</Text> : null}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.dueName, { color: payment.is_active ? colors.text : colors.muted }]}>{payment.name}</Text>
+          {subText ? <Text style={[styles.dueSub, { color: colors.muted }]}>{subText}</Text> : null}
+        </View>
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.paymentName, { color: payment.is_active ? colors.text : colors.muted }]}>
-          {payment.name}
-        </Text>
-        {payment.category && (
-          <Text style={[styles.paymentSub, { color: colors.muted }]}>{payment.category.name}</Text>
-        )}
-      </View>
-      <View style={{ alignItems: 'flex-end' }}>
-        <Text style={[styles.paymentAmount, { color: payment.type === 'income' ? colors.income : colors.expense }]}>
-          {payment.type === 'income' ? '+' : '−'}{formatCurrency(payment.amount, currency)}
-        </Text>
-        {!payment.is_active
-          ? <Text style={[styles.paymentSub, { color: colors.muted }]}>Paused</Text>
-          : next
-            ? <Text style={[styles.paymentSub, { color: colors.muted }]}>
-              Next: {next.toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </Text>
-            : null}
-      </View>
+      <Text style={[styles.dueAmount, { color: payment.type === 'income' ? colors.income : colors.expense }]}>
+        {payment.type === 'income' ? '+' : '−'}{formatCurrency(payment.amount, currency)}
+      </Text>
     </TouchableOpacity>
   );
 }
