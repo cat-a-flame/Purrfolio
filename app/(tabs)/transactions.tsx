@@ -329,7 +329,7 @@ export default function TransactionsScreen() {
       {/* Wallets tab */}
       {activeTab === 'wallets' && (
         <>
-          <View style={[styles.walletTabHeader, { borderBottomColor: colors.border }]}>
+          <View style={[styles.walletTabHeader, { borderBottomColor: colors.border, paddingTop: 16}]}>
             <TouchableOpacity
               onPress={() => router.push('/wallet/new')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -381,6 +381,7 @@ export default function TransactionsScreen() {
       {/* Transactions tab */}
       {activeTab === 'transactions' && <FlatList
         data={flat}
+        style={{ paddingTop: 16 }}
         keyExtractor={(item) => item.kind === 'header' ? `h-${item.date}` : item.tx.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={styles.list}
@@ -408,11 +409,11 @@ export default function TransactionsScreen() {
           <View style={styles.headerBlock}>
             {/* Search bar + filter button */}
             <View style={styles.searchRow}>
-              <View style={[styles.searchBox, { borderColor: search ? colors.accent : colors.border, backgroundColor: colors.surface, flex: 1 }]}>
-                <Ionicons name="search-outline" size={16} color={colors.muted} />
+              <View style={[styles.searchBox, { backgroundColor: colors.surface, flex: 1 }]}>
+                <Ionicons name="search" size={18} color={colors.muted} />
                 <TextInput
                   style={[styles.searchInput, { color: colors.text }]}
-                  placeholder="Search notes & payer…"
+                  placeholder="Search for notes or payee"
                   placeholderTextColor={colors.muted}
                   value={search}
                   onChangeText={setSearch}
@@ -421,7 +422,7 @@ export default function TransactionsScreen() {
                 />
                 {search ? (
                   <TouchableOpacity onPress={() => setSearch('')}>
-                    <Ionicons name="close-circle" size={16} color={colors.muted} />
+                    <Ionicons name="close-circle" size={20} color={colors.muted} />
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -435,7 +436,7 @@ export default function TransactionsScreen() {
                   },
                 ]}
               >
-                <Ionicons name="options-outline" size={18} color={filterCount > 0 ? '#fff' : colors.muted} />
+                <Ionicons name="options-outline" size={22} color={filterCount > 0 ? '#fff' : colors.muted} />
                 {filterCount > 0 && (
                   <View style={[styles.filterBadge, { backgroundColor: '#fff' }]}>
                     <Text style={[styles.filterBadgeText, { color: colors.accent }]}>{filterCount}</Text>
@@ -454,7 +455,7 @@ export default function TransactionsScreen() {
             <View style={{ gap: 6, marginTop: 4 }}>
               {Array.from({ length: 8 }).map((_, i) => (
                 <View key={i} style={[styles.skeletonRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <SkeletonBox style={{ width: 40, height: 40, borderRadius: 10 }} />
+                  <SkeletonBox style={{ width: 40, height: 40, borderRadius: 8 }} />
                   <View style={{ flex: 1, gap: 7, paddingTop: 3 }}>
                     <SkeletonBox style={{ height: 13, width: `${48 + (i * 11) % 28}%`, borderRadius: 4 }} />
                     <SkeletonBox style={{ height: 11, width: `${28 + (i * 17) % 22}%`, borderRadius: 4 }} />
@@ -740,25 +741,23 @@ export default function TransactionsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   list: { paddingHorizontal: 16 },
-  headerBlock: { gap: 10, marginBottom: 12 },
+  headerBlock: { gap: 12, marginBottom: 12 },
 
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 12,
     borderRadius: 10,
-    borderWidth: 1,
   },
-  searchInput: { flex: 1, fontSize: 14, padding: 0 },
+  searchInput: { flex: 1, fontSize: 15, padding: 0 },
 
   filterBtn: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 10,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -781,15 +780,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 6,
+    marginTop: 24,
+    marginBottom: 0,
     paddingHorizontal: 4,
   },
   dateHeader: {
     fontSize: 13,
     fontFamily: 'Figtree_600SemiBold',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   dayNet: { fontSize: 13, fontFamily: 'Figtree_700Bold' },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
@@ -891,7 +888,7 @@ const styles = StyleSheet.create({
 
   panelFooter: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 16,
     padding: 16,
     borderTopWidth: StyleSheet.hairlineWidth,
   },

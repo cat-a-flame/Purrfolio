@@ -363,7 +363,7 @@ export default function StatsScreen() {
       <AppHeader title="Statistics" />
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
+        contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16, paddingTop: 16 }]}
       >
         <PeriodPicker value={period} onChange={setPeriod} />
 
