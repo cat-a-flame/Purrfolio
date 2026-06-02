@@ -5,9 +5,10 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
@@ -56,6 +57,7 @@ function typeColor(t: Form['type'], colors: any): string {
 export default function AddTransactionScreen() {
   const colors = useTheme();
   const router = useRouter();
+  const navigation = useNavigation();
   const { bottom } = useSafeAreaInsets();
 
   const [form, setForm] = useState<Form>({
@@ -87,6 +89,24 @@ export default function AddTransactionScreen() {
 
   // which amount field the numpad is targeting (transfer mode)
   const [activeField, setActiveField] = useState<'amount' | 'to_amount'>('amount');
+
+  const isDirty = form.amount !== '' || form.notes !== '' || form.payer !== '' || form.labelIds.length > 0;
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. Are you sure you want to discard them?',
+        [
+          { text: 'Keep editing', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+        ]
+      );
+    });
+    return unsubscribe;
+  }, [navigation, isDirty]);
 
   useEffect(() => {
     async function loadData() {

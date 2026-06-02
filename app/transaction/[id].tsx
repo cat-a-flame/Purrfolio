@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Events } from '@/lib/events';
@@ -47,6 +47,7 @@ function typeColor(t: TransactionType, colors: any): string {
 export default function EditTransactionScreen() {
   const colors = useTheme();
   const router = useRouter();
+  const navigation = useNavigation();
   const { bottom } = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -64,6 +65,7 @@ export default function EditTransactionScreen() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
+  const [initialForm, setInitialForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
@@ -97,7 +99,7 @@ export default function EditTransactionScreen() {
 
       if (tx) {
         setIsTransfer(!!tx.transfer_group_id);
-        setForm({
+        const loaded: Form = {
           type: tx.type,
           amount: String(tx.amount),
           wallet_id: tx.wallet_id ?? '',
@@ -106,13 +108,42 @@ export default function EditTransactionScreen() {
           notes: tx.notes ?? '',
           payer: tx.payer ?? '',
           labelIds: (tx.transaction_labels ?? []).map((tl: any) => tl.label_id),
-        });
+        };
+        setForm(loaded);
+        setInitialForm(loaded);
       }
 
       setFetching(false);
     }
     loadData();
   }, [id]);
+
+  const isDirty = initialForm !== null && (
+    form.type !== initialForm.type ||
+    form.amount !== initialForm.amount ||
+    form.wallet_id !== initialForm.wallet_id ||
+    form.category_id !== initialForm.category_id ||
+    form.date !== initialForm.date ||
+    form.notes !== initialForm.notes ||
+    form.payer !== initialForm.payer ||
+    form.labelIds.join(',') !== initialForm.labelIds.join(',')
+  );
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. Are you sure you want to discard them?',
+        [
+          { text: 'Keep editing', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+        ]
+      );
+    });
+    return unsubscribe;
+  }, [navigation, isDirty]);
 
   function setField<K extends keyof Form>(key: K, value: Form[K]) {
     setForm((f) => ({ ...f, [key]: value }));
