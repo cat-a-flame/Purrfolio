@@ -210,7 +210,7 @@ export default function RecurringScreen() {
         amount: payment.amount,
         wallet_id: payment.wallet_id,
         category_id: payment.category_id,
-        date: isoDate(dueDate),
+        date: isoDate(new Date()),
         notes: payment.notes,
         payer: payment.payer,
       })
