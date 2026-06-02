@@ -560,7 +560,6 @@ export default function RecurringScreen() {
                 disabled={loading}
                 activeOpacity={0.8}
               >
-                <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
                 <Text style={styles.actionSheetBtnText}>Mark as paid</Text>
               </TouchableOpacity>
 
@@ -570,8 +569,7 @@ export default function RecurringScreen() {
                 disabled={loading}
                 activeOpacity={0.8}
               >
-                <Ionicons name="close-circle-outline" size={20} color={colors.muted} />
-                <Text style={[styles.actionSheetBtnText, { color: colors.muted }]}>Skip this occurrence</Text>
+                <Text style={[styles.actionSheetBtnText, { color: colors.muted }]}>Skip</Text>
               </TouchableOpacity>
             </>
           );
