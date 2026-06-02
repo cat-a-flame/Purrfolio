@@ -68,7 +68,6 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
   function navigate(route: string) { closeDrawer(() => router.push(route as any)); }
 
   const appSettingsItems = [
-    { label: 'Accounts',   route: '/settings/wallets',    icon: 'wallet-outline'   },
     { label: 'Categories', route: '/settings/categories', icon: 'grid-outline'     },
     { label: 'Labels',     route: '/settings/labels',     icon: 'pricetag-outline' },
     { label: 'Templates',  route: '/settings/templates',  icon: 'copy-outline'     },
