@@ -117,6 +117,12 @@ function buildArcPath(cx: number, cy: number, outerR: number, innerR: number, st
 const CHART_SIZE = SCREEN_W - 32 - 28; // full-width donut
 const DONUT_SIDE_SIZE = Math.round((SCREEN_W - 32 - 28) * 0.48); // side-by-side donut
 
+const CHART_PALETTE = [
+  '#6C63FF', '#FF6B6B', '#43BCCD', '#F9A826', '#5CB85C',
+  '#E8468A', '#3ABFB1', '#FF8C42', '#9B59B6', '#2ECC71',
+  '#E74C3C', '#3498DB',
+];
+
 function DonutChart({ items, total, fallback, size: sizeProp }: { items: CategoryStat[]; total: number; fallback: string; size?: number }) {
   const size = sizeProp ?? CHART_SIZE;
   const cx = size / 2, cy = size / 2;
@@ -297,11 +303,15 @@ export default function StatsScreen() {
     const main = expenseByCategory.filter(c => c.amount >= THRESHOLD);
     const small = expenseByCategory.filter(c => c.amount < THRESHOLD);
     const otherAmount = small.reduce((s, c) => s + c.amount, 0);
-    if (otherAmount === 0) return main;
-    return [
+    const items = otherAmount === 0 ? main : [
       ...main,
       { id: '__other__' as string | null, name: 'Other', icon: null, color: '#94a3b8', amount: otherAmount, count: small.reduce((s, c) => s + c.count, 0) },
     ];
+    // Assign unique palette colors by index so segments are always distinguishable
+    return items.map((item, i) => ({
+      ...item,
+      color: item.id === '__other__' ? '#94a3b8' : CHART_PALETTE[i % CHART_PALETTE.length],
+    }));
   }, [expenseByCategory]);
 
   // One entry per currency; bars are sized by HUF-equivalent so EUR/USD align correctly
