@@ -473,14 +473,13 @@ export default function TransactionsScreen() {
       {/* Filter panel */}
       <Modal visible={filterPanelVisible} transparent animationType="none" onRequestClose={() => closeFilterPanel(false)}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.overlay, opacity: fadeAnim }]} pointerEvents="none" />
-        <View style={styles.panelOverlayContainer}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => closeFilterPanel(false)} />
-          <Animated.View
-            style={[
-              styles.filterPanel,
-              { backgroundColor: colors.bg, transform: [{ translateX: panelAnim }] },
-            ]}
-          >
+        <TouchableOpacity style={[StyleSheet.absoluteFill, { right: PANEL_WIDTH }]} activeOpacity={1} onPress={() => closeFilterPanel(false)} />
+        <Animated.View
+          style={[
+            styles.filterPanel,
+            { backgroundColor: colors.bg, transform: [{ translateX: panelAnim }] },
+          ]}
+        >
             {/* Panel header */}
             <SafeAreaView edges={['top', 'right']} style={{ flex: 1 }}>
               <View style={[styles.panelHeader, { borderBottomColor: colors.border }]}>
@@ -723,7 +722,6 @@ export default function TransactionsScreen() {
               </View>
             </SafeAreaView>
           </Animated.View>
-        </View>
       </Modal>
 
       <Toast
@@ -827,8 +825,11 @@ const styles = StyleSheet.create({
   },
 
   // Filter panel
-  panelOverlayContainer: { flex: 1, flexDirection: 'row' },
   filterPanel: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 0,
     width: PANEL_WIDTH,
     elevation: 24,
     shadowColor: '#000',
