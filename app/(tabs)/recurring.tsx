@@ -542,7 +542,7 @@ function DueCard({
   const currency = payment.wallet?.currency ?? 'HUF';
   const isOverdue = isoDate(dueDate) < isoDate(today);
   const isToday = isoDate(dueDate) === isoDate(today);
-  const diff = Math.round((dueDate.getTime() - today.getTime()) / 86400000);
+  const diff = Math.round((new Date(isoDate(dueDate) + 'T00:00:00').getTime() - new Date(isoDate(today) + 'T00:00:00').getTime()) / 86400000);
   const label = isToday ? 'Today'
     : diff === 1 ? 'Tomorrow'
     : diff < 0 ? `${Math.abs(diff)}d overdue`
