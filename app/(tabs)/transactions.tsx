@@ -8,7 +8,6 @@ import {
   RefreshControl,
   TouchableOpacity,
   TextInput,
-  Modal,
   Animated,
   Dimensions,
 } from 'react-native';
@@ -304,7 +303,8 @@ export default function TransactionsScreen() {
   const filterCount = typeFilters.length + walletFilters.length + categoryFilters.length + labelFilters.length;
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+    <View style={[styles.safe, { backgroundColor: colors.bg }]}>
+    <SafeAreaView edges={['top']} style={{ flex: 1 }}>
       <AppHeader title="Overview" />
 
       {/* Tab switcher */}
@@ -470,8 +470,17 @@ export default function TransactionsScreen() {
         ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />}
 
-      {/* Filter panel */}
-      <Modal visible={filterPanelVisible} transparent animationType="none" onRequestClose={() => closeFilterPanel(false)}>
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        success={toast.success}
+        bottomOffset={TAB_BAR_HEIGHT + bottom + 12}
+      />
+    </SafeAreaView>
+
+    {/* Filter panel — rendered outside SafeAreaView to avoid Modal presentation artifacts */}
+    {filterPanelVisible && (
+      <>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.overlay, opacity: fadeAnim }]} pointerEvents="none" />
         <TouchableOpacity style={[StyleSheet.absoluteFill, { right: PANEL_WIDTH }]} activeOpacity={1} onPress={() => closeFilterPanel(false)} />
         <Animated.View
@@ -480,7 +489,6 @@ export default function TransactionsScreen() {
             { backgroundColor: colors.bg, transform: [{ translateX: panelAnim }], paddingTop: top },
           ]}
         >
-            {/* Panel header — no SafeAreaView to avoid vertical shift during animation */}
             <View style={{ flex: 1 }}>
               <View style={[styles.panelHeader, { borderBottomColor: colors.border }]}>
                 {panelView !== 'main' ? (
@@ -722,15 +730,9 @@ export default function TransactionsScreen() {
               </View>
             </View>
           </Animated.View>
-      </Modal>
-
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        success={toast.success}
-        bottomOffset={TAB_BAR_HEIGHT + bottom + 12}
-      />
-    </SafeAreaView>
+      </>
+    )}
+    </View>
   );
 }
 
