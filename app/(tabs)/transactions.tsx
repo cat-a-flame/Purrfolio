@@ -66,7 +66,6 @@ export default function TransactionsScreen() {
   const [draftWallets, setDraftWallets] = useState<string[]>([]);
   const [draftCategories, setDraftCategories] = useState<string[]>([]);
   const [draftLabels, setDraftLabels] = useState<string[]>([]);
-  const [draftPeriod, setDraftPeriod] = useState<PeriodValue>(defaultPeriod);
 
   const [filterPanelVisible, setFilterPanelVisible] = useState(false);
   const [panelView, setPanelView] = useState<PanelView>('main');
@@ -163,7 +162,6 @@ export default function TransactionsScreen() {
     setDraftWallets([...walletFilters]);
     setDraftCategories([...categoryFilters]);
     setDraftLabels([...labelFilters]);
-    setDraftPeriod(period);
     setPanelView('main');
     panelAnim.setValue(PANEL_WIDTH);
     fadeAnim.setValue(0);
@@ -189,7 +187,6 @@ export default function TransactionsScreen() {
       setWalletFilters(draftWallets);
       setCategoryFilters(draftCategories);
       setLabelFilters(draftLabels);
-      setPeriod(draftPeriod);
     }
   }
 
@@ -198,7 +195,6 @@ export default function TransactionsScreen() {
     setDraftWallets([]);
     setDraftCategories([]);
     setDraftLabels([]);
-    setDraftPeriod(defaultPeriod());
   }
 
   function resetFilters() {
@@ -448,6 +444,9 @@ export default function TransactionsScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* Period picker */}
+            <PeriodPicker value={period} onChange={setPeriod} />
+
           </View>
         }
         ListEmptyComponent={
@@ -506,12 +505,6 @@ export default function TransactionsScreen() {
               <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
                 {panelView === 'main' && (
                   <>
-                    {/* Period row */}
-                    <View style={[styles.panelSection, { borderBottomColor: colors.border }]}>
-                      <Text style={[styles.panelSectionLabel, { color: colors.muted }]}>Period</Text>
-                      <PeriodPicker value={draftPeriod} onChange={setDraftPeriod} />
-                    </View>
-
                     {/* Type row */}
                     <TouchableOpacity
                       style={[styles.panelRow, { borderBottomColor: colors.border }]}
