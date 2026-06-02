@@ -363,14 +363,14 @@ export default function RecurringScreen() {
               activeOpacity={0.7}
             >
               <Text style={[styles.tabBtnText, { color: active ? colors.accent : colors.muted }]}>
-                {tab === 'due' ? 'Due' : 'Recurring'}
+                {tab === 'due' ? 'Upcoming' : 'Recurring'}
               </Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* ── Due tab ───────────────────────────────────────────────────── */}
+      {/* ── Upcoming tab ───────────────────────────────────────────────────── */}
       {activeTab === 'due' && (
         <ScrollView
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -388,7 +388,7 @@ export default function RecurringScreen() {
           </View>
 
           {dueItems.length === 0 && (
-            <Text style={[styles.emptyText, { color: colors.muted, textAlign: 'center', marginTop: 24 }]}>
+            <Text style={[styles.emptyText, { color: colors.muted, textAlign: 'center', marginTop: 10 }]}>
               {payments.filter(p => p.is_active).length === 0
                 ? 'No recurring payments yet.'
                 : 'All payments for this period have been handled.'}
@@ -397,7 +397,7 @@ export default function RecurringScreen() {
 
           {overdueItems.length > 0 && (
             <>
-              <Text style={[styles.dueGroupLabel, { color: colors.danger }]}>Overdue</Text>
+              <Text style={[styles.dueGroupLabel, { color: colors.danger, marginTop: 10 }]}>Overdue</Text>
               {overdueItems.map(({ payment, dueDate }) => {
                 const key = `${payment.id}|${isoDate(dueDate)}`;
                 return (
@@ -418,7 +418,7 @@ export default function RecurringScreen() {
 
           {todayItems.length > 0 && (
             <>
-              <Text style={[styles.dueGroupLabel, { color: colors.text }]}>Today</Text>
+              <Text style={[styles.dueGroupLabel, { color: colors.text, marginTop: 10 }]}>Today</Text>
               {todayItems.map(({ payment, dueDate }) => {
                 const key = `${payment.id}|${isoDate(dueDate)}`;
                 return (
@@ -440,7 +440,7 @@ export default function RecurringScreen() {
           {upcomingItems.length > 0 && (
             <>
               {(overdueItems.length > 0 || todayItems.length > 0) && (
-                <Text style={[styles.dueGroupLabel, { color: colors.muted }]}>Upcoming</Text>
+                <Text style={[styles.dueGroupLabel, { color: colors.muted, marginTop: 10 }]}>Upcoming</Text>
               )}
               {upcomingItems.map(({ payment, dueDate }) => {
                 const key = `${payment.id}|${isoDate(dueDate)}`;
@@ -570,14 +570,16 @@ function DueCard({
   const diff = Math.round((new Date(isoDate(dueDate) + 'T00:00:00').getTime() - new Date(isoDate(today) + 'T00:00:00').getTime()) / 86400000);
   const label = isToday ? 'Today'
     : diff === 1 ? 'Tomorrow'
-    : diff < 0 ? `${Math.abs(diff)}d overdue`
-    : diff < 7 ? `In ${diff} days`
-    : dueDate.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+      : diff < 0 ? `${Math.abs(diff)}d overdue`
+        : diff < 7 ? `In ${diff} days`
+          : dueDate.toLocaleDateString('default', { month: 'short', day: 'numeric' });
 
   return (
-    <View style={[styles.dueCard, { borderColor: isOverdue ? colors.danger + '44' : isToday ? colors.border2 : colors.border }]}>
+    <View style={[styles.dueCard, { backgroundColor: colors.surface }]}>
       <View style={styles.dueMeta}>
-        {payment.category?.icon ? <Text style={styles.dueIcon}>{payment.category.icon}</Text> : null}
+        <View style={[styles.iconBox, { backgroundColor: '#fcf1ff' }]}>
+          {payment.category?.icon ? <Text style={styles.dueIcon}>{payment.category.icon}</Text> : null}
+        </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.dueName, { color: colors.text }]}>{payment.name}</Text>
           <Text style={[styles.dueSub, { color: isOverdue ? colors.danger : isToday ? colors.text : colors.muted }]}>{label}</Text>
@@ -649,10 +651,10 @@ function PaymentRow({
         {!payment.is_active
           ? <Text style={[styles.paymentSub, { color: colors.muted }]}>Paused</Text>
           : next
-          ? <Text style={[styles.paymentSub, { color: colors.muted }]}>
+            ? <Text style={[styles.paymentSub, { color: colors.muted }]}>
               Next: {next.toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' })}
             </Text>
-          : null}
+            : null}
       </View>
     </TouchableOpacity>
   );
@@ -698,7 +700,7 @@ function PaymentModal({
   const initialFormRef = useRef<EditForm>(form);
   useEffect(() => {
     if (visible) initialFormRef.current = form;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const isDirty = JSON.stringify(form) !== JSON.stringify(initialFormRef.current);
@@ -993,7 +995,7 @@ function PaymentModal({
                 {w.name}
               </Text>
               {form.wallet_id === w.id && <Text style={{ color: colors.accent }}>
-                <Ionicons name="checkmark" size={18} color={colors.accent} />  
+                <Ionicons name="checkmark" size={18} color={colors.accent} />
               </Text>}
             </TouchableOpacity>
           ))}
@@ -1136,11 +1138,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
-    borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 12,
     gap: 10,
-    marginBottom: 6,
+    marginBottom: 2,
+  },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   dueMeta: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   dueIcon: { fontSize: 20 },
