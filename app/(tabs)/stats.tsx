@@ -121,7 +121,7 @@ function DonutChart({ items, total, fallback, size: sizeProp }: { items: Categor
   const size = sizeProp ?? CHART_SIZE;
   const cx = size / 2, cy = size / 2;
   const outerR = size / 2 - 6;
-  const innerR = outerR - 52;
+  const innerR = outerR - 22;
   const GAP_DEG = items.length > 1 ? 2 : 0;
 
   if (total === 0) return null;
