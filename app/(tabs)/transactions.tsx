@@ -11,7 +11,6 @@ import {
   Modal,
   Animated,
   Dimensions,
-  Pressable,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
@@ -29,8 +28,7 @@ import Toast from '@/components/Toast';
 import { Events } from '@/lib/events';
 import { useRouter } from 'expo-router';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const PANEL_WIDTH = Math.round(SCREEN_WIDTH * 0.85);
+const PANEL_WIDTH = Math.min(Dimensions.get('window').width * 0.85, Dimensions.get('window').width - 40);
 
 function defaultPeriod(): PeriodValue {
   const now = new Date();
@@ -73,6 +71,7 @@ export default function TransactionsScreen() {
   const [filterPanelVisible, setFilterPanelVisible] = useState(false);
   const [panelView, setPanelView] = useState<PanelView>('main');
   const panelAnim = useRef(new Animated.Value(PANEL_WIDTH)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const [activeTab, setActiveTab] = useState<'transactions' | 'wallets'>('transactions');
@@ -158,7 +157,7 @@ export default function TransactionsScreen() {
     return Events.on('wallet-saved', () => { loadRef.current(true); });
   }, []);
 
-  // Panel open/close
+  // Panel open/close — mirrors AppHeader drawer pattern
   function openFilterPanel() {
     setDraftTypes([...typeFilters]);
     setDraftWallets([...walletFilters]);
@@ -166,14 +165,25 @@ export default function TransactionsScreen() {
     setDraftLabels([...labelFilters]);
     setDraftPeriod(period);
     setPanelView('main');
+    panelAnim.setValue(PANEL_WIDTH);
+    fadeAnim.setValue(0);
     setFilterPanelVisible(true);
-    Animated.spring(panelAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
   }
 
+  useEffect(() => {
+    if (filterPanelVisible) {
+      Animated.parallel([
+        Animated.timing(panelAnim, { toValue: 0, duration: 260, useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [filterPanelVisible]);
+
   function closeFilterPanel(apply = false) {
-    Animated.timing(panelAnim, { toValue: PANEL_WIDTH, duration: 220, useNativeDriver: true }).start(() => {
-      setFilterPanelVisible(false);
-    });
+    Animated.parallel([
+      Animated.timing(panelAnim, { toValue: PANEL_WIDTH, duration: 220, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start(() => { setFilterPanelVisible(false); });
     if (apply) {
       setTypeFilters(draftTypes);
       setWalletFilters(draftWallets);
@@ -470,8 +480,9 @@ export default function TransactionsScreen() {
 
       {/* Filter panel */}
       <Modal visible={filterPanelVisible} transparent animationType="none" onRequestClose={() => closeFilterPanel(false)}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.overlay, opacity: fadeAnim }]} pointerEvents="none" />
         <View style={styles.panelOverlayContainer}>
-          <Pressable style={styles.panelOverlay} onPress={() => closeFilterPanel(false)} />
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => closeFilterPanel(false)} />
           <Animated.View
             style={[
               styles.filterPanel,
@@ -839,15 +850,13 @@ const styles = StyleSheet.create({
 
   // Filter panel
   panelOverlayContainer: { flex: 1, flexDirection: 'row' },
-  panelOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
   filterPanel: {
     width: PANEL_WIDTH,
-    flex: 1,
+    elevation: 24,
     shadowColor: '#000',
-    shadowOffset: { width: -2, height: 0 },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: -4, height: 0 },
+    shadowOpacity: 0.22,
     shadowRadius: 12,
-    elevation: 10,
   },
   panelHeader: {
     flexDirection: 'row',
