@@ -460,7 +460,7 @@ export default function AddTransactionScreen() {
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
-                  {form.type !== 'transfer' ? (form.type === 'income' ? '+' : '−') : ''}{formatAmountDisplay(form.amount) || '0'}
+                  {form.amount && form.type !== 'transfer' ? (form.type === 'income' ? '+' : '−') : ''}{formatAmountDisplay(form.amount) || '0'}
                 </Text>
                 {currency ? <Text style={[styles.currencyLabel, { color: colors.muted }]}>{currency}</Text> : null}
               </View>
