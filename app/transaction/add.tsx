@@ -307,6 +307,7 @@ export default function AddTransactionScreen() {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>New transaction</Text>
         <View style={{ width: 40 }} />
+
       </View>
 
       {/* Scrollable form */}
@@ -452,41 +453,41 @@ export default function AddTransactionScreen() {
           /* ── Income / Expense layout ── */
           <>
             {/* Amount display */}
-            <View style={[styles.amountDisplay, { borderBottomColor: accentColor }]}>
-              <Text
-                style={[styles.amountText, { color: form.amount ? colors.text : colors.placeholder }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-                {formatAmountDisplay(form.amount) || '0'}
+            <View style={styles.amountSection}>
+              <Text style={[styles.amountLabel, { color: colors.muted }]}>AMOUNT</Text>
+              <View style={[styles.amountDisplay, { borderBottomColor: accentColor }]}>
+                <Text
+                  style={[styles.amountText, { color: form.amount ? colors.text : colors.placeholder }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {formatAmountDisplay(form.amount) || '0'}
+                </Text>
+                {currency ? <Text style={[styles.currencyLabel, { color: accentColor }]}>{currency}</Text> : null}
+              </View>
+            </View>
+
+            {/* Category — full width */}
+            <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
+              <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
+                {selectedCategory ? `${selectedCategory.icon ?? ''}${selectedCategory.icon ? ' ' : ''}${selectedCategory.name}` : 'Add category'}
               </Text>
-              {currency ? <Text style={[styles.currencyLabel, { color: accentColor }]}>{currency}</Text> : null}
-            </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            </TouchableOpacity>
 
-            {/* Date */}
-            <View style={styles.rowFieldGroup}>
-              <TouchableOpacity style={[styles.pickerBtnBorderless, { backgroundColor: colors.bg }]} onPress={() => setShowDatePicker(true)}>
-                <Ionicons name="calendar" size={13} color={colors.muted} />
-                <Text style={[styles.pickerBtnInlineText, { color: colors.text }]}>{dateLabel}</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Account + Category */}
+            {/* Account + Date side by side */}
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
                   <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
                     {selectedWallet ? `${selectedWallet.icon ?? ''}${selectedWallet.icon ? ' ' : ''}${selectedWallet.name}` : 'Select wallet…'}
                   </Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.muted} />
                 </TouchableOpacity>
               </View>
               <View style={{ flex: 1 }}>
-                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
-                  <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
-                    {selectedCategory ? `${selectedCategory.icon ?? ''}${selectedCategory.icon ? ' ' : ''}${selectedCategory.name}` : 'Select category'}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowDatePicker(true)}>
+                  <Ionicons name="calendar" size={15} color={colors.muted} style={{ marginRight: 6 }} />
+                  <Text style={[styles.pickerBtnText, { color: colors.text }]} numberOfLines={1}>{dateLabel}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -542,7 +543,7 @@ export default function AddTransactionScreen() {
         <NumPad onKey={handleNumPadKey} />
         <View style={styles.saveRow}>
           <AppButton onPress={handleSave} loading={loading} fullWidth>
-            Save transaction
+            Add
           </AppButton>
         </View>
       </View>
@@ -643,11 +644,20 @@ const styles = StyleSheet.create({
   typeBtnText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
 
   /* Amount display */
+  amountSection: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  amountLabel: {
+    fontSize: 11,
+    fontFamily: 'Figtree_600SemiBold',
+    letterSpacing: 1.2,
+  },
   amountDisplay: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 8,
     borderBottomWidth: 2,
     gap: 6,
   },
