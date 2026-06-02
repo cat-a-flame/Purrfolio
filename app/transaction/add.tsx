@@ -538,7 +538,7 @@ export default function AddTransactionScreen() {
       </ScrollView>
 
       {/* Always-visible numpad + save */}
-      <View style={[styles.bottomBlock, { borderTopColor: colors.border, paddingBottom: bottom + 8 }]}>
+      <View style={[styles.bottomBlock, { borderTopColor: colors.border, paddingBottom: bottom + 8, backgroundColor: colors.surface }]}>
         <NumPad onKey={handleNumPadKey} />
         <View style={styles.saveRow}>
           <AppButton onPress={handleSave} loading={loading} fullWidth>
