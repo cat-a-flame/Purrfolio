@@ -348,7 +348,7 @@ export default function TransactionsScreen() {
                 <TouchableOpacity
                   key={w.id}
                   activeOpacity={0.7}
-                  onPress={() => router.push(`/wallet/${w.id}`)}
+                  onPress={() => router.push(`/wallet/${w.id}` as any)}
                   style={[styles.walletCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
                   <View style={styles.walletIcon}>
