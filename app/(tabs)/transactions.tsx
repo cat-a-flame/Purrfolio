@@ -375,7 +375,14 @@ export default function TransactionsScreen() {
                       : <View style={[styles.walletIconFallback, { backgroundColor: (w.color || colors.muted) + '33' }]} />}
                   </View>
                   <View style={styles.walletInfo}>
-                    <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
+                    <View style={styles.walletNameRow}>
+                      <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
+                      {w.is_default && (
+                        <View style={[styles.defaultBadge, { backgroundColor: colors.accent + '22' }]}>
+                          <Text style={[styles.defaultBadgeText, { color: colors.accent }]}>Default</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={[styles.walletCurrency, { color: colors.muted }]}>{w.currency}</Text>
                   </View>
                   <Text style={[styles.walletBalance, { color: balColor }]}>
@@ -570,12 +577,18 @@ export default function TransactionsScreen() {
       </BottomModal>
 
       {/* Edit wallet modal */}
-      <BottomModal visible={!!editWallet} onClose={() => setEditWallet(null)} title="Edit account">
+      <BottomModal
+        visible={!!editWallet}
+        onClose={() => setEditWallet(null)}
+        title="Edit account"
+        rightAction={
+          <TouchableOpacity onPress={handleDeleteWallet} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="trash-outline" size={22} color={colors.danger} />
+          </TouchableOpacity>
+        }
+      >
         <WalletFormFields form={walletForm} setField={setWalletField} colors={colors} />
-        <View style={styles.modalActions}>
-          <AppButton onPress={handleDeleteWallet} variant="danger" style={{ flex: 1 }}>Delete</AppButton>
-          <AppButton onPress={handleSaveWallet} loading={walletSaving} style={{ flex: 2 }}>Save</AppButton>
-        </View>
+        <AppButton onPress={handleSaveWallet} loading={walletSaving} fullWidth>Save</AppButton>
       </BottomModal>
 
       <ConfirmModal
@@ -599,20 +612,27 @@ function WalletFormFields({
   setField: <K extends keyof WalletForm>(k: K, v: WalletForm[K]) => void;
   colors: any;
 }) {
+  const [currencyPickerVisible, setCurrencyPickerVisible] = useState(false);
+
   return (
     <>
-      <AppInput
-        label="Name"
-        value={form.name}
-        onChangeText={(v) => setField('name', v)}
-        placeholder="Account name"
-      />
-      <AppInput
-        label="Icon (emoji)"
-        value={form.icon}
-        onChangeText={(v) => setField('icon', v)}
-        placeholder="💰"
-      />
+      <View style={styles.iconNameRow}>
+        <AppInput
+          label="Icon"
+          value={form.icon}
+          onChangeText={(v) => setField('icon', v)}
+          placeholder="💰"
+          style={{ width: 72 }}
+        />
+        <View style={{ flex: 1 }}>
+          <AppInput
+            label="Name"
+            value={form.name}
+            onChangeText={(v) => setField('name', v)}
+            placeholder="Account name"
+          />
+        </View>
+      </View>
       <AppInput
         label="Starting balance"
         value={form.starting_balance}
@@ -620,25 +640,15 @@ function WalletFormFields({
         keyboardType="decimal-pad"
         placeholder="0"
       />
-      <View style={styles.formRow}>
+      <View style={[styles.formRow, { justifyContent: 'space-between' }]}>
         <Text style={{ color: colors.muted, fontSize: 14 }}>Currency</Text>
-        <View style={styles.chips}>
-          {CURRENCIES.map((c) => (
-            <TouchableOpacity
-              key={c}
-              style={[
-                styles.chip,
-                { borderColor: form.currency === c ? colors.accent : colors.border },
-                form.currency === c && { backgroundColor: colors.accent + '22' },
-              ]}
-              onPress={() => setField('currency', c)}
-            >
-              <Text style={{ color: form.currency === c ? colors.accent : colors.text, fontFamily: 'Figtree_600SemiBold' }}>
-                {c}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity
+          onPress={() => setCurrencyPickerVisible(true)}
+          style={[styles.currencyDropdown, { borderColor: colors.border, backgroundColor: colors.bg }]}
+        >
+          <Text style={{ color: colors.text, fontFamily: 'Figtree_600SemiBold', fontSize: 14 }}>{form.currency}</Text>
+          <Ionicons name="chevron-down" size={14} color={colors.muted} />
+        </TouchableOpacity>
       </View>
       <View style={[styles.formRow, { justifyContent: 'space-between' }]}>
         <Text style={{ color: colors.muted, fontSize: 14 }}>Set as default</Text>
@@ -649,6 +659,19 @@ function WalletFormFields({
           thumbColor="#fff"
         />
       </View>
+
+      <BottomModal visible={currencyPickerVisible} onClose={() => setCurrencyPickerVisible(false)} title="Currency">
+        {CURRENCIES.map((c) => (
+          <TouchableOpacity
+            key={c}
+            style={[styles.currencyRow, { borderBottomColor: colors.border }, form.currency === c && { backgroundColor: colors.accent + '11' }]}
+            onPress={() => { setField('currency', c); setCurrencyPickerVisible(false); }}
+          >
+            <Text style={[styles.currencyRowText, { color: form.currency === c ? colors.accent : colors.text }]}>{c}</Text>
+            {form.currency === c && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+          </TouchableOpacity>
+        ))}
+      </BottomModal>
     </>
   );
 }
@@ -726,10 +749,29 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   walletsList: { padding: 16, gap: 10 },
-  modalActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  walletNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  defaultBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  defaultBadgeText: { fontSize: 11, fontFamily: 'Figtree_600SemiBold' },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  chips: { flexDirection: 'row', gap: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
+  iconNameRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
+  currencyDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  currencyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  currencyRowText: { fontSize: 15 },
   walletCard: {
     flexDirection: 'row',
     alignItems: 'center',

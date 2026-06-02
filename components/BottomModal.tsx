@@ -15,10 +15,11 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   title?: string;
+  rightAction?: ReactNode;
   children: ReactNode;
 }
 
-export default function BottomModal({ visible, onClose, title, children }: Props) {
+export default function BottomModal({ visible, onClose, title, rightAction, children }: Props) {
   const colors = useTheme();
 
   return (
@@ -40,7 +41,10 @@ export default function BottomModal({ visible, onClose, title, children }: Props
         <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           {title && (
-            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+            <View style={styles.titleRow}>
+              <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+              {rightAction ?? null}
+            </View>
           )}
           <ScrollView
             contentContainerStyle={styles.content}
@@ -75,10 +79,15 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 16,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   title: {
     fontSize: 18,
     fontFamily: 'Figtree_700Bold',
-    marginBottom: 16,
   },
   content: {
     gap: 12,
