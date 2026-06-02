@@ -1,14 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import { useKeyboardVisible } from '@/lib/useKeyboardVisible';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -19,6 +15,7 @@ import AppButton from '@/components/AppButton';
 import BottomModal from '@/components/BottomModal';
 import DatePickerModal from '@/components/DatePickerModal';
 import CategoryPickerModal from '@/components/CategoryPickerModal';
+import NumPad from '@/components/NumPad';
 import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { todayInputDate } from '@/lib/utils';
@@ -29,10 +26,6 @@ function formatAmountDisplay(raw: string): string {
   const [intPart, decPart] = raw.split('.');
   const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   return decPart !== undefined ? `${grouped}.${decPart}` : grouped;
-}
-
-function parseAmountInput(text: string): string {
-  return text.replace(/\s/g, '');
 }
 
 type Form = {
@@ -64,7 +57,6 @@ export default function AddTransactionScreen() {
   const colors = useTheme();
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
-  const keyboardVisible = useKeyboardVisible();
 
   const [form, setForm] = useState<Form>({
     type: 'expense',
@@ -79,8 +71,6 @@ export default function AddTransactionScreen() {
     labelIds: [],
   });
 
-  const amountRef = useRef<TextInput>(null);
-  const toAmountRef = useRef<TextInput>(null);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
@@ -94,6 +84,9 @@ export default function AddTransactionScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateUserSelected, setDateUserSelected] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
+
+  // which amount field the numpad is targeting (transfer mode)
+  const [activeField, setActiveField] = useState<'amount' | 'to_amount'>('amount');
 
   useEffect(() => {
     async function loadData() {
@@ -138,8 +131,38 @@ export default function AddTransactionScreen() {
     selectedWallet.currency === selectedToWallet.currency
   );
 
-  function handleFromAmountChange(raw: string) {
-    setForm((f) => ({ ...f, amount: raw, ...(sameCurrency ? { to_amount: raw } : {}) }));
+  function handleNumPadKey(key: string) {
+    setForm((f) => {
+      const field = f.type === 'transfer' && !sameCurrency ? activeField : 'amount';
+      const current = f[field];
+
+      let next: string;
+      if (key === 'backspace') {
+        next = current.slice(0, -1);
+      } else if (key === '.') {
+        if (current.includes('.')) return f;
+        next = current + '.';
+      } else {
+        // digit
+        if (current === '0') {
+          next = key;
+        } else if (current.includes('.') && current.split('.')[1].length >= 2) {
+          return f;
+        } else {
+          next = current + key;
+        }
+      }
+
+      if (field === 'amount') {
+        const isSameCurr =
+          f.type === 'transfer' &&
+          wallets.find((w) => w.id === f.wallet_id)?.currency ===
+          wallets.find((w) => w.id === f.to_wallet_id)?.currency &&
+          !!f.wallet_id && !!f.to_wallet_id;
+        return { ...f, amount: next, ...(isSameCurr ? { to_amount: next } : {}) };
+      }
+      return { ...f, [field]: next };
+    });
   }
 
   function handleFromWalletSelect(id: string) {
@@ -272,12 +295,13 @@ export default function AddTransactionScreen() {
   const selectedLabels = labels.filter((l) => form.labelIds.includes(l.id));
   const currency = selectedWallet?.currency ?? '';
   const isTransfer = form.type === 'transfer';
-
   const dateLabel = dateUserSelected ? form.date : 'Today';
+  const accentColor = typeColor(form.type, colors);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <View style={[styles.headerBar]}>
+      {/* Header */}
+      <View style={styles.headerBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
           <Ionicons name="close" size={24} color={colors.text} />
         </TouchableOpacity>
@@ -285,274 +309,245 @@ export default function AddTransactionScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <KeyboardAvoidingView
+      {/* Scrollable form */}
+      <ScrollView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        contentContainerStyle={[styles.form, { paddingBottom: 8 }]}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView contentContainerStyle={[styles.form, { paddingBottom: 24 }]} keyboardShouldPersistTaps="handled">
-          {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
+        {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
 
-          {/* Type toggle */}
-          <View style={[styles.typeToggle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            {TYPES.map((t) => (
+        {/* Type toggle */}
+        <View style={[styles.typeToggle, { backgroundColor: colors.surface }]}>
+          {TYPES.map((t) => (
+            <TouchableOpacity
+              key={t.value}
+              style={[
+                styles.typeBtn,
+                form.type === t.value && { backgroundColor: typeColor(t.value, colors) },
+              ]}
+              onPress={() => { setField('type', t.value); setField('category_id', ''); setActiveField('amount'); }}
+            >
+              <Text style={[styles.typeBtnText, { color: form.type === t.value ? '#fff' : colors.muted }]}>
+                {t.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {isTransfer ? (
+          /* ── Transfer layout ── */
+          <>
+            {/* Amount display — two fields when currencies differ */}
+            <View style={[styles.transferAmountBlock, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {/* From amount */}
               <TouchableOpacity
-                key={t.value}
                 style={[
-                  styles.typeBtn,
-                  form.type === t.value && { backgroundColor: typeColor(t.value, colors) },
+                  styles.transferAmountField,
+                  activeField === 'amount' && { borderColor: accentColor, borderWidth: 1.5 },
+                  { borderColor: colors.border },
                 ]}
-                onPress={() => { setField('type', t.value); setField('category_id', ''); }}
+                onPress={() => setActiveField('amount')}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.typeBtnText, { color: form.type === t.value ? '#fff' : colors.muted }]}>
-                  {t.label}
-                </Text>
+                <Text style={[styles.transferFieldLabel, { color: colors.muted }]}>From</Text>
+                <View style={styles.transferAmountRow}>
+                  <Text style={[styles.transferAmountText, { color: colors.text }]}>
+                    {formatAmountDisplay(form.amount) || <Text style={{ color: colors.placeholder }}>0</Text>}
+                  </Text>
+                  {currency ? <Text style={[styles.transferCurrency, { color: accentColor }]}>{currency}</Text> : null}
+                </View>
               </TouchableOpacity>
-            ))}
-          </View>
 
-          {isTransfer ? (
-            /* ── Transfer layout ── */
-            <>
-              {/* From account */}
-              <View style={styles.fieldGroup3}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>From account</Text>
+              {/* Arrow */}
+              <View style={[styles.arrowCircle, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+                <Ionicons name="arrow-down" size={14} color={accentColor} />
+              </View>
+
+              {/* To amount — only shown when currencies differ */}
+              {!sameCurrency && (
+                <TouchableOpacity
+                  style={[
+                    styles.transferAmountField,
+                    activeField === 'to_amount' && { borderColor: accentColor, borderWidth: 1.5 },
+                    { borderColor: colors.border },
+                  ]}
+                  onPress={() => setActiveField('to_amount')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.transferFieldLabel, { color: colors.muted }]}>To</Text>
+                  <View style={styles.transferAmountRow}>
+                    <Text style={[styles.transferAmountText, { color: colors.text }]}>
+                      {formatAmountDisplay(form.to_amount) || <Text style={{ color: colors.placeholder }}>0</Text>}
+                    </Text>
+                    {selectedToWallet?.currency ? (
+                      <Text style={[styles.transferCurrency, { color: accentColor }]}>{selectedToWallet.currency}</Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              )}
+
+              {sameCurrency && (
+                <Text style={[styles.sameHint, { color: colors.muted }]}>Same currency — amount auto-matched</Text>
+              )}
+            </View>
+
+            {/* From / To wallets */}
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>From</Text>
                 <TouchableOpacity
                   style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
                   onPress={() => setShowWalletModal(true)}
                 >
-                  <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
-                    {selectedWallet
-                      ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
-                      : 'Select wallet…'}
+                  <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]} numberOfLines={1}>
+                    {selectedWallet ? `${selectedWallet.icon ?? ''}${selectedWallet.icon ? ' ' : ''}${selectedWallet.name}` : 'Select…'}
                   </Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                  <Ionicons name="chevron-forward" size={16} color={colors.muted} />
                 </TouchableOpacity>
               </View>
-
-              {/* Amount sent */}
-              <View style={styles.fieldGroup3}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount sent</Text>
-                <TouchableOpacity
-                  activeOpacity={1}
-                  style={[styles.transferAmountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                  onPress={() => amountRef.current?.focus()}
-                >
-                  <TextInput
-                    ref={amountRef}
-                    value={formatAmountDisplay(form.amount)}
-                    onChangeText={(v) => handleFromAmountChange(parseAmountInput(v))}
-                    keyboardType="decimal-pad"
-                    placeholder="0"
-                    placeholderTextColor={colors.placeholder}
-                    style={[styles.transferAmountInput, { color: colors.text }]}
-                    textAlign="right"
-                  />
-                  {currency ? <Text style={[styles.transferCurrencyLabel, { color: colors.accent }]}>{currency}</Text> : null}
-                </TouchableOpacity>
-              </View>
-
-              {/* Arrow divider */}
-              <View style={styles.arrowRow}>
-                <View style={[styles.arrowLine, { backgroundColor: colors.border }]} />
-                <View style={[styles.arrowCircle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <Ionicons name="arrow-down" size={16} color={colors.accent} />
-                </View>
-                <View style={[styles.arrowLine, { backgroundColor: colors.border }]} />
-              </View>
-
-              {/* To account */}
-              <View style={styles.fieldGroup3}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>To account</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>To</Text>
                 <TouchableOpacity
                   style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
                   onPress={() => setShowToWalletModal(true)}
                 >
-                  <Text style={[styles.pickerBtnText, { color: selectedToWallet ? colors.text : colors.muted }]}>
-                    {selectedToWallet
-                      ? `${selectedToWallet.icon ? selectedToWallet.icon + ' ' : ''}${selectedToWallet.name}`
-                      : 'Select wallet…'}
+                  <Text style={[styles.pickerBtnText, { color: selectedToWallet ? colors.text : colors.muted }]} numberOfLines={1}>
+                    {selectedToWallet ? `${selectedToWallet.icon ?? ''}${selectedToWallet.icon ? ' ' : ''}${selectedToWallet.name}` : 'Select…'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Date */}
+            <TouchableOpacity style={[styles.pickerBtnBorderless, { backgroundColor: colors.bg }]} onPress={() => setShowDatePicker(true)}>
+              <Ionicons name="calendar" size={13} color={colors.muted} />
+              <Text style={[styles.pickerBtnInlineText, { color: colors.text }]}>{dateLabel}</Text>
+            </TouchableOpacity>
+
+            {/* More options */}
+            <TouchableOpacity
+              style={[styles.moreToggle, { borderColor: colors.border }]}
+              onPress={() => setMoreExpanded((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.moreToggleText, { color: colors.muted }]}>More options</Text>
+              <Ionicons name={moreExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
+            </TouchableOpacity>
+
+            {moreExpanded && (
+              <AppInput
+                label="Notes (optional)"
+                value={form.notes}
+                onChangeText={(v) => setField('notes', v)}
+                placeholder="Add a note…"
+                multiline
+                numberOfLines={3}
+                style={{ minHeight: 80, textAlignVertical: 'top' }}
+              />
+            )}
+          </>
+        ) : (
+          /* ── Income / Expense layout ── */
+          <>
+            {/* Amount display */}
+            <View style={[styles.amountDisplay, { borderBottomColor: accentColor }]}>
+              <Text
+                style={[styles.amountText, { color: form.amount ? colors.text : colors.placeholder }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {formatAmountDisplay(form.amount) || '0'}
+              </Text>
+              {currency ? <Text style={[styles.currencyLabel, { color: accentColor }]}>{currency}</Text> : null}
+            </View>
+
+            {/* Date */}
+            <View style={styles.rowFieldGroup}>
+              <TouchableOpacity style={[styles.pickerBtnBorderless, { backgroundColor: colors.bg }]} onPress={() => setShowDatePicker(true)}>
+                <Ionicons name="calendar" size={13} color={colors.muted} />
+                <Text style={[styles.pickerBtnInlineText, { color: colors.text }]}>{dateLabel}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Account + Category */}
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
+                  <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
+                    {selectedWallet ? `${selectedWallet.icon ?? ''}${selectedWallet.icon ? ' ' : ''}${selectedWallet.name}` : 'Select wallet…'}
                   </Text>
                   <Ionicons name="chevron-forward" size={18} color={colors.muted} />
                 </TouchableOpacity>
               </View>
-
-              {/* Amount received — only when currencies differ */}
-              {!sameCurrency ? (
-                <View style={styles.fieldGroup3}>
-                  <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount received</Text>
-                  <TouchableOpacity
-                    activeOpacity={1}
-                    style={[styles.transferAmountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                    onPress={() => toAmountRef.current?.focus()}
-                  >
-                    <TextInput
-                      ref={toAmountRef}
-                      value={formatAmountDisplay(form.to_amount)}
-                      onChangeText={(v) => setField('to_amount', parseAmountInput(v))}
-                      keyboardType="decimal-pad"
-                      placeholder="0"
-                      placeholderTextColor={colors.placeholder}
-                      style={[styles.transferAmountInput, { color: colors.text }]}
-                      textAlign="right"
-                    />
-                    {selectedToWallet?.currency ? (
-                      <Text style={[styles.transferCurrencyLabel, { color: colors.accent }]}>{selectedToWallet.currency}</Text>
-                    ) : null}
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <Text style={[styles.sameHint, { color: colors.muted }]}>
-                  Same currency — amount auto-matched
-                </Text>
-              )}
-
-              {/* Date */}
-              <View style={styles.fieldGroup3}>
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Date</Text>
-                <TouchableOpacity
-                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Text style={[styles.pickerBtnText, { color: colors.text }]}>{dateLabel}</Text>
-                  <Ionicons name="calendar" size={18} color={colors.muted} />
+              <View style={{ flex: 1 }}>
+                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
+                  <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
+                    {selectedCategory ? `${selectedCategory.icon ?? ''}${selectedCategory.icon ? ' ' : ''}${selectedCategory.name}` : 'Select category'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.muted} />
                 </TouchableOpacity>
               </View>
+            </View>
 
-              {/* More options */}
-              <TouchableOpacity
-                style={[styles.moreToggle, { borderColor: colors.border }]}
-                onPress={() => setMoreExpanded((v) => !v)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.moreToggleText, { color: colors.muted }]}>More options</Text>
-                <Ionicons name={moreExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
-              </TouchableOpacity>
+            {/* More options */}
+            <TouchableOpacity
+              style={[styles.moreToggle, { borderColor: colors.border }]}
+              onPress={() => setMoreExpanded((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.moreToggleText, { color: colors.muted }]}>More options</Text>
+              <Ionicons name={moreExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
+            </TouchableOpacity>
 
-              {moreExpanded && (
+            {moreExpanded && (
+              <>
+                {labels.length > 0 && (
+                  <View style={styles.fieldGroup}>
+                    <TouchableOpacity
+                      style={[styles.pickerBtn2, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                      onPress={() => setShowLabelModal(true)}
+                    >
+                      <Text style={[styles.pickerBtnText, { color: selectedLabels.length ? colors.text : colors.muted }]}>
+                        {selectedLabels.length > 0 ? selectedLabels.map((l) => l.name).join(', ') : 'Select labels'}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 <AppInput
-                  label="Notes (optional)"
+                  value={form.payer}
+                  onChangeText={(v) => setField('payer', v)}
+                  placeholder="Payee name"
+                />
+
+                <AppInput
                   value={form.notes}
                   onChangeText={(v) => setField('notes', v)}
-                  placeholder="Add a note…"
+                  placeholder="Notes"
                   multiline
                   numberOfLines={3}
                   style={{ minHeight: 80, textAlignVertical: 'top' }}
                 />
-              )}
-            </>
-          ) : (
-            /* ── Income / Expense layout ── */
-            <>
-              {/* Amount */}
-              <View>
-                <TouchableOpacity
-                  activeOpacity={1}
-                  style={[styles.amountRow, { backgroundColor: colors.bg }]}
-                  onPress={() => amountRef.current?.focus()}
-                >
-                  <TextInput
-                    ref={amountRef}
-                    value={formatAmountDisplay(form.amount)}
-                    onChangeText={(v) => handleFromAmountChange(parseAmountInput(v))}
-                    keyboardType="decimal-pad"
-                    placeholder="0"
-                    placeholderTextColor={colors.placeholder}
-                    style={[styles.amountInput, { color: colors.text }]}
-                    textAlign="right"
-                  />
-                  {currency ? <Text style={[styles.currencyLabel, { color: colors.accent }]}>{currency}</Text> : null}
-                </TouchableOpacity>
-              </View>
+              </>
+            )}
+          </>
+        )}
+      </ScrollView>
 
-              {/* Date */}
-              <View style={styles.rowFieldGroup}>
-                <TouchableOpacity style={[styles.pickerBtnBorderless, { backgroundColor: colors.bg }]} onPress={() => setShowDatePicker(true)}>
-                  <Ionicons name="calendar" size={13} color={colors.muted} />
-                  <Text style={[styles.pickerBtnInlineText, { color: colors.text }]}>{dateLabel}</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.row}>
-                {/* Account */}
-                <View style={styles.fieldGroup2}>
-                  <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
-                    <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
-                      {selectedWallet
-                        ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
-                        : 'Select wallet…'}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Category */}
-                <View style={styles.fieldGroup2}>
-                  <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
-                    <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
-                      {selectedCategory
-                        ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
-                        : 'Select category'}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* More options */}
-              <TouchableOpacity
-                style={[styles.moreToggle, { borderColor: colors.border }]}
-                onPress={() => setMoreExpanded((v) => !v)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.moreToggleText, { color: colors.muted }]}>More options</Text>
-                <Ionicons name={moreExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
-              </TouchableOpacity>
-
-              {moreExpanded && (
-                <>
-                  {labels.length > 0 && (
-                    <View style={styles.fieldGroup}>
-                      <TouchableOpacity
-                        style={[styles.pickerBtn2, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                        onPress={() => setShowLabelModal(true)}
-                      >
-                        <Text style={[styles.pickerBtnText, { color: selectedLabels.length ? colors.text : colors.muted }]}>
-                          {selectedLabels.length > 0
-                            ? selectedLabels.map((l) => l.name).join(', ')
-                            : 'Select labels'}
-                        </Text>
-                        <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  <AppInput
-                    value={form.payer}
-                    onChangeText={(v) => setField('payer', v)}
-                    placeholder="Payee name"
-                  />
-
-                  <AppInput
-                    value={form.notes}
-                    onChangeText={(v) => setField('notes', v)}
-                    placeholder="Notes"
-                    multiline
-                    numberOfLines={3}
-                    style={{ minHeight: 80, textAlignVertical: 'top' }}
-                  />
-                </>
-              )}
-            </>
-          )}
-        </ScrollView>
-
-        <View style={[styles.stickyFooter, { paddingBottom: keyboardVisible ? 8 : bottom + 16, borderTopColor: colors.border }]}>
+      {/* Always-visible numpad + save */}
+      <View style={[styles.bottomBlock, { borderTopColor: colors.border, paddingBottom: bottom + 8 }]}>
+        <NumPad onKey={handleNumPadKey} />
+        <View style={styles.saveRow}>
           <AppButton onPress={handleSave} loading={loading} fullWidth>
             Save transaction
           </AppButton>
         </View>
-      </KeyboardAvoidingView>
+      </View>
 
+      {/* Modals */}
       <DatePickerModal
         visible={showDatePicker}
         value={form.date || todayInputDate()}
@@ -560,7 +555,6 @@ export default function AddTransactionScreen() {
         onClose={() => setShowDatePicker(false)}
       />
 
-      {/* From wallet picker */}
       <BottomModal visible={showWalletModal} onClose={() => setShowWalletModal(false)} title={isTransfer ? 'From account' : 'Select account'}>
         {wallets.map((w) => (
           <TouchableOpacity
@@ -575,7 +569,6 @@ export default function AddTransactionScreen() {
         ))}
       </BottomModal>
 
-      {/* To wallet picker */}
       <BottomModal visible={showToWalletModal} onClose={() => setShowToWalletModal(false)} title="To account">
         {wallets.filter((w) => w.id !== form.wallet_id).map((w) => (
           <TouchableOpacity
@@ -632,17 +625,11 @@ const styles = StyleSheet.create({
   },
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontFamily: 'Figtree_600SemiBold' },
-  form: { padding: 16, gap: 16, flexGrow: 1 },
-  stickyFooter: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
+  form: { padding: 16, gap: 14 },
   error: { fontSize: 14, textAlign: 'center' },
   typeToggle: {
     flexDirection: 'row',
     borderRadius: 12,
-    borderWidth: 0,
     overflow: 'hidden',
     padding: 4,
     gap: 4,
@@ -654,56 +641,107 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   typeBtnText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
-  fieldGroup: { gap: 8, flexDirection: 'row', },
-  fieldGroup3: { gap: 8, flexDirection: 'column' },
-  fieldLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
-  amountRow: {
+
+  /* Amount display */
+  amountDisplay: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingTop: 12,
-    paddingBottom: 60,
     justifyContent: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 2,
+    gap: 6,
   },
-  amountInput: {
+  amountText: {
     fontSize: 52,
-    paddingVertical: 0,
     fontFamily: 'Lora_400Regular',
+    paddingVertical: 0,
   },
   currencyLabel: {
     fontSize: 15,
     fontFamily: 'Figtree_700Bold',
-    marginLeft: 2,
-    marginBottom: 12,
+    marginBottom: 10,
+  },
+
+  /* Transfer amount block */
+  transferAmountBlock: {
+    borderRadius: 14,
+    padding: 12,
+    gap: 8,
+    alignItems: 'stretch',
+  },
+  transferAmountField: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 10,
+    gap: 2,
+  },
+  transferFieldLabel: { fontSize: 11, fontFamily: 'Figtree_500Medium' },
+  transferAmountRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  transferAmountText: { flex: 1, fontSize: 22, fontFamily: 'Lora_400Regular' },
+  transferCurrency: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
+  arrowCircle: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
+    alignSelf: 'center',
+  },
+  sameHint: { fontSize: 12, textAlign: 'center', paddingVertical: 4 },
+
+  /* Pickers */
+  row: { flexDirection: 'row', gap: 8 },
+  fieldGroup: { gap: 8, flexDirection: 'row' },
+  fieldLabel: { fontSize: 12, fontFamily: 'Figtree_500Medium', marginBottom: 4 },
+  pickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  pickerBtnText: { fontSize: 14, flex: 1 },
+  pickerBtn2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    flexGrow: 1,
+    flexShrink: 0,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  pickerBtnBorderless: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'center',
+  },
+  pickerBtnInlineText: { fontSize: 14 },
+  rowFieldGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   moreToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
-  moreToggleText: { fontSize: 16, fontFamily: 'Figtree_500Medium' },
-  pickerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
+  moreToggleText: { fontSize: 15, fontFamily: 'Figtree_500Medium' },
+
+  /* Bottom block */
+  bottomBlock: {
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  pickerBtnText: { fontSize: 15, flex: 1 },
-  pickerBtn2: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
-    flexGrow: 1,
-    flexShrink: 0
+  saveRow: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
-  pickerBtnInline: { alignSelf: 'flex-start' },
-  pickerBtnInlineText: { fontSize: 15 },
+
+  /* Modal rows */
   modalRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -715,48 +753,4 @@ const styles = StyleSheet.create({
   modalRowIcon: { fontSize: 20, width: 28, textAlign: 'center' },
   modalRowText: { flex: 1, fontSize: 15 },
   labelDot: { width: 12, height: 12, borderRadius: 6 },
-  arrowRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  arrowLine: { flexGrow: 1, flexShrink: 1, height: 1 },
-  arrowCircle: {
-    width: 32, height: 32, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  sameHint: { fontSize: 13, textAlign: 'center', marginTop: -8 },
-  transferAmountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    minHeight: 46,
-  },
-  transferAmountInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: 10,
-  },
-  transferCurrencyLabel: {
-    fontSize: 15,
-    fontFamily: 'Figtree_700Bold',
-    marginLeft: 6,
-  },
-  rowFieldGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -12,
-  },
-  pickerBtnBorderless: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  fieldGroup2: {
-    flexShrink: 1,
-    flexGrow: 1,
-  },
 });
