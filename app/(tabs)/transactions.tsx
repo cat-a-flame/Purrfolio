@@ -21,6 +21,7 @@ import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { Ionicons } from '@expo/vector-icons';
 import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { groupByDate, formatDayHeader, formatCurrency } from '@/lib/utils';
+import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
 import SkeletonBox from '@/components/SkeletonBox';
 import Toast from '@/components/Toast';
 import { Events } from '@/lib/events';
@@ -110,6 +111,8 @@ export default function TransactionsScreen() {
   const [activeTab, setActiveTab] = useState<'transactions' | 'wallets'>('transactions');
   const [walletBalances, setWalletBalances] = useState<Map<string, number>>(new Map());
 
+  const [dailyRates, setDailyRates] = useState<DailyRates>({});
+
   const [openModal, setOpenModal] = useState<ModalKind>(null);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -157,6 +160,14 @@ export default function TransactionsScreen() {
       ...tx,
       labels: (tx.labels ?? []).map((l: any) => l.label).filter(Boolean),
     })));
+
+    let periodRates = await getExchangeRatesForPeriod(period.from, period.to);
+    if (Object.keys(periodRates).length === 0) {
+      const current = await getExchangeRates();
+      if (Object.keys(current).length > 0) periodRates = { [period.from]: current };
+    }
+    setDailyRates(periodRates);
+
     setLoading(false);
   }, [period.from, period.to]);
 
@@ -206,14 +217,24 @@ export default function TransactionsScreen() {
     });
   }, [transactions, search, typeFilter, walletFilter, categoryFilter, labelFilter, period]);
 
-  const groups = groupByDate(filtered);
+  const groups = useMemo(() => groupByDate(filtered), [filtered]);
 
-  type ListItem = { kind: 'header'; date: string } | { kind: 'tx'; tx: Transaction };
-  const flat: ListItem[] = [];
-  for (const g of groups) {
-    flat.push({ kind: 'header', date: g.date });
-    for (const tx of g.items) flat.push({ kind: 'tx', tx });
-  }
+  type ListItem = { kind: 'header'; date: string; dayNet: number } | { kind: 'tx'; tx: Transaction };
+  const flat = useMemo<ListItem[]>(() => {
+    const items: ListItem[] = [];
+    for (const g of groups) {
+      const rates = getRatesForDate(g.date, dailyRates);
+      let dayNet = 0;
+      for (const tx of g.items) {
+        if (tx.transfer_group_id) continue;
+        const huf = toHUF(tx.amount, (tx.wallet as any)?.currency, rates);
+        dayNet += tx.type === 'income' ? huf : -huf;
+      }
+      items.push({ kind: 'header', date: g.date, dayNet });
+      for (const tx of g.items) items.push({ kind: 'tx', tx });
+    }
+    return items;
+  }, [groups, dailyRates]);
 
   const selectedCategory = categories.find((c) => c.id === categoryFilter);
   const selectedWallet = wallets.find((w) => w.id === walletFilter);
@@ -282,7 +303,15 @@ export default function TransactionsScreen() {
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
           if (item.kind === 'header') {
-            return <Text style={[styles.dateHeader, { color: colors.muted }]}>{formatDayHeader(item.date)}</Text>;
+            const positive = item.dayNet >= 0;
+            return (
+              <View style={styles.dayHeader}>
+                <Text style={[styles.dateHeader, { color: colors.muted }]}>{formatDayHeader(item.date)}</Text>
+                <Text style={[styles.dayNet, { color: positive ? colors.income : colors.expense }]}>
+                  {positive ? '+' : '−'}{formatCurrency(Math.abs(item.dayNet), 'HUF')}
+                </Text>
+              </View>
+            );
           }
           return (
             <TransactionRow
@@ -488,14 +517,21 @@ const styles = StyleSheet.create({
   modalRowText: { flex: 1, fontSize: 15 },
   labelDot: { width: 10, height: 10, borderRadius: 5 },
 
+  dayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 6,
+    paddingHorizontal: 4,
+  },
   dateHeader: {
     fontSize: 13,
     fontFamily: 'Figtree_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginTop: 12,
-    marginBottom: 6,
   },
+  dayNet: { fontSize: 13, fontFamily: 'Figtree_700Bold' },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
 
   tabStrip: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
