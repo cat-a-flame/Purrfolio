@@ -333,44 +333,65 @@ export default function RecurringScreen() {
     load();
   }
 
+  const [activeTab, setActiveTab] = useState<'due' | 'recurring'>('due');
+
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <AppHeader
         title="Planned"
         rightAction={
-          <TouchableOpacity
-            onPress={() => { setForm(EMPTY_FORM); setFormError(''); setShowAddModal(true); }}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="add-circle-outline" size={26} color={colors.accent} />
-          </TouchableOpacity>
+          activeTab === 'recurring' ? (
+            <TouchableOpacity
+              onPress={() => { setForm(EMPTY_FORM); setFormError(''); setShowAddModal(true); }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add-circle-outline" size={26} color={colors.accent} />
+            </TouchableOpacity>
+          ) : undefined
         }
       />
-      <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16, paddingTop: 16 }]}
-      >
 
-        {/* Due this month */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Due this month</Text>
-            <View style={styles.monthNav}>
-              <TouchableOpacity onPress={prevMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
-                <Ionicons name="chevron-back" size={18} color={colors.muted} />
-              </TouchableOpacity>
-              <Text style={[styles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
-              <TouchableOpacity onPress={nextMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
-                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-              </TouchableOpacity>
-            </View>
+      {/* Tab strip */}
+      <View style={[styles.tabStrip, { borderBottomColor: colors.border }]}>
+        {(['due', 'recurring'] as const).map((tab) => {
+          const active = activeTab === tab;
+          return (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tabBtn, active && { borderBottomColor: colors.accent, borderBottomWidth: 2 }]}
+              onPress={() => setActiveTab(tab)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.tabBtnText, { color: active ? colors.accent : colors.muted }]}>
+                {tab === 'due' ? 'Due' : 'Recurring'}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* ── Due tab ───────────────────────────────────────────────────── */}
+      {activeTab === 'due' && (
+        <ScrollView
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16, paddingTop: 16 }]}
+        >
+          {/* Month navigator */}
+          <View style={[styles.monthNavRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+            <TouchableOpacity onPress={prevMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
+              <Ionicons name="chevron-back" size={18} color={colors.muted} />
+            </TouchableOpacity>
+            <Text style={[styles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
+            <TouchableOpacity onPress={nextMonth} style={styles.monthNavBtn} activeOpacity={0.7}>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            </TouchableOpacity>
           </View>
 
           {dueItems.length === 0 && (
-            <Text style={[styles.emptyText, { color: colors.muted }]}>
+            <Text style={[styles.emptyText, { color: colors.muted, textAlign: 'center', marginTop: 24 }]}>
               {payments.filter(p => p.is_active).length === 0
                 ? 'No recurring payments yet.'
-                : 'All payments for this month have been handled.'}
+                : 'All payments for this period have been handled.'}
             </Text>
           )}
 
@@ -438,21 +459,32 @@ export default function RecurringScreen() {
               })}
             </>
           )}
-        </View>
+        </ScrollView>
+      )}
 
-        {/* All recurring payments grouped by frequency */}
-        {payments.length > 0 && (
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>All recurring payments</Text>
-            {(['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] as RecurrenceFrequency[])
-              .filter(f => payments.some(p => p.frequency === f))
-              .map(f => (
-                <View key={f}>
-                  <Text style={[styles.freqLabel, { color: colors.muted }]}>{frequencyLabel(f).toUpperCase()}</Text>
-                  {payments.filter(p => p.frequency === f).map(p => (
+      {/* ── Recurring tab ─────────────────────────────────────────────── */}
+      {activeTab === 'recurring' && (
+        <ScrollView
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16, paddingTop: 16 }]}
+        >
+          {payments.length === 0 && (
+            <Text style={[styles.emptyText, { color: colors.muted, textAlign: 'center', marginTop: 24 }]}>
+              No recurring payments yet.
+            </Text>
+          )}
+
+          {(['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] as RecurrenceFrequency[])
+            .filter(f => payments.some(p => p.frequency === f))
+            .map(f => (
+              <View key={f}>
+                <Text style={[styles.freqLabel, { color: colors.muted }]}>{frequencyLabel(f).toUpperCase()}</Text>
+                <View style={[styles.paymentGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  {payments.filter(p => p.frequency === f).map((p, i) => (
                     <PaymentRow
                       key={p.id}
                       payment={p}
+                      isFirst={i === 0}
                       colors={colors}
                       onPress={() => {
                         setForm({
@@ -468,18 +500,11 @@ export default function RecurringScreen() {
                     />
                   ))}
                 </View>
-              ))
-            }
-          </View>
-        )}
-
-        {payments.length === 0 && (
-          <Text style={[styles.emptyText, { color: colors.muted, textAlign: 'center', marginTop: 32 }]}>
-            No recurring payments yet.
-          </Text>
-        )}
-
-      </ScrollView>
+              </View>
+            ))
+          }
+        </ScrollView>
+      )}
 
       <PaymentModal
         visible={showAddModal}
@@ -588,18 +613,19 @@ function DueCard({
 // ─── PaymentRow ──────────────────────────────────────────────────────────────
 
 function PaymentRow({
-  payment, colors, onPress,
+  payment, colors, onPress, isFirst,
 }: {
   payment: RecurringPayment;
   colors: any;
   onPress: () => void;
+  isFirst?: boolean;
 }) {
   const currency = payment.wallet?.currency ?? 'HUF';
   const next = nextDueDate(payment);
   const dotColor = payment.category?.color || colors.muted;
   return (
     <TouchableOpacity
-      style={[styles.paymentRow, { borderTopColor: colors.border }]}
+      style={[styles.paymentRow, { borderTopColor: colors.border }, isFirst && { borderTopWidth: 0 }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -1078,13 +1104,17 @@ function PaymentModal({
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  container: { paddingHorizontal: 16, gap: 12 },
-  card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 10 },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardTitle: { fontSize: 16, fontFamily: 'Figtree_600SemiBold' },
+  container: { paddingHorizontal: 16, gap: 10 },
+  tabStrip: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
+  tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12 },
+  tabBtnText: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
+  monthNavRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 12, borderWidth: 1, paddingHorizontal: 4, paddingVertical: 4,
+  },
   monthNav: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  monthNavBtn: { padding: 4 },
-  monthLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium', minWidth: 90, textAlign: 'center' },
+  monthNavBtn: { padding: 8 },
+  monthLabel: { fontSize: 14, fontFamily: 'Figtree_600SemiBold', flex: 1, textAlign: 'center' },
   emptyText: { fontSize: 14, paddingVertical: 8 },
   dueGroupLabel: {
     fontSize: 11,
@@ -1099,7 +1129,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Figtree_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginTop: 12,
+    marginTop: 8,
     marginBottom: 4,
   },
   dueCard: {
@@ -1127,9 +1157,13 @@ const styles = StyleSheet.create({
     width: 30, height: 30, borderRadius: 15,
     alignItems: 'center', justifyContent: 'center',
   },
+  paymentGroup: {
+    borderRadius: 12, borderWidth: 1, overflow: 'hidden',
+  },
   paymentRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, gap: 10,
+    paddingVertical: 10, paddingHorizontal: 12,
+    borderTopWidth: StyleSheet.hairlineWidth, gap: 10,
   },
   paymentIcon: {
     width: 34, height: 34, borderRadius: 8,
