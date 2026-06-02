@@ -5,10 +5,9 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
-import DiscardModal from '@/components/DiscardModal';
+import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -131,6 +130,7 @@ export default function EditTransactionScreen() {
   );
 
   const [pendingAction, setPendingAction] = useState<any>(null);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -227,22 +227,16 @@ export default function EditTransactionScreen() {
   }
 
   function handleDelete() {
-    Alert.alert('Delete transaction', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          await supabase.from('transaction_labels').delete().eq('transaction_id', id);
-          const { error: txErr } = await supabase.from('transactions').delete().eq('id', id);
-          Events.emit('transaction-saved', {
-            success: !txErr,
-            message: txErr ? (txErr.message ?? 'Failed to delete.') : 'Record deleted.',
-          });
-          setSaved(true);
-          router.back();
-        },
-      },
-    ]);
+    setConfirmAction(() => async () => {
+      await supabase.from('transaction_labels').delete().eq('transaction_id', id);
+      const { error: txErr } = await supabase.from('transactions').delete().eq('id', id);
+      Events.emit('transaction-saved', {
+        success: !txErr,
+        message: txErr ? (txErr.message ?? 'Failed to delete.') : 'Record deleted.',
+      });
+      setSaved(true);
+      router.back();
+    });
   }
 
   const filteredCategories = categories.filter(
@@ -462,10 +456,22 @@ export default function EditTransactionScreen() {
         </View>
       </View>
 
-      <DiscardModal
+      <ConfirmModal
         visible={!!pendingAction}
-        onKeep={() => setPendingAction(null)}
-        onDiscard={() => { navigation.dispatch(pendingAction); setPendingAction(null); }}
+        title="Discard changes?"
+        message="You have unsaved changes. Are you sure you want to discard them?"
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        onConfirm={() => { navigation.dispatch(pendingAction); setPendingAction(null); }}
+        onCancel={() => setPendingAction(null)}
+      />
+      <ConfirmModal
+        visible={!!confirmAction}
+        title="Delete transaction"
+        message="This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => { confirmAction?.(); setConfirmAction(null); }}
+        onCancel={() => setConfirmAction(null)}
       />
 
       {/* Modals */}

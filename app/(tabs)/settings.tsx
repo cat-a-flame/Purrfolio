@@ -1,12 +1,13 @@
 import { Fragment } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
 } from 'react-native';
+import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -24,19 +25,13 @@ type SettingsItem = {
 export default function SettingsScreen() {
   const colors = useTheme();
   const router = useRouter();
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
 
-  async function handleSignOut() {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: async () => {
-          await supabase.auth.signOut();
-          router.replace('/(auth)/login');
-        },
-      },
-    ]);
+  function handleSignOut() {
+    setConfirmAction(() => async () => {
+      await supabase.auth.signOut();
+      router.replace('/(auth)/login');
+    });
   }
 
   const sections: { title: string; items: SettingsItem[] }[] = [
@@ -100,6 +95,14 @@ export default function SettingsScreen() {
           </View>
         ))}
       </ScrollView>
+      <ConfirmModal
+        visible={!!confirmAction}
+        title="Sign out"
+        message="Are you sure you want to sign out?"
+        confirmLabel="Sign out"
+        onConfirm={() => { confirmAction?.(); setConfirmAction(null); }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </SafeAreaView>
   );
 }

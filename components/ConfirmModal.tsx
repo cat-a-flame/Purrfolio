@@ -3,35 +3,45 @@ import { useTheme } from '@/lib/theme';
 
 type Props = {
   visible: boolean;
-  onKeep: () => void;
-  onDiscard: () => void;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
 };
 
-export default function DiscardModal({ visible, onKeep, onDiscard }: Props) {
+export default function ConfirmModal({
+  visible,
+  title,
+  message,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  onConfirm,
+  onCancel,
+}: Props) {
   const colors = useTheme();
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View style={styles.overlay}>
         <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.title, { color: colors.text }]}>Discard changes?</Text>
-          <Text style={[styles.body, { color: colors.muted }]}>
-            You have unsaved changes. Are you sure you want to discard them?
-          </Text>
+          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+          <Text style={[styles.body, { color: colors.muted }]}>{message}</Text>
           <View style={styles.buttons}>
             <TouchableOpacity
               style={[styles.btn, { backgroundColor: colors.bg }]}
-              onPress={onKeep}
+              onPress={onCancel}
               activeOpacity={0.7}
             >
-              <Text style={[styles.btnText, { color: colors.text }]}>Keep editing</Text>
+              <Text style={[styles.btnText, { color: colors.text }]}>{cancelLabel}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.btn, { backgroundColor: colors.danger + '18' }]}
-              onPress={onDiscard}
+              onPress={onConfirm}
               activeOpacity={0.7}
             >
-              <Text style={[styles.btnText, { color: colors.danger }]}>Discard</Text>
+              <Text style={[styles.btnText, { color: colors.danger }]}>{confirmLabel}</Text>
             </TouchableOpacity>
           </View>
         </View>

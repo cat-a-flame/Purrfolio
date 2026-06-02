@@ -16,7 +16,7 @@ import BottomModal from '@/components/BottomModal';
 import DatePickerModal from '@/components/DatePickerModal';
 import CategoryPickerModal from '@/components/CategoryPickerModal';
 import NumPad from '@/components/NumPad';
-import DiscardModal from '@/components/DiscardModal';
+import ConfirmModal from '@/components/ConfirmModal';
 import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { todayInputDate } from '@/lib/utils';
@@ -605,10 +605,14 @@ export default function AddTransactionScreen() {
         onSelect={(id) => setField('category_id', id)}
       />
 
-      <DiscardModal
+      <ConfirmModal
         visible={!!pendingAction}
-        onKeep={() => setPendingAction(null)}
-        onDiscard={() => { navigation.dispatch(pendingAction); setPendingAction(null); }}
+        title="Discard changes?"
+        message="You have unsaved changes. Are you sure you want to discard them?"
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        onConfirm={() => { navigation.dispatch(pendingAction); setPendingAction(null); }}
+        onCancel={() => setPendingAction(null)}
       />
 
       <BottomModal visible={showLabelModal} onClose={() => setShowLabelModal(false)} title="Select labels">

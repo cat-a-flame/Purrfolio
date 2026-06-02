@@ -5,9 +5,9 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Switch,
 } from 'react-native';
+import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -46,6 +46,7 @@ export default function WalletsScreen() {
   const [editWallet, setEditWallet] = useState<Wallet | null>(null);
   const [form, setForm] = useState<WalletForm>(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -113,18 +114,11 @@ export default function WalletsScreen() {
 
   async function handleDelete() {
     if (!editWallet) return;
-    Alert.alert('Delete account', `Delete "${editWallet.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await supabase.from('wallets').delete().eq('id', editWallet.id);
-          setEditWallet(null);
-          load();
-        },
-      },
-    ]);
+    setConfirmAction(() => async () => {
+      await supabase.from('wallets').delete().eq('id', editWallet.id);
+      setEditWallet(null);
+      load();
+    });
   }
 
   return (
@@ -183,6 +177,14 @@ export default function WalletsScreen() {
           <AppButton onPress={handleSave} loading={saving} style={{ flex: 2 }}>Save</AppButton>
         </View>
       </BottomModal>
+      <ConfirmModal
+        visible={!!confirmAction}
+        title="Delete account"
+        message={`Delete "${editWallet?.name}"?`}
+        confirmLabel="Delete"
+        onConfirm={() => { confirmAction?.(); setConfirmAction(null); }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </SafeAreaView>
   );
 }
