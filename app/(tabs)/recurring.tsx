@@ -79,7 +79,6 @@ export default function RecurringScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editing, setEditing] = useState<RecurringPayment | null>(null);
   const [form, setForm] = useState<EditForm>(EMPTY_FORM);
-  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -320,12 +319,10 @@ export default function RecurringScreen() {
     load();
   }
 
-  function handleDelete() {
-    setConfirmAction(() => async () => {
-      await supabase.from('recurring_payments').delete().eq('id', editing!.id);
-      setEditing(null);
-      load();
-    });
+  async function handleDelete() {
+    await supabase.from('recurring_payments').delete().eq('id', editing!.id);
+    setEditing(null);
+    load();
   }
 
   async function handleToggleActive() {
@@ -525,14 +522,6 @@ export default function RecurringScreen() {
         bottomOffset={TAB_BAR_HEIGHT + bottom + 16}
         onUndo={toast.undoable ? handleUndo : undefined}
       />
-      <ConfirmModal
-        visible={!!confirmAction}
-        title="Delete planned payment"
-        message="This cannot be undone."
-        confirmLabel="Delete"
-        onConfirm={() => { confirmAction?.(); setConfirmAction(null); }}
-        onCancel={() => setConfirmAction(null)}
-      />
     </SafeAreaView>
   );
 }
@@ -678,6 +667,20 @@ function PaymentModal({
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
   const [showDotMenu, setShowDotMenu] = useState(false);
+  const [confirmKind, setConfirmKind] = useState<'delete' | 'pause' | 'close' | null>(null);
+
+  const initialFormRef = useRef<EditForm>(form);
+  useEffect(() => {
+    if (visible) initialFormRef.current = form;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  const isDirty = onDelete != null && JSON.stringify(form) !== JSON.stringify(initialFormRef.current);
+
+  function handleClose() {
+    if (isDirty) { setConfirmKind('close'); return; }
+    onClose();
+  }
 
   useEffect(() => {
     if (!visible) {
@@ -689,6 +692,7 @@ function PaymentModal({
       setShowEndDatePicker(false);
       setMoreExpanded(false);
       setShowDotMenu(false);
+      setConfirmKind(null);
     }
   }, [visible]);
 
@@ -712,12 +716,12 @@ function PaymentModal({
   const filteredCategories = categories.filter((c) => c.type === 'both' || c.type === form.type);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
       <SafeAreaView edges={['top']} style={[styles.modalSafe, { backgroundColor: colors.bg }]}>
 
         {/* Header */}
         <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onClose} style={styles.headerBtn}>
+          <TouchableOpacity onPress={handleClose} style={styles.headerBtn}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
@@ -731,7 +735,7 @@ function PaymentModal({
                   {onToggleActive && (
                     <TouchableOpacity
                       style={[styles.dotMenuItem, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
-                      onPress={() => { setShowDotMenu(false); onToggleActive(); }}
+                      onPress={() => { setShowDotMenu(false); setConfirmKind('pause'); }}
                     >
                       <Ionicons name={isActive ? 'pause-outline' : 'play-outline'} size={18} color={colors.text} />
                       <Text style={[styles.dotMenuText, { color: colors.text }]}>
@@ -741,7 +745,7 @@ function PaymentModal({
                   )}
                   <TouchableOpacity
                     style={styles.dotMenuItem}
-                    onPress={() => { setShowDotMenu(false); onDelete(); }}
+                    onPress={() => { setShowDotMenu(false); setConfirmKind('delete'); }}
                   >
                     <Ionicons name="trash-outline" size={18} color={colors.danger} />
                     <Text style={[styles.dotMenuText, { color: colors.danger }]}>Delete</Text>
@@ -1038,6 +1042,32 @@ function PaymentModal({
             <AppButton onPress={() => setShowLabelModal(false)} fullWidth>Done</AppButton>
           </View>
         </BottomModal>
+
+        <ConfirmModal
+          visible={confirmKind === 'delete'}
+          title="Delete recurring payment"
+          message="This cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={() => { setConfirmKind(null); onDelete?.(); }}
+          onCancel={() => setConfirmKind(null)}
+        />
+        <ConfirmModal
+          visible={confirmKind === 'pause'}
+          title={isActive ? 'Pause recurring payment' : 'Resume recurring payment'}
+          message={isActive ? 'No future occurrences will be scheduled while paused.' : 'Future occurrences will resume being scheduled.'}
+          confirmLabel={isActive ? 'Pause' : 'Resume'}
+          onConfirm={() => { setConfirmKind(null); onToggleActive?.(); }}
+          onCancel={() => setConfirmKind(null)}
+        />
+        <ConfirmModal
+          visible={confirmKind === 'close'}
+          title="Discard changes?"
+          message="You have unsaved changes. Are you sure you want to discard them?"
+          confirmLabel="Discard"
+          cancelLabel="Keep editing"
+          onConfirm={() => { setConfirmKind(null); onClose(); }}
+          onCancel={() => setConfirmKind(null)}
+        />
 
       </SafeAreaView>
     </Modal>
