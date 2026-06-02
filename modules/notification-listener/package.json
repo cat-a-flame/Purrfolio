@@ -1,0 +1,16 @@
+{
+  "name": "notification-listener",
+  "version": "1.0.0",
+  "description": "Local Expo module for reading Google Wallet notifications",
+  "main": "index.ts",
+  "expo": {
+    "autolinking": {
+      "android": {
+        "sourceDir": "android",
+        "modules": [
+          "com.purrfolio.app.notificationlistener.NotificationListenerModule"
+        ]
+      }
+    }
+  }
+}
