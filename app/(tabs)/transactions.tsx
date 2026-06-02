@@ -29,7 +29,8 @@ import Toast from '@/components/Toast';
 import { Events } from '@/lib/events';
 import { useRouter } from 'expo-router';
 
-const PANEL_WIDTH = Math.round(Dimensions.get('window').width * 0.88);
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const PANEL_WIDTH = Math.round(SCREEN_WIDTH * 0.5);
 
 function defaultPeriod(): PeriodValue {
   const now = new Date();
@@ -56,14 +57,14 @@ export default function TransactionsScreen() {
   const [labels, setLabels] = useState<Label[]>([]);
 
   const [search, setSearch] = useState('');
-  const [typeFilters, setTypeFilters] = useState<TransactionType[]>([]);
+  const [typeFilters, setTypeFilters] = useState<(TransactionType | 'transfer')[]>([]);
   const [walletFilters, setWalletFilters] = useState<string[]>([]);
   const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
   const [labelFilters, setLabelFilters] = useState<string[]>([]);
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
 
   // Draft filters (edited inside the panel before applying)
-  const [draftTypes, setDraftTypes] = useState<TransactionType[]>([]);
+  const [draftTypes, setDraftTypes] = useState<(TransactionType | 'transfer')[]>([]);
   const [draftWallets, setDraftWallets] = useState<string[]>([]);
   const [draftCategories, setDraftCategories] = useState<string[]>([]);
   const [draftLabels, setDraftLabels] = useState<string[]>([]);
@@ -72,6 +73,7 @@ export default function TransactionsScreen() {
   const [filterPanelVisible, setFilterPanelVisible] = useState(false);
   const [panelView, setPanelView] = useState<PanelView>('main');
   const panelAnim = useRef(new Animated.Value(PANEL_WIDTH)).current;
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const [activeTab, setActiveTab] = useState<'transactions' | 'wallets'>('transactions');
   const [walletBalances, setWalletBalances] = useState<Map<string, number>>(new Map());
@@ -210,10 +212,17 @@ export default function TransactionsScreen() {
     labelFilters.length > 0
   );
 
+  function matchesTypeFilter(tx: Transaction, types: (TransactionType | 'transfer')[]) {
+    if (types.length === 0) return true;
+    const isTransfer = !!tx.transfer_group_id;
+    if (isTransfer) return types.includes('transfer');
+    return types.includes(tx.type as TransactionType);
+  }
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return transactions.filter((tx) => {
-      if (typeFilters.length > 0 && !typeFilters.includes(tx.type as TransactionType)) return false;
+      if (!matchesTypeFilter(tx, typeFilters)) return false;
       if (walletFilters.length > 0 && !walletFilters.includes(tx.wallet_id)) return false;
       if (categoryFilters.length > 0 && !categoryFilters.includes(tx.category_id ?? '')) return false;
       if (labelFilters.length > 0 && !tx.labels?.some((l: Label) => labelFilters.includes(l.id))) return false;
@@ -226,10 +235,10 @@ export default function TransactionsScreen() {
     });
   }, [transactions, search, typeFilters, walletFilters, categoryFilters, labelFilters]);
 
-  // Draft-filtered count (for "Show N" button)
+  // Draft-filtered count (for filter button)
   const draftFilteredCount = useMemo(() => {
     return transactions.filter((tx) => {
-      if (draftTypes.length > 0 && !draftTypes.includes(tx.type as TransactionType)) return false;
+      if (!matchesTypeFilter(tx, draftTypes)) return false;
       if (draftWallets.length > 0 && !draftWallets.includes(tx.wallet_id)) return false;
       if (draftCategories.length > 0 && !draftCategories.includes(tx.category_id ?? '')) return false;
       if (draftLabels.length > 0 && !tx.labels?.some((l: Label) => draftLabels.includes(l.id))) return false;
@@ -259,7 +268,7 @@ export default function TransactionsScreen() {
   // Filter summary helpers
   function typeSummary() {
     if (draftTypes.length === 0) return 'All';
-    return draftTypes.map(t => t === 'expense' ? 'Expenses' : 'Income').join(', ');
+    return draftTypes.map(t => t === 'expense' ? 'Expenses' : t === 'income' ? 'Income' : 'Transfers').join(', ');
   }
   function accountSummary() {
     if (draftWallets.length === 0) return 'All';
@@ -560,8 +569,9 @@ export default function TransactionsScreen() {
                 {panelView === 'type' && (
                   <View>
                     {([
-                      { key: 'expense' as TransactionType, label: 'Expenses', icon: 'arrow-up-outline' },
-                      { key: 'income' as TransactionType, label: 'Income', icon: 'arrow-down-outline' },
+                      { key: 'expense' as const, label: 'Expenses', icon: 'arrow-up-outline' },
+                      { key: 'income' as const, label: 'Income', icon: 'arrow-down-outline' },
+                      { key: 'transfer' as const, label: 'Transfers', icon: 'swap-horizontal-outline' },
                     ]).map((opt) => {
                       const sel = draftTypes.includes(opt.key);
                       return (
@@ -598,24 +608,84 @@ export default function TransactionsScreen() {
                   </View>
                 )}
 
-                {panelView === 'category' && (
-                  <View>
-                    {categories.map((c) => {
-                      const sel = draftCategories.includes(c.id);
-                      return (
-                        <TouchableOpacity
-                          key={c.id}
-                          style={[styles.optionRow, { borderBottomColor: colors.border }, sel && { backgroundColor: colors.accent + '11' }]}
-                          onPress={() => setDraftCategories(prev => toggleItem(prev, c.id))}
-                        >
-                          <Text style={{ fontSize: 18, width: 22, textAlign: 'center' }}>{c.icon ?? '•'}</Text>
-                          <Text style={[styles.optionLabel, { color: sel ? colors.accent : colors.text }]}>{c.name}</Text>
-                          {sel && <Ionicons name="checkmark" size={18} color={colors.accent} />}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                )}
+                {panelView === 'category' && (() => {
+                  const parents = categories.filter(c => !c.parent_id);
+                  const children = categories.filter(c => !!c.parent_id);
+                  const getChildren = (parentId: string) => children.filter(c => c.parent_id === parentId);
+                  // Flat categories (no children and no parent)
+                  const flatCats = parents.filter(p => getChildren(p.id).length === 0);
+                  // Group parents (have children)
+                  const groupParents = parents.filter(p => getChildren(p.id).length > 0);
+
+                  function toggleParent(parentId: string) {
+                    setExpandedCategories(prev => {
+                      const next = new Set(prev);
+                      if (next.has(parentId)) next.delete(parentId);
+                      else next.add(parentId);
+                      return next;
+                    });
+                  }
+
+                  function selectParent(parent: Category) {
+                    const kids = getChildren(parent.id);
+                    const allIds = [parent.id, ...kids.map(k => k.id)];
+                    const allSelected = allIds.every(id => draftCategories.includes(id));
+                    if (allSelected) {
+                      setDraftCategories(prev => prev.filter(id => !allIds.includes(id)));
+                    } else {
+                      setDraftCategories(prev => [...new Set([...prev, ...allIds])]);
+                    }
+                  }
+
+                  return (
+                    <View>
+                      {[...groupParents, ...flatCats].sort((a, b) => a.name.localeCompare(b.name)).map((cat) => {
+                        const kids = getChildren(cat.id);
+                        const isGroup = kids.length > 0;
+                        const expanded = expandedCategories.has(cat.id);
+                        const allSelected = isGroup
+                          ? [cat.id, ...kids.map(k => k.id)].every(id => draftCategories.includes(id))
+                          : draftCategories.includes(cat.id);
+                        const someSelected = isGroup
+                          ? [cat.id, ...kids.map(k => k.id)].some(id => draftCategories.includes(id))
+                          : false;
+
+                        return (
+                          <View key={cat.id}>
+                            <TouchableOpacity
+                              style={[styles.optionRow, { borderBottomColor: colors.border }, allSelected && { backgroundColor: colors.accent + '11' }]}
+                              onPress={() => isGroup ? selectParent(cat) : setDraftCategories(prev => toggleItem(prev, cat.id))}
+                            >
+                              <Text style={{ fontSize: 18, width: 22, textAlign: 'center' }}>{cat.icon ?? '•'}</Text>
+                              <Text style={[styles.optionLabel, { color: allSelected ? colors.accent : someSelected ? colors.accent : colors.text, fontFamily: isGroup ? 'Figtree_600SemiBold' : 'Figtree_500Medium' }]}>{cat.name}</Text>
+                              {allSelected && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                              {someSelected && !allSelected && <View style={[styles.partialCheck, { borderColor: colors.accent }]} />}
+                              {isGroup && (
+                                <TouchableOpacity onPress={() => toggleParent(cat.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                  <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
+                                </TouchableOpacity>
+                              )}
+                            </TouchableOpacity>
+                            {isGroup && expanded && kids.sort((a, b) => a.name.localeCompare(b.name)).map((kid) => {
+                              const kidSel = draftCategories.includes(kid.id);
+                              return (
+                                <TouchableOpacity
+                                  key={kid.id}
+                                  style={[styles.optionRow, styles.optionRowChild, { borderBottomColor: colors.border }, kidSel && { backgroundColor: colors.accent + '11' }]}
+                                  onPress={() => setDraftCategories(prev => toggleItem(prev, kid.id))}
+                                >
+                                  <Text style={{ fontSize: 16, width: 22, textAlign: 'center' }}>{kid.icon ?? '•'}</Text>
+                                  <Text style={[styles.optionLabel, { color: kidSel ? colors.accent : colors.text }]}>{kid.name}</Text>
+                                  {kidSel && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  );
+                })()}
 
                 {panelView === 'label' && (
                   <View>
@@ -651,7 +721,7 @@ export default function TransactionsScreen() {
                   onPress={() => closeFilterPanel(true)}
                   style={[styles.showResultsBtn, { backgroundColor: colors.accent }]}
                 >
-                  <Text style={styles.showResultsText}>Show {draftFilteredCount} results</Text>
+                  <Text style={styles.showResultsText}>Filter ({draftFilteredCount})</Text>
                 </TouchableOpacity>
               </View>
             </SafeAreaView>
@@ -817,8 +887,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 12,
   },
+  optionRowChild: {
+    paddingLeft: 32,
+  },
   optionLabel: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
   labelDot: { width: 12, height: 12, borderRadius: 6, marginHorizontal: 5 },
+  partialCheck: { width: 14, height: 14, borderRadius: 3, borderWidth: 2 },
 
   panelFooter: {
     flexDirection: 'row',
