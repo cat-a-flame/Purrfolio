@@ -677,6 +677,7 @@ function PaymentModal({
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
+  const [showDotMenu, setShowDotMenu] = useState(false);
 
   useEffect(() => {
     if (!visible) {
@@ -687,6 +688,7 @@ function PaymentModal({
       setShowStartDatePicker(false);
       setShowEndDatePicker(false);
       setMoreExpanded(false);
+      setShowDotMenu(false);
     }
   }, [visible]);
 
@@ -720,9 +722,33 @@ function PaymentModal({
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
           {onDelete ? (
-            <TouchableOpacity onPress={onDelete} style={styles.headerBtnRight}>
-              <Ionicons name="trash" size={22} color={colors.danger} />
-            </TouchableOpacity>
+            <View>
+              <TouchableOpacity onPress={() => setShowDotMenu((v) => !v)} style={styles.headerBtnRight}>
+                <Ionicons name="ellipsis-vertical" size={22} color={colors.text} />
+              </TouchableOpacity>
+              {showDotMenu && (
+                <View style={[styles.dotMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  {onToggleActive && (
+                    <TouchableOpacity
+                      style={[styles.dotMenuItem, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
+                      onPress={() => { setShowDotMenu(false); onToggleActive(); }}
+                    >
+                      <Ionicons name={isActive ? 'pause-outline' : 'play-outline'} size={18} color={colors.text} />
+                      <Text style={[styles.dotMenuText, { color: colors.text }]}>
+                        {isActive ? 'Pause' : 'Resume'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={styles.dotMenuItem}
+                    onPress={() => { setShowDotMenu(false); onDelete(); }}
+                  >
+                    <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                    <Text style={[styles.dotMenuText, { color: colors.danger }]}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           ) : (
             <View style={{ width: 40 }} />
           )}
@@ -910,15 +936,6 @@ function PaymentModal({
               </>
             )}
 
-            {/* Pause / Resume — only when editing */}
-            {onToggleActive && (
-              <TouchableOpacity style={styles.secondaryBtn} onPress={onToggleActive}>
-                <Ionicons name={isActive ? 'pause-outline' : 'play-outline'} size={16} color={colors.muted} />
-                <Text style={[styles.secondaryBtnText, { color: colors.muted }]}>
-                  {isActive ? 'Pause recurring payment' : 'Resume recurring payment'}
-                </Text>
-              </TouchableOpacity>
-            )}
           </ScrollView>
 
           {/* Sticky footer save button */}
@@ -1145,12 +1162,28 @@ const styles = StyleSheet.create({
   moreToggleText: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
   clearText: { fontSize: 13, textAlign: 'right' },
 
-  // Secondary action
-  secondaryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingVertical: 10,
+  dotMenu: {
+    position: 'absolute',
+    top: 36,
+    right: 0,
+    borderRadius: 10,
+    borderWidth: 1,
+    minWidth: 160,
+    zIndex: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  secondaryBtnText: { fontSize: 15, fontFamily: 'Figtree_500Medium' },
+  dotMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dotMenuText: { fontSize: 15, fontFamily: 'Figtree_500Medium' },
 
   // Modal list rows (matches [id].tsx)
   modalRow: {
