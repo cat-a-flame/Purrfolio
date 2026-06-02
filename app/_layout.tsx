@@ -100,7 +100,6 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="transaction/add" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="transaction/[id]" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="settings/wallets" options={{ headerShown: false }} />
         <Stack.Screen name="settings/categories" options={{ headerShown: false }} />
         <Stack.Screen name="settings/labels" options={{ headerShown: false }} />
         <Stack.Screen name="settings/templates" options={{ headerShown: false }} />
