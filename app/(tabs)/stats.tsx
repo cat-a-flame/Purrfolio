@@ -8,10 +8,11 @@ import {
   Dimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
-import { useTheme, Colors } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { formatCurrency } from '@/lib/utils';
@@ -271,20 +272,20 @@ export default function StatsScreen() {
 
   const defaultCurrency: Currency = 'HUF';
 
-  const { projIncome, projExpense } = useMemo(() => {
+  const { projIncome, projExpense, recurringLeftCount } = useMemo(() => {
     const actionedKeys = new Set(recurringOccurrences.map((o: any) => `${o.recurring_payment_id}|${o.due_date}`));
     const from = new Date(period.from + 'T00:00:00');
     const to = new Date(period.to + 'T23:59:59');
-    let projIncome = 0, projExpense = 0;
+    let projIncome = 0, projExpense = 0, recurringLeftCount = 0;
     for (const p of recurringPayments) {
       for (const date of generateDueDates(p, from, to)) {
         if (actionedKeys.has(`${p.id}|${recurringIsoDate(date)}`)) continue;
         const amtHUF = toHUF(p.amount, (p.wallet as any)?.currency, currentRates);
         if (p.type === 'income') projIncome += amtHUF;
-        else projExpense += amtHUF;
+        else { projExpense += amtHUF; recurringLeftCount += 1; }
       }
     }
-    return { projIncome, projExpense };
+    return { projIncome, projExpense, recurringLeftCount };
   }, [recurringPayments, recurringOccurrences, period.from, period.to, currentRates]);
 
   const expenseByCategory = useMemo(() => groupByCategory(txsHUF, 'expense'), [txsHUF]);
@@ -336,13 +337,8 @@ export default function StatsScreen() {
         <AppHeader title="Statistics" />
         <ScrollView contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}>
           <PeriodPicker value={period} onChange={setPeriod} />
-          {/* Summary tiles */}
-          <View style={styles.summaryGrid}>
-            {[0, 1, 2, 3].map(i => (
-              <SkeletonBox key={i} style={{ width: (SCREEN_W - 32 - 10) / 2, height: 80, borderRadius: 14 }} />
-            ))}
-          </View>
-          {/* Chart card placeholders */}
+          <SkeletonBox style={{ height: 148, borderRadius: 14 }} />
+          <SkeletonBox style={{ height: 200, borderRadius: 14 }} />
           <SkeletonBox style={{ height: 320, borderRadius: 14 }} />
           <SkeletonBox style={{ height: 160, borderRadius: 14 }} />
           <SkeletonBox style={{ height: 260, borderRadius: 14 }} />
@@ -360,35 +356,90 @@ export default function StatsScreen() {
       >
         <PeriodPicker value={period} onChange={setPeriod} />
 
-        {/* ── Summary ──────────────────────────────────────────────────── */}
-        <View style={styles.summaryGrid}>
-          <SummaryTile
-            label="Income"
-            value={formatCurrency(income, defaultCurrency)}
-            valueColor={colors.income}
-            projected={projIncome > 0 ? `+${formatCurrency(projIncome, defaultCurrency)}` : undefined}
-            colors={colors}
-          />
-          <SummaryTile
-            label="Expenses"
-            value={formatCurrency(expense, defaultCurrency)}
-            valueColor={colors.expense}
-            projected={projExpense > 0 ? formatCurrency(expense + projExpense, defaultCurrency) : undefined}
-            colors={colors}
-          />
-          <SummaryTile
-            label="Net"
-            value={(net >= 0 ? '+' : '−') + formatCurrency(Math.abs(net), defaultCurrency)}
-            valueColor={net >= 0 ? colors.income : colors.expense}
-            projected={(() => {
-              if (projIncome === 0 && projExpense === 0) return undefined;
-              const projectedNet = net + projIncome - projExpense;
-              return (projectedNet >= 0 ? '+' : '−') + formatCurrency(Math.abs(projectedNet), defaultCurrency);
-            })()}
-            colors={colors}
-          />
-          <SummaryTile label="Transactions" value={String(txCount)} valueColor={colors.accent} colors={colors} />
+        {/* ── Card 1: Saved / Net summary ──────────────────────────────── */}
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.summaryCardHeader}>
+            <Text style={[styles.summaryCardLabel, { color: colors.muted }]}>
+              {net >= 0 ? 'SAVED THIS PERIOD' : 'DEFICIT THIS PERIOD'}
+            </Text>
+            <Text style={[styles.summaryCardTxCount, { color: colors.muted }]}>{txCount} transactions</Text>
+          </View>
+          <Text style={[styles.summaryCardNet, { color: net >= 0 ? colors.income : colors.expense }]} numberOfLines={1} adjustsFontSizeToFit>
+            {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), defaultCurrency)}
+          </Text>
+          <View style={[styles.summaryCardDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.summaryCardRow}>
+            <View style={[styles.summaryCardIconCircle, { backgroundColor: colors.income + '22' }]}>
+              <Ionicons name="arrow-down-outline" size={18} color={colors.income} />
+            </View>
+            <Text style={[styles.summaryCardRowLabel, { color: colors.text }]}>Income</Text>
+            <Text style={[styles.summaryCardRowAmount, { color: colors.income }]}>+{formatCurrency(income, defaultCurrency)}</Text>
+          </View>
+          <View style={styles.summaryCardRow}>
+            <View style={[styles.summaryCardIconCircle, { backgroundColor: colors.expense + '22' }]}>
+              <Ionicons name="arrow-up-outline" size={18} color={colors.expense} />
+            </View>
+            <Text style={[styles.summaryCardRowLabel, { color: colors.text }]}>Spending</Text>
+            <Text style={[styles.summaryCardRowAmount, { color: colors.expense }]}>−{formatCurrency(expense, defaultCurrency)}</Text>
+          </View>
         </View>
+
+        {/* ── Card 2: Projected month end ──────────────────────────────── */}
+        {(projExpense > 0 || projIncome > 0) && (() => {
+          const projectedExpense = expense + projExpense;
+          const projectedNet = net + projIncome - projExpense;
+          const totalBar = projectedExpense > 0 ? projectedExpense : 1;
+          const spentPct = Math.min((expense / totalBar) * 100, 100);
+          const remainPct = Math.min((projExpense / totalBar) * 100, 100 - spentPct);
+          return (
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.projHeader}>
+                <Ionicons name="refresh-outline" size={15} color={colors.muted} />
+                <Text style={[styles.projTitle, { color: colors.muted }]}>Projected · period end</Text>
+              </View>
+
+              <View style={styles.projRow}>
+                <Text style={[styles.projRowLabel, { color: colors.muted }]}>Projected spending</Text>
+                <View style={styles.projAmountGroup}>
+                  <Text style={[styles.projTotalAmount, { color: colors.text }]}>{formatCurrency(projectedExpense, defaultCurrency)}</Text>
+                  <Text style={[styles.projCurrency, { color: colors.muted }]}> HUF</Text>
+                </View>
+              </View>
+
+              {/* Progress bar */}
+              <View style={[styles.projBarTrack, { backgroundColor: colors.border }]}>
+                <View style={[styles.projBarSpent, { width: `${spentPct}%` as any, backgroundColor: colors.accent }]} />
+                <View style={[styles.projBarRemain, { width: `${remainPct}%` as any, backgroundColor: colors.accent + '44' }]} />
+              </View>
+
+              <View style={styles.projLegendRow}>
+                <View style={[styles.projLegendDot, { backgroundColor: colors.accent }]} />
+                <Text style={[styles.projLegendLabel, { color: colors.text }]}>Spent so far</Text>
+                <Text style={[styles.projLegendAmount, { color: colors.text }]}>{formatCurrency(expense, defaultCurrency)}</Text>
+              </View>
+              <View style={styles.projLegendRow}>
+                <View style={[styles.projLegendDot, { backgroundColor: colors.accent + '44' }]} />
+                <Text style={[styles.projLegendLabel, { color: colors.text }]}>{recurringLeftCount} recurring left</Text>
+                <Text style={[styles.projLegendAmount, { color: colors.text }]}>+{formatCurrency(projExpense, defaultCurrency)}</Text>
+              </View>
+
+              <View style={[styles.projDivider, { backgroundColor: colors.border }]} />
+
+              <View style={styles.projNetRow}>
+                <View>
+                  <Text style={[styles.projNetLabel, { color: colors.muted }]}>Projected net</Text>
+                  <Text style={[styles.projNetSub, { color: colors.muted }]}>if nothing else changes</Text>
+                </View>
+                <View style={styles.projNetAmountGroup}>
+                  <Text style={[styles.projNetAmount, { color: projectedNet >= 0 ? colors.income : colors.expense }]}>
+                    {projectedNet >= 0 ? '+' : '−'}{formatCurrency(Math.abs(projectedNet), defaultCurrency)}
+                  </Text>
+                  <Text style={[styles.projNetCurrency, { color: colors.muted }]}> HUF</Text>
+                </View>
+              </View>
+            </View>
+          );
+        })()}
 
         {/* ── Expenses by Category ─────────────────────────────────────── */}
         {displayExpenseByCategory.length > 0 && (
@@ -540,25 +591,6 @@ export default function StatsScreen() {
   );
 }
 
-// ─── SummaryTile ──────────────────────────────────────────────────────────────
-
-function SummaryTile({ label, value, valueColor, projected, colors }: {
-  label: string; value: string; valueColor: string; projected?: string; colors: Colors;
-}) {
-  return (
-    <View style={[styles.summaryTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Text style={[styles.summaryLabel, { color: colors.muted }]}>{label}</Text>
-      <Text style={[styles.summaryValue, { color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-      </Text>
-      {projected && (
-        <Text style={[styles.summaryProjected, { color: colors.muted }]} numberOfLines={1} adjustsFontSizeToFit>
-          {projected} projected
-        </Text>
-      )}
-    </View>
-  );
-}
 
 // ─── styles ───────────────────────────────────────────────────────────────────
 
@@ -566,18 +598,39 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: { paddingHorizontal: 16, gap: 16 },
 
-  // Summary
-  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  summaryTile: {
-    width: (SCREEN_W - 32 - 10) / 2,
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 16,
-    gap: 4,
-  },
-  summaryLabel: { fontSize: 12, fontFamily: 'Figtree_500Medium', textTransform: 'uppercase', letterSpacing: 0.4 },
-  summaryValue: { fontSize: 20, fontFamily: 'Figtree_700Bold', lineHeight: 26 },
-  summaryProjected: { fontSize: 11, fontFamily: 'Figtree_500Medium', marginTop: 2 },
+  // Card 1: Net summary
+  summaryCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingTop: 14, paddingBottom: 4 },
+  summaryCardLabel: { fontSize: 11, fontFamily: 'Figtree_700Bold', textTransform: 'uppercase', letterSpacing: 0.5 },
+  summaryCardTxCount: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  summaryCardNet: { fontSize: 42, fontFamily: 'Lora_700Bold', paddingHorizontal: 14, paddingBottom: 14, lineHeight: 52 },
+  summaryCardDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 14, marginBottom: 6 },
+  summaryCardRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 10 },
+  summaryCardIconCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  summaryCardRowLabel: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
+  summaryCardRowAmount: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
+
+  // Card 2: Projected
+  projHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingTop: 14, paddingBottom: 10 },
+  projTitle: { fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
+  projRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 10 },
+  projRowLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  projAmountGroup: { flexDirection: 'row', alignItems: 'baseline' },
+  projTotalAmount: { fontSize: 22, fontFamily: 'Figtree_700Bold' },
+  projCurrency: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  projBarTrack: { height: 10, borderRadius: 5, marginHorizontal: 14, marginBottom: 12, flexDirection: 'row', overflow: 'hidden' },
+  projBarSpent: { height: 10 },
+  projBarRemain: { height: 10 },
+  projLegendRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 4 },
+  projLegendDot: { width: 10, height: 10, borderRadius: 5 },
+  projLegendLabel: { flex: 1, fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  projLegendAmount: { fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
+  projDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 14, marginTop: 12, marginBottom: 10 },
+  projNetRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 14 },
+  projNetLabel: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
+  projNetSub: { fontSize: 11, fontFamily: 'Figtree_400Regular', marginTop: 2 },
+  projNetAmountGroup: { flexDirection: 'row', alignItems: 'baseline' },
+  projNetAmount: { fontSize: 24, fontFamily: 'Lora_700Bold' },
+  projNetCurrency: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
 
   // Card shell
   card: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
