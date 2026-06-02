@@ -448,13 +448,6 @@ export default function TransactionsScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Active filter chips */}
-            {hasActiveFilters && (
-              <TouchableOpacity onPress={resetFilters} style={[styles.resetBtn, { borderColor: colors.border, backgroundColor: colors.surface, alignSelf: 'flex-start' }]}>
-                <Ionicons name="close-circle-outline" size={14} color={colors.muted} />
-                <Text style={[styles.resetBtnText, { color: colors.muted }]}>Reset filters</Text>
-              </TouchableOpacity>
-            )}
           </View>
         }
         ListEmptyComponent={
