@@ -351,11 +351,10 @@ export default function TransactionsScreen() {
                   onPress={() => router.push(`/wallet/${w.id}`)}
                   style={[styles.walletCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
-                  <View style={[styles.walletColorBar, { backgroundColor: w.color || colors.muted }]} />
                   <View style={styles.walletIcon}>
                     {w.icon
                       ? <Text style={{ fontSize: 22 }}>{w.icon}</Text>
-                      : <View style={[styles.walletIconFallback, { backgroundColor: (w.color || colors.muted) + '33' }]} />}
+                      : <View style={[styles.walletIconFallback, { backgroundColor: colors.border }]} />}
                   </View>
                   <View style={styles.walletInfo}>
                     <View style={styles.walletNameRow}>
@@ -811,11 +810,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 12,
     borderWidth: 1,
-    overflow: 'hidden',
     gap: 12,
-    paddingRight: 14,
+    paddingHorizontal: 14,
   },
-  walletColorBar: { width: 4, alignSelf: 'stretch' },
   walletIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   walletIconFallback: { width: 28, height: 28, borderRadius: 8 },
   walletInfo: { flex: 1, paddingVertical: 14, gap: 2 },
