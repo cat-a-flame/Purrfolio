@@ -114,10 +114,11 @@ function buildArcPath(cx: number, cy: number, outerR: number, innerR: number, st
   ].join(' ');
 }
 
-const CHART_SIZE = SCREEN_W - 32 - 28; // card width minus horizontal padding
+const CHART_SIZE = SCREEN_W - 32 - 28; // full-width donut
+const DONUT_SIDE_SIZE = Math.round((SCREEN_W - 32 - 28) * 0.48); // side-by-side donut
 
-function DonutChart({ items, total, fallback }: { items: CategoryStat[]; total: number; fallback: string }) {
-  const size = CHART_SIZE;
+function DonutChart({ items, total, fallback, size: sizeProp }: { items: CategoryStat[]; total: number; fallback: string; size?: number }) {
+  const size = sizeProp ?? CHART_SIZE;
   const cx = size / 2, cy = size / 2;
   const outerR = size / 2 - 6;
   const innerR = outerR - 52;
@@ -446,29 +447,29 @@ export default function StatsScreen() {
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.muted }]}>EXPENSES BY CATEGORY</Text>
 
-            {/* donut */}
-            <View style={styles.donutWrap}>
-              <DonutChart items={displayExpenseByCategory} total={expense} fallback={colors.expense} />
-              <View style={styles.donutCenter} pointerEvents="none">
-                <Text style={[styles.donutTotal, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {formatCurrency(expense, defaultCurrency)}
-                </Text>
-                <Text style={[styles.donutTotalLabel, { color: colors.muted }]}>total</Text>
+            {/* donut + legend side by side */}
+            <View style={styles.donutRow}>
+              <View style={[styles.donutWrap, { width: DONUT_SIDE_SIZE, height: DONUT_SIDE_SIZE }]}>
+                <DonutChart items={displayExpenseByCategory} total={expense} fallback={colors.expense} size={DONUT_SIDE_SIZE} />
+                <View style={styles.donutCenter} pointerEvents="none">
+                  <Text style={[styles.donutTotal, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
+                    {formatCurrency(expense, defaultCurrency)}
+                  </Text>
+                  <Text style={[styles.donutTotalLabel, { color: colors.muted }]}>total</Text>
+                </View>
               </View>
-            </View>
-
-            {/* legend below chart */}
-            <View style={styles.donutLegend}>
-              {displayExpenseByCategory.map((cat, i) => {
-                const pct = expense > 0 ? Math.round((cat.amount / expense) * 100) : 0;
-                return (
-                  <View key={cat.id ?? `null-${i}`} style={styles.legendRow}>
-                    <View style={[styles.legendDot, { backgroundColor: cat.color || colors.expense }]} />
-                    <Text style={[styles.legendName, { color: colors.text }]} numberOfLines={1}>{cat.name}</Text>
-                    <Text style={[styles.legendPct, { color: colors.muted }]}>{pct}%</Text>
-                  </View>
-                );
-              })}
+              <View style={styles.donutLegend}>
+                {displayExpenseByCategory.map((cat, i) => {
+                  const pct = expense > 0 ? Math.round((cat.amount / expense) * 100) : 0;
+                  return (
+                    <View key={cat.id ?? `null-${i}`} style={styles.legendRow}>
+                      <View style={[styles.legendDot, { backgroundColor: cat.color || colors.expense }]} />
+                      <Text style={[styles.legendName, { color: colors.text }]} numberOfLines={1}>{cat.name}</Text>
+                      <Text style={[styles.legendPct, { color: colors.muted }]}>{pct}%</Text>
+                    </View>
+                  );
+                })}
+              </View>
             </View>
 
             {/* full list */}
@@ -645,15 +646,16 @@ const styles = StyleSheet.create({
   },
 
   // Donut
-  donutWrap: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', position: 'relative', width: CHART_SIZE, height: CHART_SIZE },
-  donutCenter: { position: 'absolute', alignItems: 'center', justifyContent: 'center', width: 110, height: 110 },
-  donutTotal: { fontSize: 16, fontFamily: 'Figtree_700Bold', textAlign: 'center' },
-  donutTotalLabel: { fontSize: 12, fontFamily: 'Figtree_500Medium' },
-  donutLegend: { paddingHorizontal: 14, paddingBottom: 14, paddingTop: 8, gap: 8 },
+  donutRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
+  donutWrap: { alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  donutCenter: { position: 'absolute', alignItems: 'center', justifyContent: 'center', width: 80, height: 80 },
+  donutTotal: { fontSize: 13, fontFamily: 'Figtree_700Bold', textAlign: 'center' },
+  donutTotalLabel: { fontSize: 11, fontFamily: 'Figtree_500Medium' },
+  donutLegend: { flex: 1, gap: 8 },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  legendDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
-  legendName: { flex: 1, fontSize: 13, fontFamily: 'Figtree_500Medium' },
-  legendPct: { fontSize: 13, fontFamily: 'Figtree_600SemiBold', width: 36, textAlign: 'right' },
+  legendDot: { width: 9, height: 9, borderRadius: 5, flexShrink: 0 },
+  legendName: { flex: 1, fontSize: 12, fontFamily: 'Figtree_500Medium' },
+  legendPct: { fontSize: 12, fontFamily: 'Figtree_600SemiBold', width: 32, textAlign: 'right' },
 
   // Category rows
   catRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 10 },
