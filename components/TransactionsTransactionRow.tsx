@@ -79,7 +79,7 @@ export default function TransactionsTransactionRow({ transaction: tx, onPress }:
         </View>
       </View>
 
-      {tx.payer && tx.notes && tx.notes.length > 0 && (
+      {(tx.payer || (tx.notes && tx.notes.length > 0)) && (
         <View style={[styles.subtext, { borderColor: colors.border2 }]}>
           {tx.payer ? (
             <Text style={[styles.sub, { color: colors.text }]}>{tx.payer}</Text>
