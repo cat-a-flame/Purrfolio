@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,10 @@ import {
   RefreshControl,
   TouchableOpacity,
   TextInput,
+  Modal,
+  Animated,
+  Dimensions,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
@@ -15,8 +19,6 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import TransactionRow from '@/components/TransactionsTransactionRow';
-import CategoryPickerModal from '@/components/CategoryPickerModal';
-import BottomModal from '@/components/BottomModal';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { Ionicons } from '@expo/vector-icons';
 import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
@@ -27,9 +29,7 @@ import Toast from '@/components/Toast';
 import { Events } from '@/lib/events';
 import { useRouter } from 'expo-router';
 
-type TypeFilter = 'all' | TransactionType;
-type ModalKind = 'type' | 'wallet' | 'label' | null;
-
+const PANEL_WIDTH = Math.round(Dimensions.get('window').width * 0.88);
 
 function defaultPeriod(): PeriodValue {
   const now = new Date();
@@ -43,54 +43,7 @@ function defaultPeriod(): PeriodValue {
   };
 }
 
-// ── Reusable dropdown button ──────────────────────────────────────────────────
-function DropBtn({
-  label, active, onPress, onClear, colors,
-}: {
-  label: string; active: boolean;
-  onPress: () => void; onClear: () => void;
-  colors: any;
-}) {
-  return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={onPress}
-      style={[
-        styles.dropBtn,
-        { borderColor: active ? colors.accent : colors.border, backgroundColor: colors.surface },
-      ]}
-    >
-      <Text numberOfLines={1} style={[styles.dropBtnText, { color: active ? colors.text : colors.muted }]}>
-        {label}
-      </Text>
-      {active ? (
-        <TouchableOpacity onPress={onClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="close-circle" size={16} color={colors.muted} />
-        </TouchableOpacity>
-      ) : (
-        <Ionicons name="chevron-down" size={16} color={colors.muted} />
-      )}
-    </TouchableOpacity>
-  );
-}
-
-// ── Modal row ─────────────────────────────────────────────────────────────────
-function ModalRow({
-  label, selected, onPress, colors, icon,
-}: {
-  label: string; selected: boolean; onPress: () => void; colors: any; icon?: ReactNode;
-}) {
-  return (
-    <TouchableOpacity
-      style={[styles.modalRow, { borderBottomColor: colors.border }, selected && { backgroundColor: colors.accent + '11' }]}
-      onPress={onPress}
-    >
-      {icon ?? null}
-      <Text style={[styles.modalRowText, { color: selected ? colors.accent : colors.text }]}>{label}</Text>
-      {selected && <Ionicons name="checkmark" size={18} color={colors.accent} />}
-    </TouchableOpacity>
-  );
-}
+type PanelView = 'main' | 'type' | 'account' | 'category' | 'label';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 export default function TransactionsScreen() {
@@ -103,19 +56,27 @@ export default function TransactionsScreen() {
   const [labels, setLabels] = useState<Label[]>([]);
 
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
-  const [walletFilter, setWalletFilter] = useState<string>('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('');
-  const [labelFilter, setLabelFilter] = useState<string>('');
+  const [typeFilters, setTypeFilters] = useState<TransactionType[]>([]);
+  const [walletFilters, setWalletFilters] = useState<string[]>([]);
+  const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
+  const [labelFilters, setLabelFilters] = useState<string[]>([]);
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
+
+  // Draft filters (edited inside the panel before applying)
+  const [draftTypes, setDraftTypes] = useState<TransactionType[]>([]);
+  const [draftWallets, setDraftWallets] = useState<string[]>([]);
+  const [draftCategories, setDraftCategories] = useState<string[]>([]);
+  const [draftLabels, setDraftLabels] = useState<string[]>([]);
+  const [draftPeriod, setDraftPeriod] = useState<PeriodValue>(defaultPeriod);
+
+  const [filterPanelVisible, setFilterPanelVisible] = useState(false);
+  const [panelView, setPanelView] = useState<PanelView>('main');
+  const panelAnim = useRef(new Animated.Value(PANEL_WIDTH)).current;
 
   const [activeTab, setActiveTab] = useState<'transactions' | 'wallets'>('transactions');
   const [walletBalances, setWalletBalances] = useState<Map<string, number>>(new Map());
-
   const [dailyRates, setDailyRates] = useState<DailyRates>({});
 
-  const [openModal, setOpenModal] = useState<ModalKind>(null);
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', success: true });
@@ -195,24 +156,67 @@ export default function TransactionsScreen() {
     return Events.on('wallet-saved', () => { loadRef.current(true); });
   }, []);
 
+  // Panel open/close
+  function openFilterPanel() {
+    setDraftTypes([...typeFilters]);
+    setDraftWallets([...walletFilters]);
+    setDraftCategories([...categoryFilters]);
+    setDraftLabels([...labelFilters]);
+    setDraftPeriod(period);
+    setPanelView('main');
+    setFilterPanelVisible(true);
+    Animated.spring(panelAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
+  }
+
+  function closeFilterPanel(apply = false) {
+    Animated.timing(panelAnim, { toValue: PANEL_WIDTH, duration: 220, useNativeDriver: true }).start(() => {
+      setFilterPanelVisible(false);
+    });
+    if (apply) {
+      setTypeFilters(draftTypes);
+      setWalletFilters(draftWallets);
+      setCategoryFilters(draftCategories);
+      setLabelFilters(draftLabels);
+      setPeriod(draftPeriod);
+    }
+  }
+
+  function resetDraft() {
+    setDraftTypes([]);
+    setDraftWallets([]);
+    setDraftCategories([]);
+    setDraftLabels([]);
+    setDraftPeriod(defaultPeriod());
+  }
+
   function resetFilters() {
     setSearch('');
-    setTypeFilter('all');
-    setWalletFilter('');
-    setCategoryFilter('');
-    setLabelFilter('');
+    setTypeFilters([]);
+    setWalletFilters([]);
+    setCategoryFilters([]);
+    setLabelFilters([]);
     setPeriod(defaultPeriod());
   }
 
-  const hasActiveFilters = !!(search || typeFilter !== 'all' || walletFilter || categoryFilter || labelFilter);
+  function toggleItem<T>(arr: T[], item: T): T[] {
+    return arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item];
+  }
+
+  const hasActiveFilters = !!(
+    search ||
+    typeFilters.length > 0 ||
+    walletFilters.length > 0 ||
+    categoryFilters.length > 0 ||
+    labelFilters.length > 0
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return transactions.filter((tx) => {
-      if (typeFilter !== 'all' && tx.type !== typeFilter) return false;
-      if (walletFilter && tx.wallet_id !== walletFilter) return false;
-      if (categoryFilter && tx.category_id !== categoryFilter) return false;
-      if (labelFilter && !tx.labels?.some((l: Label) => l.id === labelFilter)) return false;
+      if (typeFilters.length > 0 && !typeFilters.includes(tx.type as TransactionType)) return false;
+      if (walletFilters.length > 0 && !walletFilters.includes(tx.wallet_id)) return false;
+      if (categoryFilters.length > 0 && !categoryFilters.includes(tx.category_id ?? '')) return false;
+      if (labelFilters.length > 0 && !tx.labels?.some((l: Label) => labelFilters.includes(l.id))) return false;
       if (q) {
         const inNotes = tx.notes?.toLowerCase().includes(q) ?? false;
         const inPayer = tx.payer?.toLowerCase().includes(q) ?? false;
@@ -220,7 +224,18 @@ export default function TransactionsScreen() {
       }
       return true;
     });
-  }, [transactions, search, typeFilter, walletFilter, categoryFilter, labelFilter, period]);
+  }, [transactions, search, typeFilters, walletFilters, categoryFilters, labelFilters]);
+
+  // Draft-filtered count (for "Show N" button)
+  const draftFilteredCount = useMemo(() => {
+    return transactions.filter((tx) => {
+      if (draftTypes.length > 0 && !draftTypes.includes(tx.type as TransactionType)) return false;
+      if (draftWallets.length > 0 && !draftWallets.includes(tx.wallet_id)) return false;
+      if (draftCategories.length > 0 && !draftCategories.includes(tx.category_id ?? '')) return false;
+      if (draftLabels.length > 0 && !tx.labels?.some((l: Label) => draftLabels.includes(l.id))) return false;
+      return true;
+    }).length;
+  }, [transactions, draftTypes, draftWallets, draftCategories, draftLabels]);
 
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
 
@@ -241,11 +256,37 @@ export default function TransactionsScreen() {
     return items;
   }, [groups, dailyRates]);
 
-  const selectedCategory = categories.find((c) => c.id === categoryFilter);
-  const selectedWallet = wallets.find((w) => w.id === walletFilter);
-  const selectedLabel = labels.find((l) => l.id === labelFilter);
+  // Filter summary helpers
+  function typeSummary() {
+    if (draftTypes.length === 0) return 'All';
+    return draftTypes.map(t => t === 'expense' ? 'Expenses' : 'Income').join(', ');
+  }
+  function accountSummary() {
+    if (draftWallets.length === 0) return 'All';
+    if (draftWallets.length === 1) {
+      const w = wallets.find(x => x.id === draftWallets[0]);
+      return w ? `${w.icon ? w.icon + ' ' : ''}${w.name}` : '1 selected';
+    }
+    return `${draftWallets.length} selected`;
+  }
+  function categorySummary() {
+    if (draftCategories.length === 0) return 'All';
+    if (draftCategories.length === 1) {
+      const c = categories.find(x => x.id === draftCategories[0]);
+      return c ? `${c.icon ? c.icon + ' ' : ''}${c.name}` : '1 selected';
+    }
+    return `${draftCategories.length} selected`;
+  }
+  function labelSummary() {
+    if (draftLabels.length === 0) return 'All';
+    if (draftLabels.length === 1) {
+      const l = labels.find(x => x.id === draftLabels[0]);
+      return l ? l.name : '1 selected';
+    }
+    return `${draftLabels.length} selected`;
+  }
 
-  const typeLabel = typeFilter === 'all' ? 'All types' : typeFilter === 'expense' ? 'Expenses' : 'Income';
+  const filterCount = typeFilters.length + walletFilters.length + categoryFilters.length + labelFilters.length;
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -350,68 +391,51 @@ export default function TransactionsScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListHeaderComponent={
           <View style={styles.headerBlock}>
-            <View style={styles.titleRow}>
-              {hasActiveFilters && (
-                <TouchableOpacity onPress={resetFilters} style={[styles.resetBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-                  <Ionicons name="close-circle-outline" size={14} color={colors.muted} />
-                  <Text style={[styles.resetBtnText, { color: colors.muted }]}>Reset</Text>
-                </TouchableOpacity>
-              )}
+            {/* Search bar + filter button */}
+            <View style={styles.searchRow}>
+              <View style={[styles.searchBox, { borderColor: search ? colors.accent : colors.border, backgroundColor: colors.surface, flex: 1 }]}>
+                <Ionicons name="search-outline" size={16} color={colors.muted} />
+                <TextInput
+                  style={[styles.searchInput, { color: colors.text }]}
+                  placeholder="Search notes & payer…"
+                  placeholderTextColor={colors.muted}
+                  value={search}
+                  onChangeText={setSearch}
+                  returnKeyType="search"
+                  clearButtonMode="while-editing"
+                />
+                {search ? (
+                  <TouchableOpacity onPress={() => setSearch('')}>
+                    <Ionicons name="close-circle" size={16} color={colors.muted} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              <TouchableOpacity
+                onPress={openFilterPanel}
+                style={[
+                  styles.filterBtn,
+                  {
+                    backgroundColor: filterCount > 0 ? colors.accent : colors.surface,
+                    borderColor: filterCount > 0 ? colors.accent : colors.border,
+                  },
+                ]}
+              >
+                <Ionicons name="options-outline" size={18} color={filterCount > 0 ? '#fff' : colors.muted} />
+                {filterCount > 0 && (
+                  <View style={[styles.filterBadge, { backgroundColor: '#fff' }]}>
+                    <Text style={[styles.filterBadgeText, { color: colors.accent }]}>{filterCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
 
-            {/* Search */}
-            <View style={[styles.searchBox, { borderColor: search ? colors.accent : colors.border, backgroundColor: colors.surface }]}>
-              <Ionicons name="search-outline" size={16} color={colors.muted} />
-              <TextInput
-                style={[styles.searchInput, { color: colors.text }]}
-                placeholder="Search notes & payer…"
-                placeholderTextColor={colors.muted}
-                value={search}
-                onChangeText={setSearch}
-                returnKeyType="search"
-                clearButtonMode="while-editing"
-              />
-              {search ? (
-                <TouchableOpacity onPress={() => setSearch('')}>
-                  <Ionicons name="close-circle" size={16} color={colors.muted} />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-
-            {/* 2×2 filter grid */}
-            <View style={styles.filterGrid}>
-              <DropBtn
-                label={typeLabel}
-                active={typeFilter !== 'all'}
-                onPress={() => setOpenModal('type')}
-                onClear={() => setTypeFilter('all')}
-                colors={colors}
-              />
-              <DropBtn
-                label={selectedWallet ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}` : 'All wallets'}
-                active={!!walletFilter}
-                onPress={() => setOpenModal('wallet')}
-                onClear={() => setWalletFilter('')}
-                colors={colors}
-              />
-              <DropBtn
-                label={selectedCategory ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}` : 'All categories'}
-                active={!!categoryFilter}
-                onPress={() => setShowCategoryPicker(true)}
-                onClear={() => setCategoryFilter('')}
-                colors={colors}
-              />
-              <DropBtn
-                label={selectedLabel?.name ?? 'All labels'}
-                active={!!labelFilter}
-                onPress={() => setOpenModal('label')}
-                onClear={() => setLabelFilter('')}
-                colors={colors}
-              />
-            </View>
-
-            {/* Date range */}
-            <PeriodPicker value={period} onChange={setPeriod} />
+            {/* Active filter chips */}
+            {hasActiveFilters && (
+              <TouchableOpacity onPress={resetFilters} style={[styles.resetBtn, { borderColor: colors.border, backgroundColor: colors.surface, alignSelf: 'flex-start' }]}>
+                <Ionicons name="close-circle-outline" size={14} color={colors.muted} />
+                <Text style={[styles.resetBtnText, { color: colors.muted }]}>Reset filters</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
         ListEmptyComponent={
@@ -435,60 +459,205 @@ export default function TransactionsScreen() {
         ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />}
 
-      {/* Type modal */}
-      <BottomModal visible={openModal === 'type'} onClose={() => setOpenModal(null)} title="Transaction type">
-        {([
-          { key: 'all', label: 'All types' },
-          { key: 'expense', label: 'Expenses' },
-          { key: 'income', label: 'Income' },
-        ] as { key: TypeFilter; label: string }[]).map((opt) => (
-          <ModalRow
-            key={opt.key}
-            label={opt.label}
-            selected={typeFilter === opt.key}
-            onPress={() => { setTypeFilter(opt.key); setOpenModal(null); }}
-            colors={colors}
-          />
-        ))}
-      </BottomModal>
+      {/* Filter panel */}
+      <Modal visible={filterPanelVisible} transparent animationType="none" onRequestClose={() => closeFilterPanel(false)}>
+        <View style={styles.panelOverlayContainer}>
+          <Pressable style={styles.panelOverlay} onPress={() => closeFilterPanel(false)} />
+          <Animated.View
+            style={[
+              styles.filterPanel,
+              { backgroundColor: colors.bg, transform: [{ translateX: panelAnim }] },
+            ]}
+          >
+            {/* Panel header */}
+            <SafeAreaView edges={['top', 'right']} style={{ flex: 1 }}>
+              <View style={[styles.panelHeader, { borderBottomColor: colors.border }]}>
+                {panelView !== 'main' ? (
+                  <TouchableOpacity onPress={() => setPanelView('main')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="arrow-back" size={22} color={colors.accent} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity onPress={() => closeFilterPanel(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="close" size={22} color={colors.accent} />
+                  </TouchableOpacity>
+                )}
+                <Text style={[styles.panelTitle, { color: colors.text }]}>
+                  {panelView === 'main' ? 'Filters' :
+                    panelView === 'type' ? 'Type' :
+                    panelView === 'account' ? 'Account' :
+                    panelView === 'category' ? 'Category' : 'Label'}
+                </Text>
+                <View style={{ width: 22 }} />
+              </View>
 
-      {/* Wallet modal */}
-      <BottomModal visible={openModal === 'wallet'} onClose={() => setOpenModal(null)} title="Account">
-        <ModalRow label="All accounts" selected={!walletFilter} onPress={() => { setWalletFilter(''); setOpenModal(null); }} colors={colors} />
-        {wallets.map((w) => (
-          <ModalRow
-            key={w.id}
-            label={`${w.icon ? w.icon + ' ' : ''}${w.name}`}
-            selected={walletFilter === w.id}
-            onPress={() => { setWalletFilter(w.id); setOpenModal(null); }}
-            colors={colors}
-          />
-        ))}
-      </BottomModal>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
+                {panelView === 'main' && (
+                  <>
+                    {/* Period row */}
+                    <View style={[styles.panelSection, { borderBottomColor: colors.border }]}>
+                      <Text style={[styles.panelSectionLabel, { color: colors.muted }]}>Period</Text>
+                      <PeriodPicker value={draftPeriod} onChange={setDraftPeriod} />
+                    </View>
 
-      {/* Label modal */}
-      <BottomModal visible={openModal === 'label'} onClose={() => setOpenModal(null)} title="Label">
-        <ModalRow label="All labels" selected={!labelFilter} onPress={() => { setLabelFilter(''); setOpenModal(null); }} colors={colors} />
-        {labels.map((lb) => (
-          <ModalRow
-            key={lb.id}
-            label={lb.name}
-            selected={labelFilter === lb.id}
-            onPress={() => { setLabelFilter(lb.id); setOpenModal(null); }}
-            colors={colors}
-            icon={lb.color ? <View style={[styles.labelDot, { backgroundColor: lb.color }]} /> : undefined}
-          />
-        ))}
-      </BottomModal>
+                    {/* Type row */}
+                    <TouchableOpacity
+                      style={[styles.panelRow, { borderBottomColor: colors.border }]}
+                      onPress={() => setPanelView('type')}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.panelRowIcon, { backgroundColor: colors.accent + '18' }]}>
+                        <Ionicons name="swap-vertical-outline" size={16} color={colors.accent} />
+                      </View>
+                      <Text style={[styles.panelRowLabel, { color: colors.text }]}>Type</Text>
+                      <Text style={[styles.panelRowValue, { color: colors.muted }]} numberOfLines={1}>{typeSummary()}</Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                    </TouchableOpacity>
 
-      {/* Category modal */}
-      <CategoryPickerModal
-        visible={showCategoryPicker}
-        onClose={() => setShowCategoryPicker(false)}
-        categories={categories}
-        selectedId={categoryFilter}
-        onSelect={(id) => { setCategoryFilter(id); setShowCategoryPicker(false); }}
-      />
+                    {/* Account row */}
+                    <TouchableOpacity
+                      style={[styles.panelRow, { borderBottomColor: colors.border }]}
+                      onPress={() => setPanelView('account')}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.panelRowIcon, { backgroundColor: colors.accent + '18' }]}>
+                        <Ionicons name="wallet-outline" size={16} color={colors.accent} />
+                      </View>
+                      <Text style={[styles.panelRowLabel, { color: colors.text }]}>Account</Text>
+                      <Text style={[styles.panelRowValue, { color: colors.muted }]} numberOfLines={1}>{accountSummary()}</Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                    </TouchableOpacity>
+
+                    {/* Category row */}
+                    <TouchableOpacity
+                      style={[styles.panelRow, { borderBottomColor: colors.border }]}
+                      onPress={() => setPanelView('category')}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.panelRowIcon, { backgroundColor: colors.accent + '18' }]}>
+                        <Ionicons name="grid-outline" size={16} color={colors.accent} />
+                      </View>
+                      <Text style={[styles.panelRowLabel, { color: colors.text }]}>Category</Text>
+                      <Text style={[styles.panelRowValue, { color: colors.muted }]} numberOfLines={1}>{categorySummary()}</Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                    </TouchableOpacity>
+
+                    {/* Label row */}
+                    <TouchableOpacity
+                      style={[styles.panelRow, { borderBottomColor: colors.border }]}
+                      onPress={() => setPanelView('label')}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.panelRowIcon, { backgroundColor: colors.accent + '18' }]}>
+                        <Ionicons name="pricetag-outline" size={16} color={colors.accent} />
+                      </View>
+                      <Text style={[styles.panelRowLabel, { color: colors.text }]}>Label</Text>
+                      <Text style={[styles.panelRowValue, { color: colors.muted }]} numberOfLines={1}>{labelSummary()}</Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {panelView === 'type' && (
+                  <View>
+                    {([
+                      { key: 'expense' as TransactionType, label: 'Expenses', icon: 'arrow-up-outline' },
+                      { key: 'income' as TransactionType, label: 'Income', icon: 'arrow-down-outline' },
+                    ]).map((opt) => {
+                      const sel = draftTypes.includes(opt.key);
+                      return (
+                        <TouchableOpacity
+                          key={opt.key}
+                          style={[styles.optionRow, { borderBottomColor: colors.border }, sel && { backgroundColor: colors.accent + '11' }]}
+                          onPress={() => setDraftTypes(prev => toggleItem(prev, opt.key))}
+                        >
+                          <Ionicons name={opt.icon as any} size={18} color={sel ? colors.accent : colors.muted} />
+                          <Text style={[styles.optionLabel, { color: sel ? colors.accent : colors.text }]}>{opt.label}</Text>
+                          {sel && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {panelView === 'account' && (
+                  <View>
+                    {wallets.map((w) => {
+                      const sel = draftWallets.includes(w.id);
+                      return (
+                        <TouchableOpacity
+                          key={w.id}
+                          style={[styles.optionRow, { borderBottomColor: colors.border }, sel && { backgroundColor: colors.accent + '11' }]}
+                          onPress={() => setDraftWallets(prev => toggleItem(prev, w.id))}
+                        >
+                          <Text style={{ fontSize: 18, width: 22, textAlign: 'center' }}>{w.icon ?? '💰'}</Text>
+                          <Text style={[styles.optionLabel, { color: sel ? colors.accent : colors.text }]}>{w.name}</Text>
+                          {sel && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {panelView === 'category' && (
+                  <View>
+                    {categories.map((c) => {
+                      const sel = draftCategories.includes(c.id);
+                      return (
+                        <TouchableOpacity
+                          key={c.id}
+                          style={[styles.optionRow, { borderBottomColor: colors.border }, sel && { backgroundColor: colors.accent + '11' }]}
+                          onPress={() => setDraftCategories(prev => toggleItem(prev, c.id))}
+                        >
+                          <Text style={{ fontSize: 18, width: 22, textAlign: 'center' }}>{c.icon ?? '•'}</Text>
+                          <Text style={[styles.optionLabel, { color: sel ? colors.accent : colors.text }]}>{c.name}</Text>
+                          {sel && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {panelView === 'label' && (
+                  <View>
+                    {labels.map((lb) => {
+                      const sel = draftLabels.includes(lb.id);
+                      return (
+                        <TouchableOpacity
+                          key={lb.id}
+                          style={[styles.optionRow, { borderBottomColor: colors.border }, sel && { backgroundColor: colors.accent + '11' }]}
+                          onPress={() => setDraftLabels(prev => toggleItem(prev, lb.id))}
+                        >
+                          {lb.color
+                            ? <View style={[styles.labelDot, { backgroundColor: lb.color }]} />
+                            : <View style={{ width: 22 }} />}
+                          <Text style={[styles.optionLabel, { color: sel ? colors.accent : colors.text }]}>{lb.name}</Text>
+                          {sel && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </ScrollView>
+
+              {/* Footer */}
+              <View style={[styles.panelFooter, { borderTopColor: colors.border }]}>
+                <TouchableOpacity
+                  onPress={resetDraft}
+                  style={[styles.resetAllBtn, { borderColor: colors.border }]}
+                >
+                  <Text style={[styles.resetAllText, { color: colors.muted }]}>Reset all</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => closeFilterPanel(true)}
+                  style={[styles.showResultsBtn, { backgroundColor: colors.accent }]}
+                >
+                  <Text style={styles.showResultsText}>Show {draftFilteredCount} results</Text>
+                </TouchableOpacity>
+              </View>
+            </SafeAreaView>
+          </Animated.View>
+        </View>
+      </Modal>
 
       <Toast
         visible={toast.visible}
@@ -496,7 +665,6 @@ export default function TransactionsScreen() {
         success={toast.success}
         bottomOffset={TAB_BAR_HEIGHT + bottom + 12}
       />
-
     </SafeAreaView>
   );
 }
@@ -506,10 +674,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   list: { paddingHorizontal: 16 },
   headerBlock: { gap: 10, marginBottom: 12 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
-  resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  resetBtnText: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
 
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -521,30 +687,28 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14, padding: 0 },
 
-  filterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  dropBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+  filterBtn: {
+    width: 42,
+    height: 42,
     borderRadius: 10,
     borderWidth: 1,
-    width: '48%',
-  },
-  dropBtnText: { flex: 1, fontSize: 13 },
-
-
-  modalRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 10,
+    justifyContent: 'center',
   },
-  modalRowText: { flex: 1, fontSize: 15 },
-  labelDot: { width: 10, height: 10, borderRadius: 5 },
+  filterBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterBadgeText: { fontSize: 9, fontFamily: 'Figtree_700Bold' },
+
+  resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  resetBtnText: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
 
   dayHeader: {
     flexDirection: 'row',
@@ -602,4 +766,81 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
   },
+
+  // Filter panel
+  panelOverlayContainer: { flex: 1, flexDirection: 'row' },
+  panelOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
+  filterPanel: {
+    width: PANEL_WIDTH,
+    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  panelTitle: { fontSize: 17, fontFamily: 'Figtree_700Bold' },
+
+  panelSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+  },
+  panelSectionLabel: { fontSize: 12, fontFamily: 'Figtree_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  panelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+  },
+  panelRowIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  panelRowLabel: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
+  panelRowValue: { fontSize: 14, maxWidth: 110 },
+
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+  },
+  optionLabel: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
+  labelDot: { width: 12, height: 12, borderRadius: 6, marginHorizontal: 5 },
+
+  panelFooter: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  resetAllBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resetAllText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
+  showResultsBtn: {
+    flex: 2,
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  showResultsText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold', color: '#fff' },
 });
