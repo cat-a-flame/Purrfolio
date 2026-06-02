@@ -756,36 +756,11 @@ function PaymentModal({
               ))}
             </View>
 
-            {/* Name */}
-            <AppInput
-              label="Name"
-              value={form.name}
-              onChangeText={(v) => setField('name', v)}
-              placeholder="e.g. Netflix"
-            />
-
-            {/* Wallet */}
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: colors.muted }]}>Wallet</Text>
-              <TouchableOpacity
-                style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                onPress={() => setShowWalletModal(true)}
-              >
-                <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]}>
-                  {selectedWallet
-                    ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}`
-                    : 'Select wallet…'}
-                </Text>
-                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-              </TouchableOpacity>
-            </View>
-
             {/* Amount */}
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: colors.muted }]}>Amount</Text>
+            <View style={styles.amountSection}>
               <TouchableOpacity
                 activeOpacity={1}
-                style={[styles.amountRow, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                style={styles.amountDisplay}
                 onPress={() => amountRef.current?.focus()}
               >
                 <TextInput
@@ -794,58 +769,76 @@ function PaymentModal({
                   onChangeText={(v) => setField('amount', parseAmountInput(v))}
                   keyboardType="decimal-pad"
                   placeholder="0"
-                  placeholderTextColor={colors.muted}
-                  style={[styles.amountInput, { color: colors.text }]}
-                  textAlign="right"
+                  placeholderTextColor={colors.placeholder ?? colors.muted}
+                  style={[styles.amountText, { color: form.amount ? colors.text : colors.muted }]}
+                  textAlign="center"
                 />
-                {currency ? (
-                  <Text style={[styles.currencyLabel, { color: colors.accent }]}>{currency}</Text>
-                ) : null}
+                {currency ? <Text style={[styles.amountCurrency, { color: colors.muted }]}>{currency}</Text> : null}
               </TouchableOpacity>
             </View>
 
-            {/* Start date */}
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: colors.muted }]}>Start date</Text>
-              <TouchableOpacity
-                style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                onPress={() => setShowStartDatePicker(true)}
-              >
-                <Text style={[styles.pickerBtnText, { color: form.start_date ? colors.text : colors.muted }]}>
-                  {form.start_date || 'Select date…'}
-                </Text>
-                <Ionicons name="calendar" size={18} color={colors.muted} />
-              </TouchableOpacity>
+            {/* Name */}
+            <AppInput
+              label="Name"
+              value={form.name}
+              onChangeText={(v) => setField('name', v)}
+              placeholder="e.g. Netflix"
+            />
+
+            {/* Wallet + Category side by side */}
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Wallet</Text>
+                <TouchableOpacity
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => setShowWalletModal(true)}
+                >
+                  <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]} numberOfLines={1}>
+                    {selectedWallet ? `${selectedWallet.icon ? selectedWallet.icon + ' ' : ''}${selectedWallet.name}` : 'Wallet…'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                </TouchableOpacity>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Category</Text>
+                <TouchableOpacity
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => setShowCategoryModal(true)}
+                >
+                  <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]} numberOfLines={1}>
+                    {selectedCategory ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}` : 'Category…'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                </TouchableOpacity>
+              </View>
             </View>
 
-            {/* Frequency */}
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: colors.muted }]}>Frequency</Text>
-              <TouchableOpacity
-                style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                onPress={() => setShowFrequencyModal(true)}
-              >
-                <Text style={[styles.pickerBtnText, { color: colors.text }]}>
-                  {frequencyLabel(form.frequency)}
-                </Text>
-                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Category */}
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: colors.muted }]}>Category</Text>
-              <TouchableOpacity
-                style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                onPress={() => setShowCategoryModal(true)}
-              >
-                <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]}>
-                  {selectedCategory
-                    ? `${selectedCategory.icon ? selectedCategory.icon + ' ' : ''}${selectedCategory.name}`
-                    : 'Select category…'}
-                </Text>
-                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-              </TouchableOpacity>
+            {/* Start date + Frequency side by side */}
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Start date</Text>
+                <TouchableOpacity
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => setShowStartDatePicker(true)}
+                >
+                  <Text style={[styles.pickerBtnText, { color: form.start_date ? colors.text : colors.muted }]} numberOfLines={1}>
+                    {form.start_date || 'Date…'}
+                  </Text>
+                  <Ionicons name="calendar" size={16} color={colors.muted} />
+                </TouchableOpacity>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.fieldLabel, { color: colors.muted }]}>Frequency</Text>
+                <TouchableOpacity
+                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  onPress={() => setShowFrequencyModal(true)}
+                >
+                  <Text style={[styles.pickerBtnText, { color: colors.text }]} numberOfLines={1}>
+                    {frequencyLabel(form.frequency)}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* More options */}
@@ -872,9 +865,7 @@ function PaymentModal({
                       onPress={() => setShowLabelModal(true)}
                     >
                       <Text style={[styles.pickerBtnText, { color: selectedLabels.length ? colors.text : colors.muted }]}>
-                        {selectedLabels.length > 0
-                          ? selectedLabels.map((l) => l.name).join(', ')
-                          : 'Select labels…'}
+                        {selectedLabels.length > 0 ? selectedLabels.map((l) => l.name).join(', ') : 'Select labels…'}
                       </Text>
                       <Ionicons name="chevron-forward" size={18} color={colors.muted} />
                     </TouchableOpacity>
@@ -882,7 +873,7 @@ function PaymentModal({
                 )}
 
                 <AppInput
-                  label="Payer (optional)"
+                  label="Payee (optional)"
                   value={form.payer}
                   onChangeText={(v) => setField('payer', v)}
                   placeholder="e.g. OTP Bank"
@@ -1125,20 +1116,26 @@ const styles = StyleSheet.create({
   typeBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
   typeBtnText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
 
-  // Fields (matches [id].tsx)
-  fieldGroup: { gap: 8 },
-  fieldLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
-  amountRow: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, minHeight: 46,
+  // Amount display (matches add.tsx)
+  amountSection: { alignItems: 'center' },
+  amountDisplay: {
+    flexDirection: 'row', alignItems: 'flex-end',
+    justifyContent: 'center', paddingVertical: 8, gap: 6,
   },
-  amountInput: { flex: 1, fontSize: 16, paddingVertical: 10 },
-  currencyLabel: { fontSize: 15, fontFamily: 'Figtree_700Bold', marginLeft: 10 },
+  amountText: { fontSize: 52, fontFamily: 'Lora_400Regular', minWidth: 60, textAlign: 'center' },
+  amountCurrency: { fontSize: 15, fontFamily: 'Figtree_700Bold', marginBottom: 10 },
+
+  // Row layout
+  row: { flexDirection: 'row', gap: 8 },
+
+  // Fields
+  fieldGroup: { gap: 8 },
+  fieldLabel: { fontSize: 12, fontFamily: 'Figtree_500Medium', marginBottom: 4 },
   pickerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, borderWidth: 1,
+    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth,
   },
-  pickerBtnText: { fontSize: 15, flex: 1 },
+  pickerBtnText: { fontSize: 14, flex: 1 },
 
   // More options (matches [id].tsx)
   moreToggle: {
