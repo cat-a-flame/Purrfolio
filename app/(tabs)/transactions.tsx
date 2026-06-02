@@ -8,6 +8,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   TextInput,
+  Switch,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
@@ -19,7 +20,10 @@ import CategoryPickerModal from '@/components/CategoryPickerModal';
 import BottomModal from '@/components/BottomModal';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { Ionicons } from '@expo/vector-icons';
-import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
+import type { Transaction, Wallet, Category, Label, TransactionType, Currency } from '@/lib/types';
+import AppInput from '@/components/AppInput';
+import AppButton from '@/components/AppButton';
+import ConfirmModal from '@/components/ConfirmModal';
 import { groupByDate, formatDayHeader, formatCurrency } from '@/lib/utils';
 import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
 import SkeletonBox from '@/components/SkeletonBox';
@@ -29,6 +33,24 @@ import { useRouter } from 'expo-router';
 
 type TypeFilter = 'all' | TransactionType;
 type ModalKind = 'type' | 'wallet' | 'label' | null;
+
+const CURRENCIES: Currency[] = ['HUF', 'USD', 'EUR'];
+
+type WalletForm = {
+  name: string;
+  currency: Currency;
+  icon: string;
+  is_default: boolean;
+  starting_balance: string;
+};
+
+const DEFAULT_WALLET_FORM: WalletForm = {
+  name: '',
+  currency: 'HUF',
+  icon: '💰',
+  is_default: false,
+  starting_balance: '0',
+};
 
 function defaultPeriod(): PeriodValue {
   const now = new Date();
@@ -119,6 +141,12 @@ export default function TransactionsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', success: true });
 
+  const [addWalletVisible, setAddWalletVisible] = useState(false);
+  const [editWallet, setEditWallet] = useState<Wallet | null>(null);
+  const [walletForm, setWalletForm] = useState<WalletForm>(DEFAULT_WALLET_FORM);
+  const [walletSaving, setWalletSaving] = useState(false);
+  const [confirmDeleteWallet, setConfirmDeleteWallet] = useState<(() => void) | null>(null);
+
   const load = useCallback(async (silent = false) => {
     if (!silent) {
       setLoading(true);
@@ -199,6 +227,56 @@ export default function TransactionsScreen() {
     setPeriod(defaultPeriod());
   }
 
+  function openEditWallet(w: Wallet) {
+    setEditWallet(w);
+    setWalletForm({
+      name: w.name,
+      currency: w.currency,
+      icon: w.icon ?? '💰',
+      is_default: w.is_default,
+      starting_balance: String(w.starting_balance ?? 0),
+    });
+  }
+
+  function setWalletField<K extends keyof WalletForm>(key: K, value: WalletForm[K]) {
+    setWalletForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function handleSaveWallet() {
+    if (!walletForm.name.trim()) return;
+    setWalletSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setWalletSaving(false); return; }
+    const payload = {
+      name: walletForm.name.trim(),
+      currency: walletForm.currency,
+      icon: walletForm.icon,
+      is_default: walletForm.is_default,
+      starting_balance: parseFloat(walletForm.starting_balance) || 0,
+    };
+    if (walletForm.is_default) {
+      await supabase.from('wallets').update({ is_default: false }).eq('user_id', user.id);
+    }
+    if (editWallet) {
+      await supabase.from('wallets').update(payload).eq('id', editWallet.id);
+    } else {
+      await supabase.from('wallets').insert({ ...payload, user_id: user.id });
+    }
+    setWalletSaving(false);
+    setAddWalletVisible(false);
+    setEditWallet(null);
+    load();
+  }
+
+  function handleDeleteWallet() {
+    if (!editWallet) return;
+    setConfirmDeleteWallet(() => async () => {
+      await supabase.from('wallets').delete().eq('id', editWallet.id);
+      setEditWallet(null);
+      load();
+    });
+  }
+
   const hasActiveFilters = !!(search || typeFilter !== 'all' || walletFilter || categoryFilter || labelFilter);
 
   const filtered = useMemo(() => {
@@ -267,32 +345,47 @@ export default function TransactionsScreen() {
 
       {/* Wallets tab */}
       {activeTab === 'wallets' && (
-        <ScrollView
-          contentContainerStyle={[styles.walletsList, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          {wallets.map((w) => {
-            const balance = walletBalances.get(w.id) ?? 0;
-            const balColor = balance >= 0 ? colors.income : colors.expense;
-            return (
-              <View key={w.id} style={[styles.walletCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <View style={[styles.walletColorBar, { backgroundColor: w.color || colors.muted }]} />
-                <View style={styles.walletIcon}>
-                  {w.icon
-                    ? <Text style={{ fontSize: 22 }}>{w.icon}</Text>
-                    : <View style={[styles.walletIconFallback, { backgroundColor: (w.color || colors.muted) + '33' }]} />}
-                </View>
-                <View style={styles.walletInfo}>
-                  <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
-                  <Text style={[styles.walletCurrency, { color: colors.muted }]}>{w.currency}</Text>
-                </View>
-                <Text style={[styles.walletBalance, { color: balColor }]}>
-                  {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), w.currency as any)}
-                </Text>
-              </View>
-            );
-          })}
-        </ScrollView>
+        <>
+          <View style={[styles.walletTabHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity
+              onPress={() => { setWalletForm(DEFAULT_WALLET_FORM); setAddWalletVisible(true); }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="add-circle-outline" size={26} color={colors.accent} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            contentContainerStyle={[styles.walletsList, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          >
+            {wallets.map((w) => {
+              const balance = walletBalances.get(w.id) ?? 0;
+              const balColor = balance >= 0 ? colors.income : colors.expense;
+              return (
+                <TouchableOpacity
+                  key={w.id}
+                  activeOpacity={0.7}
+                  onPress={() => openEditWallet(w)}
+                  style={[styles.walletCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={[styles.walletColorBar, { backgroundColor: w.color || colors.muted }]} />
+                  <View style={styles.walletIcon}>
+                    {w.icon
+                      ? <Text style={{ fontSize: 22 }}>{w.icon}</Text>
+                      : <View style={[styles.walletIconFallback, { backgroundColor: (w.color || colors.muted) + '33' }]} />}
+                  </View>
+                  <View style={styles.walletInfo}>
+                    <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
+                    <Text style={[styles.walletCurrency, { color: colors.muted }]}>{w.currency}</Text>
+                  </View>
+                  <Text style={[styles.walletBalance, { color: balColor }]}>
+                    {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), w.currency as any)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </>
       )}
 
       {/* Transactions tab */}
@@ -469,7 +562,94 @@ export default function TransactionsScreen() {
         success={toast.success}
         bottomOffset={TAB_BAR_HEIGHT + bottom + 12}
       />
+
+      {/* Add wallet modal */}
+      <BottomModal visible={addWalletVisible} onClose={() => setAddWalletVisible(false)} title="Add account">
+        <WalletFormFields form={walletForm} setField={setWalletField} colors={colors} />
+        <AppButton onPress={handleSaveWallet} loading={walletSaving} fullWidth>Save</AppButton>
+      </BottomModal>
+
+      {/* Edit wallet modal */}
+      <BottomModal visible={!!editWallet} onClose={() => setEditWallet(null)} title="Edit account">
+        <WalletFormFields form={walletForm} setField={setWalletField} colors={colors} />
+        <View style={styles.modalActions}>
+          <AppButton onPress={handleDeleteWallet} variant="danger" style={{ flex: 1 }}>Delete</AppButton>
+          <AppButton onPress={handleSaveWallet} loading={walletSaving} style={{ flex: 2 }}>Save</AppButton>
+        </View>
+      </BottomModal>
+
+      <ConfirmModal
+        visible={!!confirmDeleteWallet}
+        title="Delete account"
+        message={`Delete "${editWallet?.name}"?`}
+        confirmLabel="Delete"
+        onConfirm={() => { confirmDeleteWallet?.(); setConfirmDeleteWallet(null); }}
+        onCancel={() => setConfirmDeleteWallet(null)}
+      />
     </SafeAreaView>
+  );
+}
+
+function WalletFormFields({
+  form,
+  setField,
+  colors,
+}: {
+  form: WalletForm;
+  setField: <K extends keyof WalletForm>(k: K, v: WalletForm[K]) => void;
+  colors: any;
+}) {
+  return (
+    <>
+      <AppInput
+        label="Name"
+        value={form.name}
+        onChangeText={(v) => setField('name', v)}
+        placeholder="Account name"
+      />
+      <AppInput
+        label="Icon (emoji)"
+        value={form.icon}
+        onChangeText={(v) => setField('icon', v)}
+        placeholder="💰"
+      />
+      <AppInput
+        label="Starting balance"
+        value={form.starting_balance}
+        onChangeText={(v) => setField('starting_balance', v)}
+        keyboardType="decimal-pad"
+        placeholder="0"
+      />
+      <View style={styles.formRow}>
+        <Text style={{ color: colors.muted, fontSize: 14 }}>Currency</Text>
+        <View style={styles.chips}>
+          {CURRENCIES.map((c) => (
+            <TouchableOpacity
+              key={c}
+              style={[
+                styles.chip,
+                { borderColor: form.currency === c ? colors.accent : colors.border },
+                form.currency === c && { backgroundColor: colors.accent + '22' },
+              ]}
+              onPress={() => setField('currency', c)}
+            >
+              <Text style={{ color: form.currency === c ? colors.accent : colors.text, fontFamily: 'Figtree_600SemiBold' }}>
+                {c}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+      <View style={[styles.formRow, { justifyContent: 'space-between' }]}>
+        <Text style={{ color: colors.muted, fontSize: 14 }}>Set as default</Text>
+        <Switch
+          value={form.is_default}
+          onValueChange={(v) => setField('is_default', v)}
+          trackColor={{ true: colors.accent }}
+          thumbColor="#fff"
+        />
+      </View>
+    </>
   );
 }
 
@@ -538,7 +718,18 @@ const styles = StyleSheet.create({
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   tabBtnText: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
 
+  walletTabHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   walletsList: { padding: 16, gap: 10 },
+  modalActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  formRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  chips: { flexDirection: 'row', gap: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
   walletCard: {
     flexDirection: 'row',
     alignItems: 'center',
