@@ -10,7 +10,6 @@ import {
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
@@ -22,6 +21,7 @@ import AppButton from '@/components/AppButton';
 import BottomModal from '@/components/BottomModal';
 import DatePickerModal from '@/components/DatePickerModal';
 import CategoryPickerModal from '@/components/CategoryPickerModal';
+import ConfirmModal from '@/components/ConfirmModal';
 import { Ionicons } from '@expo/vector-icons';
 import type { RecurringPayment, Wallet, Category, Label, RecurrenceFrequency } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
@@ -79,6 +79,7 @@ export default function RecurringScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editing, setEditing] = useState<RecurringPayment | null>(null);
   const [form, setForm] = useState<EditForm>(EMPTY_FORM);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -320,17 +321,11 @@ export default function RecurringScreen() {
   }
 
   function handleDelete() {
-    Alert.alert('Delete planned payment', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          await supabase.from('recurring_payments').delete().eq('id', editing!.id);
-          setEditing(null);
-          load();
-        },
-      },
-    ]);
+    setConfirmAction(() => async () => {
+      await supabase.from('recurring_payments').delete().eq('id', editing!.id);
+      setEditing(null);
+      load();
+    });
   }
 
   async function handleToggleActive() {
@@ -529,6 +524,14 @@ export default function RecurringScreen() {
         success={toast.success}
         bottomOffset={TAB_BAR_HEIGHT + bottom + 16}
         onUndo={toast.undoable ? handleUndo : undefined}
+      />
+      <ConfirmModal
+        visible={!!confirmAction}
+        title="Delete planned payment"
+        message="This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => { confirmAction?.(); setConfirmAction(null); }}
+        onCancel={() => setConfirmAction(null)}
       />
     </SafeAreaView>
   );

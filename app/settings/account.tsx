@@ -5,9 +5,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
+import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -24,6 +24,7 @@ export default function AccountScreen() {
   const [email, setEmail] = useState('');
   const [savingUsername, setSavingUsername] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -56,18 +57,11 @@ export default function AccountScreen() {
     }
   }
 
-  async function handleSignOut() {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: async () => {
-          await supabase.auth.signOut();
-          router.replace('/(auth)/login');
-        },
-      },
-    ]);
+  function handleSignOut() {
+    setConfirmAction(() => async () => {
+      await supabase.auth.signOut();
+      router.replace('/(auth)/login');
+    });
   }
 
   return (
@@ -141,6 +135,14 @@ export default function AccountScreen() {
         </View>
 
       </ScrollView>
+      <ConfirmModal
+        visible={!!confirmAction}
+        title="Sign out"
+        message="Are you sure you want to sign out?"
+        confirmLabel="Sign out"
+        onConfirm={() => { confirmAction?.(); setConfirmAction(null); }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </SafeAreaView>
   );
 }

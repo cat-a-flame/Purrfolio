@@ -5,8 +5,8 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
+import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -36,6 +36,7 @@ export default function CategoriesScreen() {
   const [editCat, setEditCat] = useState<Category | null>(null);
   const [form, setForm] = useState<CatForm>(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -100,18 +101,11 @@ export default function CategoriesScreen() {
 
   async function handleDelete() {
     if (!editCat || editCat.is_default) return;
-    Alert.alert('Delete category', `Delete "${editCat.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await supabase.from('categories').delete().eq('id', editCat.id);
-          setEditCat(null);
-          load();
-        },
-      },
-    ]);
+    setConfirmAction(() => async () => {
+      await supabase.from('categories').delete().eq('id', editCat.id);
+      setEditCat(null);
+      load();
+    });
   }
 
   // Group into parents with children
@@ -201,6 +195,14 @@ export default function CategoriesScreen() {
           <AppButton onPress={handleSave} loading={saving} style={{ flex: 2 }}>Save</AppButton>
         </View>
       </BottomModal>
+      <ConfirmModal
+        visible={!!confirmAction}
+        title="Delete category"
+        message={`Delete "${editCat?.name}"?`}
+        confirmLabel="Delete"
+        onConfirm={() => { confirmAction?.(); setConfirmAction(null); }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </SafeAreaView>
   );
 }

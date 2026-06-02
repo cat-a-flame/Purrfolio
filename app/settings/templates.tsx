@@ -5,8 +5,8 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
+import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -51,6 +51,7 @@ export default function TemplatesScreen() {
   const [editTpl, setEditTpl] = useState<Template | null>(null);
   const [form, setForm] = useState<TemplateForm>(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -156,18 +157,11 @@ export default function TemplatesScreen() {
 
   async function handleDelete() {
     if (!editTpl) return;
-    Alert.alert('Delete template', `Delete "${editTpl.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await supabase.from('templates').delete().eq('id', editTpl.id);
-          setEditTpl(null);
-          load();
-        },
-      },
-    ]);
+    setConfirmAction(() => async () => {
+      await supabase.from('templates').delete().eq('id', editTpl.id);
+      setEditTpl(null);
+      load();
+    });
   }
 
   return (
@@ -239,6 +233,14 @@ export default function TemplatesScreen() {
           <AppButton onPress={handleSave} loading={saving} style={{ flex: 2 }}>Save</AppButton>
         </View>
       </BottomModal>
+      <ConfirmModal
+        visible={!!confirmAction}
+        title="Delete template"
+        message={`Delete "${editTpl?.name}"?`}
+        confirmLabel="Delete"
+        onConfirm={() => { confirmAction?.(); setConfirmAction(null); }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </SafeAreaView>
   );
 }

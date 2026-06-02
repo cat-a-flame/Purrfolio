@@ -5,8 +5,8 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
+import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -28,6 +28,7 @@ export default function LabelsScreen() {
   const [editLabel, setEditLabel] = useState<Label | null>(null);
   const [form, setForm] = useState<LabelForm>(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -69,18 +70,11 @@ export default function LabelsScreen() {
 
   async function handleDelete() {
     if (!editLabel) return;
-    Alert.alert('Delete label', `Delete "${editLabel.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await supabase.from('labels').delete().eq('id', editLabel.id);
-          setEditLabel(null);
-          load();
-        },
-      },
-    ]);
+    setConfirmAction(() => async () => {
+      await supabase.from('labels').delete().eq('id', editLabel.id);
+      setEditLabel(null);
+      load();
+    });
   }
 
   return (
@@ -134,6 +128,14 @@ export default function LabelsScreen() {
           <AppButton onPress={handleSave} loading={saving} style={{ flex: 2 }}>Save</AppButton>
         </View>
       </BottomModal>
+      <ConfirmModal
+        visible={!!confirmAction}
+        title="Delete label"
+        message={`Delete "${editLabel?.name}"?`}
+        confirmLabel="Delete"
+        onConfirm={() => { confirmAction?.(); setConfirmAction(null); }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </SafeAreaView>
   );
 }
