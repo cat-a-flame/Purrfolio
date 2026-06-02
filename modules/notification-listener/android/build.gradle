@@ -1,0 +1,30 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+def expoModulesCorePlugin = new File(
+  providers.exec {
+    workingDir(rootDir)
+    commandLine("node", "-e", "process.stdout.write(require.resolve('expo-modules-core/package.json'))")
+  }.standardOutput.asText.get().trim(),
+  ".."
+)
+if (expoModulesCorePlugin.exists()) {
+  apply from: "${expoModulesCorePlugin}/android/expo-module-core.gradle"
+}
+
+android {
+  compileSdkVersion safeExtGet("compileSdkVersion", 35)
+
+  defaultConfig {
+    minSdkVersion safeExtGet("minSdkVersion", 24)
+    targetSdkVersion safeExtGet("targetSdkVersion", 35)
+  }
+
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  implementation project(':expo-modules-core')
+}

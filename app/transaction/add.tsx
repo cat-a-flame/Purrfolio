@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter, useNavigation } from 'expo-router';
+import { useRouter, useNavigation, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
@@ -60,16 +60,28 @@ export default function AddTransactionScreen() {
   const navigation = useNavigation();
   const { bottom } = useSafeAreaInsets();
 
+  const {
+    prefillAmount,
+    prefillCurrency,
+    prefillMerchant,
+    prefillDate,
+  } = useLocalSearchParams<{
+    prefillAmount?: string;
+    prefillCurrency?: string;
+    prefillMerchant?: string;
+    prefillDate?: string;
+  }>();
+
   const [form, setForm] = useState<Form>({
     type: 'expense',
-    amount: '',
+    amount: prefillAmount ?? '',
     to_amount: '',
     wallet_id: '',
     to_wallet_id: '',
     category_id: '',
-    date: todayInputDate(),
+    date: prefillDate ?? todayInputDate(),
     notes: '',
-    payer: '',
+    payer: prefillMerchant ?? '',
     labelIds: [],
   });
 
@@ -84,8 +96,8 @@ export default function AddTransactionScreen() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showToWalletModal, setShowToWalletModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [dateUserSelected, setDateUserSelected] = useState(false);
-  const [moreExpanded, setMoreExpanded] = useState(false);
+  const [dateUserSelected, setDateUserSelected] = useState(!!prefillDate);
+  const [moreExpanded, setMoreExpanded] = useState(!!prefillMerchant);
 
   // which amount field the numpad is targeting (transfer mode)
   const [activeField, setActiveField] = useState<'amount' | 'to_amount'>('amount');

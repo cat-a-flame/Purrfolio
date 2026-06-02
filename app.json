@@ -20,7 +20,8 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
       ]
     },
     "web": {
@@ -29,6 +30,7 @@
     },
     "plugins": [
       "expo-router",
+      "./modules/notification-listener/plugin/index.js",
       "expo-font",
       "expo-local-authentication",
       [
