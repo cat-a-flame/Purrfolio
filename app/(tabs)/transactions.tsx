@@ -48,7 +48,7 @@ type PanelView = 'main' | 'type' | 'account' | 'category' | 'label';
 export default function TransactionsScreen() {
   const colors = useTheme();
   const router = useRouter();
-  const { bottom } = useSafeAreaInsets();
+  const { bottom, top } = useSafeAreaInsets();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -477,11 +477,11 @@ export default function TransactionsScreen() {
         <Animated.View
           style={[
             styles.filterPanel,
-            { backgroundColor: colors.bg, transform: [{ translateX: panelAnim }] },
+            { backgroundColor: colors.bg, transform: [{ translateX: panelAnim }], paddingTop: top },
           ]}
         >
-            {/* Panel header */}
-            <SafeAreaView edges={['top', 'right']} style={{ flex: 1 }}>
+            {/* Panel header — no SafeAreaView to avoid vertical shift during animation */}
+            <View style={{ flex: 1 }}>
               <View style={[styles.panelHeader, { borderBottomColor: colors.border }]}>
                 {panelView !== 'main' ? (
                   <TouchableOpacity onPress={() => setPanelView('main')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -720,7 +720,7 @@ export default function TransactionsScreen() {
                   <Text style={styles.showResultsText}>Filter</Text>
                 </TouchableOpacity>
               </View>
-            </SafeAreaView>
+            </View>
           </Animated.View>
       </Modal>
 
