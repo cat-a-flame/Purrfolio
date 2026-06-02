@@ -82,6 +82,7 @@ export default function RecurringScreen() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [selectedDue, setSelectedDue] = useState<{ payment: RecurringPayment; dueDate: Date } | null>(null);
   const [toast, setToast] = useState<{ visible: boolean; message: string; success: boolean; undoable: boolean }>({ visible: false, message: '', success: true, undoable: false });
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastPay = useRef<{ transactionId: string; paymentId: string; dueDate: string } | null>(null);
@@ -406,9 +407,7 @@ export default function RecurringScreen() {
                     payment={payment}
                     dueDate={dueDate}
                     today={today}
-                    loading={actionLoading === key}
-                    onPay={() => handlePay(payment, dueDate)}
-                    onSkip={() => handleSkip(payment, dueDate)}
+                    onPress={() => setSelectedDue({ payment, dueDate })}
                     colors={colors}
                   />
                 );
@@ -427,9 +426,7 @@ export default function RecurringScreen() {
                     payment={payment}
                     dueDate={dueDate}
                     today={today}
-                    loading={actionLoading === key}
-                    onPay={() => handlePay(payment, dueDate)}
-                    onSkip={() => handleSkip(payment, dueDate)}
+                    onPress={() => setSelectedDue({ payment, dueDate })}
                     colors={colors}
                   />
                 );
@@ -450,9 +447,7 @@ export default function RecurringScreen() {
                     payment={payment}
                     dueDate={dueDate}
                     today={today}
-                    loading={actionLoading === key}
-                    onPay={() => handlePay(payment, dueDate)}
-                    onSkip={() => handleSkip(payment, dueDate)}
+                    onPress={() => setSelectedDue({ payment, dueDate })}
                     colors={colors}
                   />
                 );
@@ -540,6 +535,52 @@ export default function RecurringScreen() {
           isActive={editing.is_active}
         />
       )}
+      {/* Due item action sheet */}
+      <BottomModal
+        visible={!!selectedDue}
+        onClose={() => setSelectedDue(null)}
+        title={selectedDue?.payment.name}
+      >
+        {selectedDue && (() => {
+          const { payment, dueDate } = selectedDue;
+          const key = `${payment.id}|${isoDate(dueDate)}`;
+          const loading = actionLoading === key;
+          const currency = payment.wallet?.currency ?? 'HUF';
+          return (
+            <>
+              <View style={[styles.actionSheetAmount, { borderColor: colors.border }]}>
+                <Text style={[styles.actionSheetAmountLabel, { color: colors.muted }]}>
+                  {dueDate.toLocaleDateString('default', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </Text>
+                <Text style={[styles.actionSheetAmountValue, { color: payment.type === 'income' ? colors.income : colors.expense }]}>
+                  {payment.type === 'income' ? '+' : '−'}{formatCurrency(payment.amount, currency)}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.actionSheetBtn, { backgroundColor: colors.accent }]}
+                onPress={() => { setSelectedDue(null); handlePay(payment, dueDate); }}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                <Text style={styles.actionSheetBtnText}>Mark as paid</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionSheetBtn, styles.actionSheetBtnOutline, { borderColor: colors.border }]}
+                onPress={() => { setSelectedDue(null); handleSkip(payment, dueDate); }}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="close-circle-outline" size={20} color={colors.muted} />
+                <Text style={[styles.actionSheetBtnText, { color: colors.muted }]}>Skip this occurrence</Text>
+              </TouchableOpacity>
+            </>
+          );
+        })()}
+      </BottomModal>
+
       <Toast
         visible={toast.visible}
         message={toast.message}
@@ -554,14 +595,12 @@ export default function RecurringScreen() {
 // ─── DueCard ────────────────────────────────────────────────────────────────
 
 function DueCard({
-  payment, dueDate, today, loading, onPay, onSkip, colors,
+  payment, dueDate, today, onPress, colors,
 }: {
   payment: RecurringPayment;
   dueDate: Date;
   today: Date;
-  loading: boolean;
-  onPay: () => void;
-  onSkip: () => void;
+  onPress: () => void;
   colors: any;
 }) {
   const currency = payment.wallet?.currency ?? 'HUF';
@@ -575,7 +614,11 @@ function DueCard({
           : dueDate.toLocaleDateString('default', { month: 'short', day: 'numeric' });
 
   return (
-    <View style={[styles.dueCard, { backgroundColor: colors.surface }]}>
+    <TouchableOpacity
+      style={[styles.dueCard, { backgroundColor: colors.surface }]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <View style={styles.dueMeta}>
         <View style={[styles.iconBox, { backgroundColor: '#fcf1ff' }]}>
           {payment.category?.icon ? <Text style={styles.dueIcon}>{payment.category.icon}</Text> : null}
@@ -585,30 +628,10 @@ function DueCard({
           <Text style={[styles.dueSub, { color: isOverdue ? colors.danger : isToday ? colors.text : colors.muted }]}>{label}</Text>
         </View>
       </View>
-      <View style={styles.dueRight}>
-        <Text style={[styles.dueAmount, { color: payment.type === 'income' ? colors.income : colors.expense }]}>
-          {payment.type === 'income' ? '+' : '−'}{formatCurrency(payment.amount, currency)}
-        </Text>
-        <View style={styles.dueActions}>
-          <TouchableOpacity
-            style={[styles.skipBtn, { borderColor: colors.border }]}
-            onPress={onSkip}
-            disabled={loading}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="close" size={16} color={colors.muted} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.payBtn, { backgroundColor: colors.accent }]}
-            onPress={onPay}
-            disabled={loading}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="checkmark" size={16} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+      <Text style={[styles.dueAmount, { color: payment.type === 'income' ? colors.income : colors.expense }]}>
+        {payment.type === 'income' ? '+' : '−'}{formatCurrency(payment.amount, currency)}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -1155,17 +1178,21 @@ const styles = StyleSheet.create({
   dueIcon: { fontSize: 20 },
   dueName: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
   dueSub: { fontSize: 12, marginTop: 1 },
-  dueRight: { alignItems: 'flex-end', gap: 6 },
-  dueAmount: { fontSize: 13, fontFamily: 'Figtree_700Bold' },
-  dueActions: { flexDirection: 'row', gap: 6 },
-  skipBtn: {
-    width: 30, height: 30, borderRadius: 15, borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center',
+  dueAmount: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
+
+  // Action sheet
+  actionSheetAmount: {
+    borderWidth: 1, borderRadius: 12, padding: 14,
+    alignItems: 'center', gap: 4, marginBottom: 4,
   },
-  payBtn: {
-    width: 30, height: 30, borderRadius: 15,
-    alignItems: 'center', justifyContent: 'center',
+  actionSheetAmountLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  actionSheetAmountValue: { fontSize: 28, fontFamily: 'Lora_700Bold' },
+  actionSheetBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, borderRadius: 12, paddingVertical: 14,
   },
+  actionSheetBtnOutline: { borderWidth: 1 },
+  actionSheetBtnText: { fontSize: 16, fontFamily: 'Figtree_600SemiBold', color: '#fff' },
   paymentGroup: {
     borderRadius: 12, borderWidth: 1, overflow: 'hidden',
   },
