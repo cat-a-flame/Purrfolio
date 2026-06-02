@@ -648,7 +648,7 @@ function PaymentRow({
       : '';
   return (
     <TouchableOpacity
-      style={[styles.dueCard, { backgroundColor: colors.surface }]}
+      style={[styles.dueCard, { backgroundColor: colors.surface, marginBottom: 12 }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -1121,6 +1121,7 @@ const styles = StyleSheet.create({
   monthNavRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     borderRadius: 12, borderWidth: 1, paddingHorizontal: 4, paddingVertical: 4,
+    marginBottom: 12,
   },
   monthNav: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   monthNavBtn: { padding: 8 },
@@ -1140,7 +1141,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginTop: 8,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   dueCard: {
     flexDirection: 'row',
@@ -1225,7 +1226,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', paddingVertical: 8, gap: 6,
   },
   amountText: { fontSize: 52, fontFamily: 'Lora_400Regular', minWidth: 60, textAlign: 'center' },
-  amountCurrency: { fontSize: 15, fontFamily: 'Figtree_700Bold', marginBottom: 10 },
+  amountCurrency: { fontSize: 15, fontFamily: 'Figtree_700Bold', marginBottom: 22 },
 
   // Row layout
   row: { flexDirection: 'row', gap: 8 },
