@@ -454,8 +454,7 @@ export default function AddTransactionScreen() {
           <>
             {/* Amount display */}
             <View style={styles.amountSection}>
-              <Text style={[styles.amountLabel, { color: colors.muted }]}>AMOUNT</Text>
-              <View style={[styles.amountDisplay, { borderBottomColor: accentColor }]}>
+              <View style={styles.amountDisplay}>
                 <Text
                   style={[styles.amountText, { color: form.amount ? colors.text : colors.placeholder }]}
                   numberOfLines={1}
@@ -463,7 +462,7 @@ export default function AddTransactionScreen() {
                 >
                   {formatAmountDisplay(form.amount) || '0'}
                 </Text>
-                {currency ? <Text style={[styles.currencyLabel, { color: accentColor }]}>{currency}</Text> : null}
+                {currency ? <Text style={[styles.currencyLabel, { color: colors.muted }]}>{currency}</Text> : null}
               </View>
             </View>
 
@@ -478,16 +477,16 @@ export default function AddTransactionScreen() {
             {/* Account + Date side by side */}
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
+                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowDatePicker(true)}>
+                  <Ionicons name="calendar" size={15} color={colors.muted} style={{ marginRight: 6 }} />
+                  <Text style={[styles.pickerBtnText, { color: colors.text }]} numberOfLines={1}>{dateLabel}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ flex: 1 }}>
                 <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
                   <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
                     {selectedWallet ? `${selectedWallet.icon ?? ''}${selectedWallet.icon ? ' ' : ''}${selectedWallet.name}` : 'Select wallet…'}
                   </Text>
-                </TouchableOpacity>
-              </View>
-              <View style={{ flex: 1 }}>
-                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowDatePicker(true)}>
-                  <Ionicons name="calendar" size={15} color={colors.muted} style={{ marginRight: 6 }} />
-                  <Text style={[styles.pickerBtnText, { color: colors.text }]} numberOfLines={1}>{dateLabel}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -658,7 +657,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'center',
     paddingVertical: 8,
-    borderBottomWidth: 2,
     gap: 6,
   },
   amountText: {
