@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useNavigation } from 'expo-router';
@@ -17,6 +16,7 @@ import BottomModal from '@/components/BottomModal';
 import DatePickerModal from '@/components/DatePickerModal';
 import CategoryPickerModal from '@/components/CategoryPickerModal';
 import NumPad from '@/components/NumPad';
+import DiscardModal from '@/components/DiscardModal';
 import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { todayInputDate } from '@/lib/utils';
@@ -91,19 +91,13 @@ export default function AddTransactionScreen() {
   const [activeField, setActiveField] = useState<'amount' | 'to_amount'>('amount');
 
   const isDirty = form.amount !== '' || form.notes !== '' || form.payer !== '' || form.labelIds.length > 0;
+  const [pendingAction, setPendingAction] = useState<any>(null);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
       if (!isDirty) return;
       e.preventDefault();
-      Alert.alert(
-        'Discard changes?',
-        'You have unsaved changes. Are you sure you want to discard them?',
-        [
-          { text: 'Keep editing', style: 'cancel' },
-          { text: 'Discard', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
-        ]
-      );
+      setPendingAction(e.data.action);
     });
     return unsubscribe;
   }, [navigation, isDirty]);
@@ -609,6 +603,12 @@ export default function AddTransactionScreen() {
         categories={filteredCategories}
         selectedId={form.category_id}
         onSelect={(id) => setField('category_id', id)}
+      />
+
+      <DiscardModal
+        visible={!!pendingAction}
+        onKeep={() => setPendingAction(null)}
+        onDiscard={() => { navigation.dispatch(pendingAction); setPendingAction(null); }}
       />
 
       <BottomModal visible={showLabelModal} onClose={() => setShowLabelModal(false)} title="Select labels">

@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import DiscardModal from '@/components/DiscardModal';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -129,18 +130,13 @@ export default function EditTransactionScreen() {
     form.labelIds.join(',') !== initialForm.labelIds.join(',')
   );
 
+  const [pendingAction, setPendingAction] = useState<any>(null);
+
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
       if (!isDirty) return;
       e.preventDefault();
-      Alert.alert(
-        'Discard changes?',
-        'You have unsaved changes. Are you sure you want to discard them?',
-        [
-          { text: 'Keep editing', style: 'cancel' },
-          { text: 'Discard', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
-        ]
-      );
+      setPendingAction(e.data.action);
     });
     return unsubscribe;
   }, [navigation, isDirty]);
@@ -462,6 +458,12 @@ export default function EditTransactionScreen() {
           </AppButton>
         </View>
       </View>
+
+      <DiscardModal
+        visible={!!pendingAction}
+        onKeep={() => setPendingAction(null)}
+        onDiscard={() => { navigation.dispatch(pendingAction); setPendingAction(null); }}
+      />
 
       {/* Modals */}
       <DatePickerModal
