@@ -675,7 +675,7 @@ function PaymentModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const isDirty = onDelete != null && JSON.stringify(form) !== JSON.stringify(initialFormRef.current);
+  const isDirty = JSON.stringify(form) !== JSON.stringify(initialFormRef.current);
 
   function handleClose() {
     if (isDirty) { setConfirmKind('close'); return; }
