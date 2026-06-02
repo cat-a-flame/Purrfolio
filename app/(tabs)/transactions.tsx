@@ -30,7 +30,7 @@ import { Events } from '@/lib/events';
 import { useRouter } from 'expo-router';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const PANEL_WIDTH = Math.round(SCREEN_WIDTH * 0.5);
+const PANEL_WIDTH = Math.round(SCREEN_WIDTH * 0.85);
 
 function defaultPeriod(): PeriodValue {
   const now = new Date();
@@ -721,7 +721,7 @@ export default function TransactionsScreen() {
                   onPress={() => closeFilterPanel(true)}
                   style={[styles.showResultsBtn, { backgroundColor: colors.accent }]}
                 >
-                  <Text style={styles.showResultsText}>Filter ({draftFilteredCount})</Text>
+                  <Text style={styles.showResultsText}>Filter</Text>
                 </TouchableOpacity>
               </View>
             </SafeAreaView>
