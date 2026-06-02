@@ -20,7 +20,7 @@ import BottomModal from '@/components/BottomModal';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { Ionicons } from '@expo/vector-icons';
 import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
-import { groupByDate, formatDate, formatCurrency } from '@/lib/utils';
+import { groupByDate, formatDayHeader, formatCurrency } from '@/lib/utils';
 import SkeletonBox from '@/components/SkeletonBox';
 import Toast from '@/components/Toast';
 import { Events } from '@/lib/events';
@@ -282,7 +282,7 @@ export default function TransactionsScreen() {
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
           if (item.kind === 'header') {
-            return <Text style={[styles.dateHeader, { color: colors.muted }]}>{formatDate(item.date)}</Text>;
+            return <Text style={[styles.dateHeader, { color: colors.muted }]}>{formatDayHeader(item.date)}</Text>;
           }
           return (
             <TransactionRow
