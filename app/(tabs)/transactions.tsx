@@ -8,7 +8,6 @@ import {
   RefreshControl,
   TouchableOpacity,
   TextInput,
-  Switch,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
@@ -20,10 +19,7 @@ import CategoryPickerModal from '@/components/CategoryPickerModal';
 import BottomModal from '@/components/BottomModal';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { Ionicons } from '@expo/vector-icons';
-import type { Transaction, Wallet, Category, Label, TransactionType, Currency } from '@/lib/types';
-import AppInput from '@/components/AppInput';
-import AppButton from '@/components/AppButton';
-import ConfirmModal from '@/components/ConfirmModal';
+import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { groupByDate, formatDayHeader, formatCurrency } from '@/lib/utils';
 import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
 import SkeletonBox from '@/components/SkeletonBox';
@@ -34,23 +30,6 @@ import { useRouter } from 'expo-router';
 type TypeFilter = 'all' | TransactionType;
 type ModalKind = 'type' | 'wallet' | 'label' | null;
 
-const CURRENCIES: Currency[] = ['HUF', 'USD', 'EUR'];
-
-type WalletForm = {
-  name: string;
-  currency: Currency;
-  icon: string;
-  is_default: boolean;
-  starting_balance: string;
-};
-
-const DEFAULT_WALLET_FORM: WalletForm = {
-  name: '',
-  currency: 'HUF',
-  icon: '💰',
-  is_default: false,
-  starting_balance: '0',
-};
 
 function defaultPeriod(): PeriodValue {
   const now = new Date();
@@ -141,12 +120,6 @@ export default function TransactionsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', success: true });
 
-  const [addWalletVisible, setAddWalletVisible] = useState(false);
-  const [editWallet, setEditWallet] = useState<Wallet | null>(null);
-  const [walletForm, setWalletForm] = useState<WalletForm>(DEFAULT_WALLET_FORM);
-  const [walletSaving, setWalletSaving] = useState(false);
-  const [confirmDeleteWallet, setConfirmDeleteWallet] = useState<(() => void) | null>(null);
-
   const load = useCallback(async (silent = false) => {
     if (!silent) {
       setLoading(true);
@@ -218,6 +191,10 @@ export default function TransactionsScreen() {
     });
   }, []);
 
+  useEffect(() => {
+    return Events.on('wallet-saved', () => { loadRef.current(true); });
+  }, []);
+
   function resetFilters() {
     setSearch('');
     setTypeFilter('all');
@@ -225,56 +202,6 @@ export default function TransactionsScreen() {
     setCategoryFilter('');
     setLabelFilter('');
     setPeriod(defaultPeriod());
-  }
-
-  function openEditWallet(w: Wallet) {
-    setEditWallet(w);
-    setWalletForm({
-      name: w.name,
-      currency: w.currency,
-      icon: w.icon ?? '💰',
-      is_default: w.is_default,
-      starting_balance: String(w.starting_balance ?? 0),
-    });
-  }
-
-  function setWalletField<K extends keyof WalletForm>(key: K, value: WalletForm[K]) {
-    setWalletForm((f) => ({ ...f, [key]: value }));
-  }
-
-  async function handleSaveWallet() {
-    if (!walletForm.name.trim()) return;
-    setWalletSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setWalletSaving(false); return; }
-    const payload = {
-      name: walletForm.name.trim(),
-      currency: walletForm.currency,
-      icon: walletForm.icon,
-      is_default: walletForm.is_default,
-      starting_balance: parseFloat(walletForm.starting_balance) || 0,
-    };
-    if (walletForm.is_default) {
-      await supabase.from('wallets').update({ is_default: false }).eq('user_id', user.id);
-    }
-    if (editWallet) {
-      await supabase.from('wallets').update(payload).eq('id', editWallet.id);
-    } else {
-      await supabase.from('wallets').insert({ ...payload, user_id: user.id });
-    }
-    setWalletSaving(false);
-    setAddWalletVisible(false);
-    setEditWallet(null);
-    load();
-  }
-
-  function handleDeleteWallet() {
-    if (!editWallet) return;
-    setConfirmDeleteWallet(() => async () => {
-      await supabase.from('wallets').delete().eq('id', editWallet.id);
-      setEditWallet(null);
-      load();
-    });
   }
 
   const hasActiveFilters = !!(search || typeFilter !== 'all' || walletFilter || categoryFilter || labelFilter);
@@ -348,7 +275,7 @@ export default function TransactionsScreen() {
         <>
           <View style={[styles.walletTabHeader, { borderBottomColor: colors.border }]}>
             <TouchableOpacity
-              onPress={() => { setWalletForm(DEFAULT_WALLET_FORM); setAddWalletVisible(true); }}
+              onPress={() => router.push('/wallet/new')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Ionicons name="add-circle-outline" size={26} color={colors.accent} />
@@ -365,7 +292,7 @@ export default function TransactionsScreen() {
                 <TouchableOpacity
                   key={w.id}
                   activeOpacity={0.7}
-                  onPress={() => openEditWallet(w)}
+                  onPress={() => router.push(`/wallet/${w.id}`)}
                   style={[styles.walletCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
                   <View style={[styles.walletColorBar, { backgroundColor: w.color || colors.muted }]} />
@@ -570,111 +497,10 @@ export default function TransactionsScreen() {
         bottomOffset={TAB_BAR_HEIGHT + bottom + 12}
       />
 
-      {/* Add wallet modal */}
-      <BottomModal visible={addWalletVisible} onClose={() => setAddWalletVisible(false)} title="Add account">
-        <WalletFormFields form={walletForm} setField={setWalletField} colors={colors} />
-        <AppButton onPress={handleSaveWallet} loading={walletSaving} fullWidth>Save</AppButton>
-      </BottomModal>
-
-      {/* Edit wallet modal */}
-      <BottomModal
-        visible={!!editWallet}
-        onClose={() => setEditWallet(null)}
-        title="Edit account"
-        rightAction={
-          <TouchableOpacity onPress={handleDeleteWallet} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="trash-outline" size={22} color={colors.danger} />
-          </TouchableOpacity>
-        }
-      >
-        <WalletFormFields form={walletForm} setField={setWalletField} colors={colors} />
-        <AppButton onPress={handleSaveWallet} loading={walletSaving} fullWidth>Save</AppButton>
-      </BottomModal>
-
-      <ConfirmModal
-        visible={!!confirmDeleteWallet}
-        title="Delete account"
-        message={`Delete "${editWallet?.name}"?`}
-        confirmLabel="Delete"
-        onConfirm={() => { confirmDeleteWallet?.(); setConfirmDeleteWallet(null); }}
-        onCancel={() => setConfirmDeleteWallet(null)}
-      />
     </SafeAreaView>
   );
 }
 
-function WalletFormFields({
-  form,
-  setField,
-  colors,
-}: {
-  form: WalletForm;
-  setField: <K extends keyof WalletForm>(k: K, v: WalletForm[K]) => void;
-  colors: any;
-}) {
-  const [currencyPickerVisible, setCurrencyPickerVisible] = useState(false);
-
-  return (
-    <>
-      <View style={styles.iconNameRow}>
-        <AppInput
-          label="Icon"
-          value={form.icon}
-          onChangeText={(v) => setField('icon', v)}
-          placeholder="💰"
-          style={{ width: 72 }}
-        />
-        <View style={{ flex: 1 }}>
-          <AppInput
-            label="Name"
-            value={form.name}
-            onChangeText={(v) => setField('name', v)}
-            placeholder="Account name"
-          />
-        </View>
-      </View>
-      <AppInput
-        label="Starting balance"
-        value={form.starting_balance}
-        onChangeText={(v) => setField('starting_balance', v)}
-        keyboardType="decimal-pad"
-        placeholder="0"
-      />
-      <View style={[styles.formRow, { justifyContent: 'space-between' }]}>
-        <Text style={{ color: colors.muted, fontSize: 14 }}>Currency</Text>
-        <TouchableOpacity
-          onPress={() => setCurrencyPickerVisible(true)}
-          style={[styles.currencyDropdown, { borderColor: colors.border, backgroundColor: colors.bg }]}
-        >
-          <Text style={{ color: colors.text, fontFamily: 'Figtree_600SemiBold', fontSize: 14 }}>{form.currency}</Text>
-          <Ionicons name="chevron-down" size={14} color={colors.muted} />
-        </TouchableOpacity>
-      </View>
-      <View style={[styles.formRow, { justifyContent: 'space-between' }]}>
-        <Text style={{ color: colors.muted, fontSize: 14 }}>Set as default</Text>
-        <Switch
-          value={form.is_default}
-          onValueChange={(v) => setField('is_default', v)}
-          trackColor={{ true: colors.accent }}
-          thumbColor="#fff"
-        />
-      </View>
-
-      <BottomModal visible={currencyPickerVisible} onClose={() => setCurrencyPickerVisible(false)} title="Currency">
-        {CURRENCIES.map((c) => (
-          <TouchableOpacity
-            key={c}
-            style={[styles.currencyRow, { borderBottomColor: colors.border }, form.currency === c && { backgroundColor: colors.accent + '11' }]}
-            onPress={() => { setField('currency', c); setCurrencyPickerVisible(false); }}
-          >
-            <Text style={[styles.currencyRowText, { color: form.currency === c ? colors.accent : colors.text }]}>{c}</Text>
-            {form.currency === c && <Ionicons name="checkmark" size={18} color={colors.accent} />}
-          </TouchableOpacity>
-        ))}
-      </BottomModal>
-    </>
-  );
-}
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
@@ -752,26 +578,6 @@ const styles = StyleSheet.create({
   walletNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   defaultBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
   defaultBadgeText: { fontSize: 11, fontFamily: 'Figtree_600SemiBold' },
-  formRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconNameRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
-  currencyDropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  currencyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  currencyRowText: { fontSize: 15 },
   walletCard: {
     flexDirection: 'row',
     alignItems: 'center',
