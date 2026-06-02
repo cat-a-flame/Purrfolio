@@ -10,6 +10,7 @@ import {
   TextInput,
   Animated,
   Dimensions,
+  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
@@ -303,8 +304,7 @@ export default function TransactionsScreen() {
   const filterCount = typeFilters.length + walletFilters.length + categoryFilters.length + labelFilters.length;
 
   return (
-    <View style={[styles.safe, { backgroundColor: colors.bg }]}>
-    <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+    <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <AppHeader title="Overview" />
 
       {/* Tab switcher */}
@@ -476,20 +476,22 @@ export default function TransactionsScreen() {
         success={toast.success}
         bottomOffset={TAB_BAR_HEIGHT + bottom + 12}
       />
-    </SafeAreaView>
 
-    {/* Filter panel — rendered outside SafeAreaView to avoid Modal presentation artifacts */}
-    {filterPanelVisible && (
-      <>
-        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.overlay, opacity: fadeAnim }]} pointerEvents="none" />
-        <TouchableOpacity style={[StyleSheet.absoluteFill, { right: PANEL_WIDTH }]} activeOpacity={1} onPress={() => closeFilterPanel(false)} />
+      {/* Filter panel — Modal mirroring AppHeader drawer pattern */}
+      <Modal visible={filterPanelVisible} transparent animationType="none" onRequestClose={() => closeFilterPanel(false)}>
         <Animated.View
-          style={[
-            styles.filterPanel,
-            { backgroundColor: colors.bg, transform: [{ translateX: panelAnim }], paddingTop: top },
-          ]}
-        >
-            <View style={{ flex: 1 }}>
+          style={[StyleSheet.absoluteFill, { backgroundColor: colors.overlay, opacity: fadeAnim }]}
+          pointerEvents="none"
+        />
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => closeFilterPanel(false)} />
+          <Animated.View
+            style={[
+              styles.filterPanel,
+              { backgroundColor: colors.bg, borderLeftWidth: 1, borderLeftColor: colors.border, transform: [{ translateX: panelAnim }] },
+            ]}
+          >
+            <View style={{ flex: 1, paddingTop: top || 16 }}>
               <View style={[styles.panelHeader, { borderBottomColor: colors.border }]}>
                 {panelView !== 'main' ? (
                   <TouchableOpacity onPress={() => setPanelView('main')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -730,9 +732,9 @@ export default function TransactionsScreen() {
               </View>
             </View>
           </Animated.View>
-      </>
-    )}
-    </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
@@ -828,10 +830,6 @@ const styles = StyleSheet.create({
 
   // Filter panel
   filterPanel: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    right: 0,
     width: PANEL_WIDTH,
     elevation: 24,
     shadowColor: '#000',
