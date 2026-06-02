@@ -329,7 +329,7 @@ export default function TransactionsScreen() {
       {/* Wallets tab */}
       {activeTab === 'wallets' && (
         <>
-          <View style={[styles.walletTabHeader, { borderBottomColor: colors.border, paddingTop: 16}]}>
+          <View style={[styles.walletTabHeader, { paddingTop: 16 }]}>
             <TouchableOpacity
               onPress={() => router.push('/wallet/new')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -349,9 +349,9 @@ export default function TransactionsScreen() {
                   key={w.id}
                   activeOpacity={0.7}
                   onPress={() => router.push(`/wallet/${w.id}` as any)}
-                  style={[styles.walletCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  style={[styles.walletCard, { backgroundColor: colors.surface }]}
                 >
-                  <View style={styles.walletIcon}>
+                  <View style={[styles.walletIcon, { backgroundColor: '#fcf1ff' }]}>
                     {w.icon
                       ? <Text style={{ fontSize: 22 }}>{w.icon}</Text>
                       : <View style={[styles.walletIconFallback, { backgroundColor: colors.border }]} />}
@@ -359,14 +359,14 @@ export default function TransactionsScreen() {
                   <View style={styles.walletInfo}>
                     <View style={styles.walletNameRow}>
                       <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
-                      {w.is_default && (
-                        <View style={[styles.defaultBadge, { backgroundColor: colors.accent + '22' }]}>
-                          <Text style={[styles.defaultBadgeText, { color: colors.accent }]}>Default</Text>
-                        </View>
-                      )}
                     </View>
                     <Text style={[styles.walletCurrency, { color: colors.muted }]}>{w.currency}</Text>
                   </View>
+                  {w.is_default && (
+                    <View style={[styles.defaultBadge, { backgroundColor: colors.accent + '22', marginRight: 16 }]}>
+                      <Text style={[styles.defaultBadgeText, { color: colors.accent }]}>Default</Text>
+                    </View>
+                  )}
                   <Text style={[styles.walletBalance, { color: balColor }]}>
                     {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), w.currency as any)}
                   </Text>
@@ -496,8 +496,8 @@ export default function TransactionsScreen() {
                 <Text style={[styles.panelTitle, { color: colors.text }]}>
                   {panelView === 'main' ? 'Filters' :
                     panelView === 'type' ? 'Type' :
-                    panelView === 'account' ? 'Account' :
-                    panelView === 'category' ? 'Category' : 'Label'}
+                      panelView === 'account' ? 'Account' :
+                        panelView === 'category' ? 'Category' : 'Label'}
                 </Text>
                 <View style={{ width: 22 }} />
               </View>
@@ -799,9 +799,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  walletsList: { padding: 16, gap: 10 },
+  walletsList: { padding: 16, gap: 16 },
   walletNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   defaultBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
   defaultBadgeText: { fontSize: 11, fontFamily: 'Figtree_600SemiBold' },
@@ -809,11 +808,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 12,
-    borderWidth: 1,
-    gap: 12,
-    paddingHorizontal: 14,
+    gap: 8,
+    paddingHorizontal: 12,
   },
-  walletIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  walletIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 10, },
   walletIconFallback: { width: 28, height: 28, borderRadius: 8 },
   walletInfo: { flex: 1, paddingVertical: 14, gap: 2 },
   walletName: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
