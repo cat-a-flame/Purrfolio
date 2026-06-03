@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { groupByDate, formatDayHeader, formatCurrency } from '@/lib/utils';
 import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import { fetchWalletBalanceSums } from '@/lib/fetchWalletBalanceSums';
 import SkeletonBox from '@/components/SkeletonBox';
 import Toast from '@/components/Toast';
 import { Events } from '@/lib/events';
@@ -89,7 +90,7 @@ export default function TransactionsScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: w }, { data: t }, { data: c }, { data: l }, { data: allTxSums }] = await Promise.all([
+    const [{ data: w }, { data: t }, { data: c }, { data: l }, allTxSums] = await Promise.all([
       supabase.from('wallets').select('*').eq('user_id', user.id).order('is_default', { ascending: false }),
       supabase
         .from('transactions')
@@ -102,7 +103,7 @@ export default function TransactionsScreen() {
         .limit(10000),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
       supabase.from('labels').select('*').eq('user_id', user.id).order('name'),
-      supabase.from('transactions').select('wallet_id, type, amount').eq('user_id', user.id).limit(10000),
+      fetchWalletBalanceSums(user.id),
     ]);
 
     const walletList = w ?? [];
@@ -112,10 +113,8 @@ export default function TransactionsScreen() {
 
     const balMap = new Map<string, number>();
     for (const wl of walletList) {
-      const wTxs = (allTxSums ?? []).filter((tx: any) => tx.wallet_id === wl.id);
-      const inc = wTxs.filter((tx: any) => tx.type === 'income').reduce((s: number, tx: any) => s + tx.amount, 0);
-      const exp = wTxs.filter((tx: any) => tx.type === 'expense').reduce((s: number, tx: any) => s + tx.amount, 0);
-      balMap.set(wl.id, (wl.starting_balance ?? 0) + inc - exp);
+      const sums = allTxSums.get(wl.id) ?? { income: 0, expense: 0 };
+      balMap.set(wl.id, (wl.starting_balance ?? 0) + sums.income - sums.expense);
     }
     setWalletBalances(balMap);
     setTransactions((t ?? []).map((tx: any) => ({

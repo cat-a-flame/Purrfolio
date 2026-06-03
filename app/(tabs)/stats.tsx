@@ -17,6 +17,7 @@ import AppHeader from '@/components/AppHeader';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { formatCurrency } from '@/lib/utils';
 import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import { fetchWalletBalanceSums } from '@/lib/fetchWalletBalanceSums';
 import { generateDueDates, isoDate as recurringIsoDate } from '@/lib/recurringUtils';
 import SkeletonBox from '@/components/SkeletonBox';
 import type { Currency, Wallet } from '@/lib/types';
@@ -177,14 +178,14 @@ export default function StatsScreen() {
 
     const [
       { data: walletRows },
-      { data: allTxSums },
+      allTxSums,
       { data: periodData },
       { data: prevData },
       { data: recurringRows },
       { data: occurrenceRows },
     ] = await Promise.all([
       supabase.from('wallets').select('*').eq('user_id', user.id).order('is_default', { ascending: false }),
-      supabase.from('transactions').select('wallet_id, type, amount').eq('user_id', user.id).limit(10000),
+      fetchWalletBalanceSums(user.id),
       supabase
         .from('transactions')
         .select('type, amount, date, wallet_id, wallet:wallets(currency), category:categories(id, name, icon, color)')
@@ -235,13 +236,10 @@ export default function StatsScreen() {
     setCurrentRates(todayRates);
 
     const walletList = walletRows ?? [];
-    const txSumList = allTxSums ?? [];
     const balanceMap = new Map<string, number>();
     for (const w of walletList) {
-      const wTxs = txSumList.filter((t: any) => t.wallet_id === w.id);
-      const inc = wTxs.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
-      const exp = wTxs.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
-      balanceMap.set(w.id, (w.starting_balance ?? 0) + inc - exp);
+      const sums = allTxSums.get(w.id) ?? { income: 0, expense: 0 };
+      balanceMap.set(w.id, (w.starting_balance ?? 0) + sums.income - sums.expense);
     }
     setWallets(walletList.map((w: any) => ({ ...w, _balance: balanceMap.get(w.id) ?? w.starting_balance ?? 0 })));
     setTxs(periodData ?? []);
