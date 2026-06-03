@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -92,10 +92,11 @@ export default function AddTransactionScreen() {
 
   const isDirty = form.amount !== '' || form.notes !== '' || form.payer !== '' || form.labelIds.length > 0;
   const [pendingAction, setPendingAction] = useState<any>(null);
+  const isSaved = useRef(false);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
-      if (!isDirty) return;
+      if (!isDirty || isSaved.current) return;
       e.preventDefault();
       setPendingAction(e.data.action);
     });
@@ -299,6 +300,7 @@ export default function AddTransactionScreen() {
 
     Events.emit('transaction-saved', { success: true, message: 'Record created.' });
     setLoading(false);
+    isSaved.current = true;
     router.back();
   }
 
