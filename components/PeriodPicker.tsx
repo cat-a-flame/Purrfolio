@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, StyleSheet,
-  ScrollView, TextInput, SafeAreaView, Pressable,
+  ScrollView, Pressable, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/lib/theme';
+import DatePickerModal from './DatePickerModal';
 
 export type PeriodTab = 'months' | 'weeks' | 'years' | 'custom';
 
@@ -71,6 +72,7 @@ export default function PeriodPicker({ value, onChange }: Props) {
   const [wkMonth, setWkMonth]         = useState(now.getMonth());
   const [cfrom, setCfrom]             = useState(value.from);
   const [cto, setCto]                 = useState(value.to);
+  const [datePickerTarget, setDatePickerTarget] = useState<'from' | 'to' | null>(null);
 
   function emit(from: string, to: string, label: string, t: PeriodTab) {
     onChange({ from, to, label, tab: t });
@@ -152,6 +154,7 @@ export default function PeriodPicker({ value, onChange }: Props) {
 
       {/* Picker modal */}
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <Pressable style={s.backdrop} onPress={() => setOpen(false)}>
           <Pressable style={[s.sheet, { backgroundColor: colors.surface }]} onPress={e => e.stopPropagation()}>
 
@@ -296,31 +299,30 @@ export default function PeriodPicker({ value, onChange }: Props) {
             {/* Custom panel */}
             {tab === 'custom' && (
               <View style={s.panel}>
-                <Text style={[s.customHint, { color: colors.muted }]}>Enter dates as YYYY-MM-DD</Text>
                 <View style={s.customFields}>
                   <View style={s.customField}>
                     <Text style={[s.customLabel, { color: colors.muted }]}>From</Text>
-                    <TextInput
-                      style={[s.customInput, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]}
-                      value={cfrom}
-                      onChangeText={setCfrom}
-                      placeholder="2026-01-01"
-                      placeholderTextColor={colors.muted}
-                      keyboardType="numeric"
-                      maxLength={10}
-                    />
+                    <TouchableOpacity
+                      style={[s.customDateBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}
+                      onPress={() => setDatePickerTarget('from')}
+                    >
+                      <Text style={[s.customDateText, { color: cfrom ? colors.text : colors.muted }]}>
+                        {cfrom || 'Select date'}
+                      </Text>
+                      <Ionicons name="calendar-outline" size={16} color={colors.muted} />
+                    </TouchableOpacity>
                   </View>
                   <View style={s.customField}>
                     <Text style={[s.customLabel, { color: colors.muted }]}>To</Text>
-                    <TextInput
-                      style={[s.customInput, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]}
-                      value={cto}
-                      onChangeText={setCto}
-                      placeholder="2026-01-31"
-                      placeholderTextColor={colors.muted}
-                      keyboardType="numeric"
-                      maxLength={10}
-                    />
+                    <TouchableOpacity
+                      style={[s.customDateBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}
+                      onPress={() => setDatePickerTarget('to')}
+                    >
+                      <Text style={[s.customDateText, { color: cto ? colors.text : colors.muted }]}>
+                        {cto || 'Select date'}
+                      </Text>
+                      <Ionicons name="calendar-outline" size={16} color={colors.muted} />
+                    </TouchableOpacity>
                   </View>
                 </View>
                 <TouchableOpacity
@@ -335,7 +337,18 @@ export default function PeriodPicker({ value, onChange }: Props) {
 
           </Pressable>
         </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
+
+      <DatePickerModal
+        visible={datePickerTarget !== null}
+        value={datePickerTarget === 'from' ? cfrom : cto}
+        onConfirm={(date) => {
+          if (datePickerTarget === 'from') setCfrom(date);
+          else setCto(date);
+        }}
+        onClose={() => setDatePickerTarget(null)}
+      />
     </>
   );
 }
@@ -427,17 +440,19 @@ function makeStyles(colors: any) {
     },
     weekDayText: { fontSize: 13 },
 
-    customHint: { fontSize: 12, marginBottom: 4 },
     customFields: { flexDirection: 'row', gap: 12 },
     customField: { flex: 1, gap: 6 },
     customLabel: { fontSize: 12, fontFamily: 'Figtree_600SemiBold' },
-    customInput: {
+    customDateBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       borderWidth: 1,
       borderRadius: 8,
       paddingHorizontal: 10,
-      paddingVertical: 8,
-      fontSize: 14,
+      paddingVertical: 10,
     },
+    customDateText: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
     applyBtn: {
       paddingVertical: 12,
       borderRadius: 10,
