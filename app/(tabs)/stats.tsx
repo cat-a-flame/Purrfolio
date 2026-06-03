@@ -214,7 +214,10 @@ export default function StatsScreen() {
         .lte('due_date', period.to),
     ]);
 
+    const hasNonHUF = (walletRows ?? []).some((w: any) => w.currency !== 'HUF');
+
     const fetchRates = async (from: string, to: string): Promise<DailyRates> => {
+      if (!hasNonHUF) return {};
       let rates = await getExchangeRatesForPeriod(from, to);
       if (Object.keys(rates).length === 0) {
         const current = await getExchangeRates();
@@ -225,7 +228,7 @@ export default function StatsScreen() {
     const [periodRates, prevRates, todayRates] = await Promise.all([
       fetchRates(period.from, period.to),
       fetchRates(prevRange.from, prevRange.to),
-      getExchangeRates(),
+      hasNonHUF ? getExchangeRates() : Promise.resolve({}),
     ]);
     setDailyRates(periodRates);
     setPrevDailyRates(prevRates);
