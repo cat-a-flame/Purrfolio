@@ -518,31 +518,27 @@ export default function StatsScreen() {
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.muted }]}>BALANCE BY CURRENCY</Text>
             <Text style={[styles.currencySubtitle, { color: colors.muted }]}>Current total across all wallets</Text>
-            {(() => {
-              const maxHUF = Math.max(...balanceByCurrency.map(d => Math.abs(d.balanceHUF)), 1);
-              return balanceByCurrency.map(({ currency, balance, balanceHUF }, i) => {
-                const pct = (Math.abs(balanceHUF) / maxHUF) * 100;
-                const barColor = balance >= 0 ? colors.income : colors.expense;
-                return (
-                  <View
-                    key={currency}
-                    style={[styles.currencyRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
-                  >
-                    <View style={styles.currencyRowInner}>
-                      <View style={styles.currencyTop}>
-                        <Text style={[styles.currencyCode, { color: colors.text }]}>{currency}</Text>
-                        <Text style={[styles.currencyAmount, { color: barColor }]}>
-                          {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), currency as Currency)}
-                        </Text>
-                      </View>
-                      <View style={[styles.barTrack, { backgroundColor: colors.border }]}>
-                        <View style={[styles.barFill, { width: `${pct}%` as any, backgroundColor: barColor }]} />
-                      </View>
-                    </View>
+            {balanceByCurrency.map(({ currency, balance, balanceHUF }, i) => {
+              const amountColor = balance >= 0 ? colors.income : colors.expense;
+              return (
+                <View
+                  key={currency}
+                  style={[styles.currencyRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
+                >
+                  <Text style={[styles.currencyCode, { color: colors.text }]}>{currency}</Text>
+                  <View style={styles.currencyAmountGroup}>
+                    <Text style={[styles.currencyAmount, { color: amountColor }]}>
+                      {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), currency as Currency)}
+                    </Text>
+                    {currency !== 'HUF' && (
+                      <Text style={[styles.currencyHUF, { color: colors.muted }]}>
+                        ≈{formatCurrency(Math.abs(balanceHUF), 'HUF')}
+                      </Text>
+                    )}
                   </View>
-                );
-              });
-            })()}
+                </View>
+              );
+            })}
             <View style={{ height: 4 }} />
           </View>
         )}
@@ -683,11 +679,11 @@ const styles = StyleSheet.create({
 
   // Balance by currency
   currencySubtitle: { fontSize: 12, fontFamily: 'Figtree_500Medium', paddingHorizontal: 14, marginTop: -6, marginBottom: 10 },
-  currencyRow: { paddingHorizontal: 14, paddingVertical: 10 },
-  currencyRowInner: { gap: 6 },
-  currencyTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  currencyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10 },
   currencyCode: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
+  currencyAmountGroup: { alignItems: 'flex-end' },
   currencyAmount: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
+  currencyHUF: { fontSize: 12, fontFamily: 'Figtree_400Regular', marginTop: 2 },
 
   // Expense comparison
   compLegendRow: { flexDirection: 'row', gap: 16, paddingHorizontal: 14, paddingBottom: 10 },
