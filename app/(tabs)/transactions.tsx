@@ -305,7 +305,19 @@ export default function TransactionsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AppHeader title="Overview" />
+      <AppHeader
+        title="Overview"
+        rightAction={
+          activeTab === 'wallets' ? (
+            <TouchableOpacity
+              onPress={() => router.push('/wallet/new')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add-circle-outline" size={26} color={colors.accent} />
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
 
       {/* Tab switcher */}
       <View style={[styles.tabStrip, { borderBottomColor: colors.border }]}>
@@ -329,14 +341,6 @@ export default function TransactionsScreen() {
       {/* Wallets tab */}
       {activeTab === 'wallets' && (
         <>
-          <View style={[styles.walletTabHeader, { paddingTop: 16 }]}>
-            <TouchableOpacity
-              onPress={() => router.push('/wallet/new')}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="add-circle-outline" size={26} color={colors.accent} />
-            </TouchableOpacity>
-          </View>
           <ScrollView
             contentContainerStyle={[styles.walletsList, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -796,12 +800,6 @@ const styles = StyleSheet.create({
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12 },
   tabBtnText: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
 
-  walletTabHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
   walletsList: { padding: 16, gap: 16 },
   walletNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   defaultBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
