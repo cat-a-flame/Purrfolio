@@ -109,7 +109,7 @@ export default function AddTransactionScreen() {
       if (!user) return;
 
       const [{ data: w }, { data: c }, { data: l }] = await Promise.all([
-        supabase.from('wallets').select('*').eq('user_id', user.id).order('is_default', { ascending: false }),
+        supabase.from('wallets').select('*').eq('user_id', user.id).neq('is_archived', true).order('is_default', { ascending: false }),
         supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
         supabase.from('labels').select('*').eq('user_id', user.id).order('name'),
       ]);

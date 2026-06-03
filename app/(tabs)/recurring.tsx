@@ -119,7 +119,7 @@ export default function RecurringScreen() {
 
     const [{ data: pmts }, { data: w }, { data: c }, { data: occs }, { data: l }] = await Promise.all([
       supabase.from('recurring_payments').select('*').eq('user_id', user.id).order('name'),
-      supabase.from('wallets').select('*').eq('user_id', user.id),
+      supabase.from('wallets').select('*').eq('user_id', user.id).neq('is_archived', true),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
       supabase.from('recurring_occurrences').select('*').eq('user_id', user.id)
         .gte('due_date', isoDate(wideFrom)).lte('due_date', isoDate(wideTo)),

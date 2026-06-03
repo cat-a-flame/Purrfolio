@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -9,6 +10,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
@@ -19,6 +21,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -67,14 +70,23 @@ export default function LoginScreen() {
             autoComplete="email"
             placeholder="you@example.com"
           />
-          <AppInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            placeholder="••••••••"
-          />
+          <View style={styles.passwordWrapper}>
+            <Text style={[styles.passwordLabel, { color: colors.muted }]}>Password</Text>
+            <View style={[styles.passwordField, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <TextInput
+                style={[styles.passwordInput, { color: colors.text }]}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                placeholder="••••••••"
+                placeholderTextColor={colors.placeholder}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.muted} />
+              </TouchableOpacity>
+            </View>
+          </View>
           <AppButton onPress={handleLogin} loading={loading} fullWidth>
             Sign in
           </AppButton>
@@ -120,4 +132,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
+  passwordWrapper: { gap: 4 },
+  passwordLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium', marginBottom: 2 },
+  passwordField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 42,
+  },
+  passwordInput: { flex: 1, fontSize: 15, padding: 0 },
 });

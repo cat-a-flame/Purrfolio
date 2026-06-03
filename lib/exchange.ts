@@ -47,6 +47,7 @@ export async function getExchangeRates(): Promise<Rates> {
 export async function getExchangeRatesForPeriod(from: string, to: string): Promise<DailyRates> {
   try {
     const res = await fetch(`${BASE}/${from}..${to}?from=HUF&to=EUR,USD`);
+    if (res.status === 404) return {}; // no ECB data for this range (future / holiday-only)
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     const daily: DailyRates = {};
@@ -60,9 +61,6 @@ export async function getExchangeRatesForPeriod(from: string, to: string): Promi
     // Single-date fallback (from === to returns flat rates)
     if (Object.keys(daily).length === 0 && json.date) {
       daily[json.date] = invertRates(raw as Record<string, number>);
-    }
-    if (Object.keys(daily).length === 0) {
-      console.error('[Exchange] getExchangeRatesForPeriod returned empty for', from, '..', to);
     }
     return daily;
   } catch (e) {
