@@ -345,38 +345,57 @@ export default function TransactionsScreen() {
             contentContainerStyle={[styles.walletsList, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           >
-            {wallets.map((w) => {
-              const balance = walletBalances.get(w.id) ?? 0;
-              const balColor = balance >= 0 ? colors.income : colors.expense;
+            {(() => {
+              const active = wallets.filter((w) => !w.is_archived);
+              const archived = wallets.filter((w) => w.is_archived);
+              const renderWallet = (w: typeof wallets[0]) => {
+                const balance = walletBalances.get(w.id) ?? 0;
+                const balColor = w.is_archived ? colors.muted : (balance >= 0 ? colors.income : colors.expense);
+                return (
+                  <TouchableOpacity
+                    key={w.id}
+                    activeOpacity={0.7}
+                    onPress={() => router.push(`/wallet/${w.id}` as any)}
+                    style={[styles.walletCard, { backgroundColor: colors.surface }, w.is_archived && { opacity: 0.6 }]}
+                  >
+                    <View style={[styles.walletIcon, { backgroundColor: '#fcf1ff' }]}>
+                      {w.icon
+                        ? <Text style={{ fontSize: 22 }}>{w.icon}</Text>
+                        : <View style={[styles.walletIconFallback, { backgroundColor: colors.border }]} />}
+                    </View>
+                    <View style={styles.walletInfo}>
+                      <View style={styles.walletNameRow}>
+                        <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
+                      </View>
+                      <Text style={[styles.walletCurrency, { color: colors.muted }]}>{w.currency}</Text>
+                    </View>
+                    {w.is_archived ? (
+                      <View style={[styles.defaultBadge, { backgroundColor: colors.muted + '22', marginRight: 16 }]}>
+                        <Text style={[styles.defaultBadgeText, { color: colors.muted }]}>Archived</Text>
+                      </View>
+                    ) : w.is_default ? (
+                      <View style={[styles.defaultBadge, { backgroundColor: colors.accent + '22', marginRight: 16 }]}>
+                        <Text style={[styles.defaultBadgeText, { color: colors.accent }]}>Default</Text>
+                      </View>
+                    ) : null}
+                    <Text style={[styles.walletBalance, { color: balColor }]}>
+                      {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), w.currency as any)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              };
               return (
-                <TouchableOpacity
-                  key={w.id}
-                  activeOpacity={0.7}
-                  onPress={() => router.push(`/wallet/${w.id}` as any)}
-                  style={[styles.walletCard, { backgroundColor: colors.surface }]}
-                >
-                  <View style={[styles.walletIcon, { backgroundColor: '#fcf1ff' }]}>
-                    {w.icon
-                      ? <Text style={{ fontSize: 22 }}>{w.icon}</Text>
-                      : <View style={[styles.walletIconFallback, { backgroundColor: colors.border }]} />}
-                  </View>
-                  <View style={styles.walletInfo}>
-                    <View style={styles.walletNameRow}>
-                      <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
-                    </View>
-                    <Text style={[styles.walletCurrency, { color: colors.muted }]}>{w.currency}</Text>
-                  </View>
-                  {w.is_default && (
-                    <View style={[styles.defaultBadge, { backgroundColor: colors.accent + '22', marginRight: 16 }]}>
-                      <Text style={[styles.defaultBadgeText, { color: colors.accent }]}>Default</Text>
-                    </View>
+                <>
+                  {active.map(renderWallet)}
+                  {archived.length > 0 && (
+                    <>
+                      <Text style={[styles.archivedSectionLabel, { color: colors.muted }]}>Archived</Text>
+                      {archived.map(renderWallet)}
+                    </>
                   )}
-                  <Text style={[styles.walletBalance, { color: balColor }]}>
-                    {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), w.currency as any)}
-                  </Text>
-                </TouchableOpacity>
+                </>
               );
-            })}
+            })()}
           </ScrollView>
         </>
       )}
@@ -801,6 +820,7 @@ const styles = StyleSheet.create({
   tabBtnText: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
 
   walletsList: { padding: 16, gap: 16 },
+  archivedSectionLabel: { fontSize: 11, fontFamily: 'Figtree_700Bold', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 },
   walletNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   defaultBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
   defaultBadgeText: { fontSize: 11, fontFamily: 'Figtree_600SemiBold' },

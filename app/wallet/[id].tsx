@@ -28,6 +28,7 @@ type WalletForm = {
   currency: Currency;
   icon: string;
   is_default: boolean;
+  is_archived: boolean;
   starting_balance: string;
 };
 
@@ -43,11 +44,13 @@ export default function WalletScreen() {
     currency: 'HUF',
     icon: '💰',
     is_default: false,
+    is_archived: false,
     starting_balance: '0',
   });
   const [saving, setSaving] = useState(false);
   const [currencyPickerVisible, setCurrencyPickerVisible] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
 
   useEffect(() => {
     if (isNew) return;
@@ -58,6 +61,7 @@ export default function WalletScreen() {
         currency: data.currency,
         icon: data.icon ?? '💰',
         is_default: data.is_default,
+        is_archived: data.is_archived ?? false,
         starting_balance: String(data.starting_balance ?? 0),
       });
     });
@@ -78,6 +82,7 @@ export default function WalletScreen() {
       currency: form.currency,
       icon: form.icon,
       is_default: form.is_default,
+      is_archived: form.is_archived,
       starting_balance: parseFloat(form.starting_balance) || 0,
     };
 
@@ -176,6 +181,28 @@ export default function WalletScreen() {
             />
           </View>
 
+          {!isNew && (
+            <View style={[styles.row, { justifyContent: 'space-between' }]}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[styles.rowLabel, { color: form.is_archived ? colors.danger : colors.muted }]}>
+                  {form.is_archived ? 'Archived' : 'Archive account'}
+                </Text>
+                <Text style={[styles.rowSub, { color: colors.muted }]}>
+                  Transactions still count; account hidden from pickers
+                </Text>
+              </View>
+              <Switch
+                value={form.is_archived}
+                onValueChange={(v) => {
+                  if (v) setConfirmArchive(true);
+                  else setField('is_archived', false);
+                }}
+                trackColor={{ true: colors.danger }}
+                thumbColor="#fff"
+              />
+            </View>
+          )}
+
           <AppButton onPress={handleSave} loading={saving} fullWidth style={{ marginTop: 8 }}>
             Save
           </AppButton>
@@ -203,6 +230,15 @@ export default function WalletScreen() {
         onConfirm={() => { setConfirmDelete(false); handleDelete(); }}
         onCancel={() => setConfirmDelete(false)}
       />
+
+      <ConfirmModal
+        visible={confirmArchive}
+        title="Archive account"
+        message={`Archive "${form.name}"? It will be hidden from transaction pickers but all records will remain visible.`}
+        confirmLabel="Archive"
+        onConfirm={() => { setConfirmArchive(false); setField('is_archived', true); }}
+        onCancel={() => setConfirmArchive(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -222,6 +258,7 @@ const styles = StyleSheet.create({
   iconNameRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowLabel: { fontSize: 14 },
+  rowSub: { fontSize: 12, fontFamily: 'Figtree_400Regular' },
   currencyWrapper: {
     gap: 4,
   },

@@ -63,7 +63,7 @@ export default function TemplatesScreen() {
         .select('*, wallet:wallets(*), category:categories(*), labels:template_labels(label:labels(*))')
         .eq('user_id', user.id)
         .order('name'),
-      supabase.from('wallets').select('*').eq('user_id', user.id),
+      supabase.from('wallets').select('*').eq('user_id', user.id).neq('is_archived', true),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
       supabase.from('labels').select('*').eq('user_id', user.id).order('name'),
     ]);

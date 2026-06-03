@@ -10,6 +10,7 @@ export type Wallet = {
   icon: string;
   color: string;
   is_default: boolean;
+  is_archived: boolean;
   starting_balance: number;
   created_at: string;
 };
