@@ -198,12 +198,14 @@ export default function TransactionsScreen() {
       labels: (tx.labels ?? []).map((l: any) => l.label).filter(Boolean),
     })));
 
-    let periodRates = await getExchangeRatesForPeriod(period.from, period.to);
-    if (Object.keys(periodRates).length === 0) {
-      const current = await getExchangeRates();
-      if (Object.keys(current).length > 0) periodRates = { [period.from]: current };
+    if (!silent) {
+      let periodRates = await getExchangeRatesForPeriod(period.from, period.to);
+      if (Object.keys(periodRates).length === 0) {
+        const current = await getExchangeRates();
+        if (Object.keys(current).length > 0) periodRates = { [period.from]: current };
+      }
+      setDailyRates(periodRates);
     }
-    setDailyRates(periodRates);
 
     setLoading(false);
   }, [period.from, period.to]);
@@ -389,6 +391,41 @@ export default function TransactionsScreen() {
 
   const filterCount = typeFilters.length + walletFilters.length + categoryFilters.length + labelFilters.length;
 
+  const renderItem = useCallback(({ item }: { item: ListItem }) => {
+    if (item.kind === 'header') {
+      const positive = item.dayNet >= 0;
+      return (
+        <View style={styles.dayHeader}>
+          <Text style={[styles.dateHeader, { color: colors.muted }]}>{formatDayHeader(item.date)}</Text>
+          <Text style={[styles.dayNet, { color: positive ? colors.income : colors.expense }]}>
+            {positive ? '+' : '−'}{formatCurrency(Math.abs(item.dayNet), 'HUF')}
+          </Text>
+        </View>
+      );
+    }
+    const id = item.tx.id;
+    return (
+      <TransactionRow
+        transaction={item.tx}
+        onPress={() => {
+          if (selectionMode) { toggleSelection(id); return; }
+          router.push(`/transaction/${id}`);
+        }}
+        onLongPress={() => {
+          if (!selectionMode) enterSelectionMode(id);
+          else toggleSelection(id);
+        }}
+        onIconPress={() => {
+          if (!selectionMode) enterSelectionMode(id);
+          else toggleSelection(id);
+        }}
+        selected={selectedIds.has(id)}
+        selectionMode={selectionMode}
+      />
+    );
+  }, [colors, selectionMode, selectedIds, router]);
+
+
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <AppHeader
@@ -493,38 +530,7 @@ export default function TransactionsScreen() {
         keyExtractor={(item) => item.kind === 'header' ? `h-${item.date}` : item.tx.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => {
-          if (item.kind === 'header') {
-            const positive = item.dayNet >= 0;
-            return (
-              <View style={styles.dayHeader}>
-                <Text style={[styles.dateHeader, { color: colors.muted }]}>{formatDayHeader(item.date)}</Text>
-                <Text style={[styles.dayNet, { color: positive ? colors.income : colors.expense }]}>
-                  {positive ? '+' : '−'}{formatCurrency(Math.abs(item.dayNet), 'HUF')}
-                </Text>
-              </View>
-            );
-          }
-          return (
-            <TransactionRow
-              transaction={item.tx}
-              onPress={() => {
-                if (selectionMode) { toggleSelection(item.tx.id); return; }
-                router.push(`/transaction/${item.tx.id}`);
-              }}
-              onLongPress={() => {
-                if (!selectionMode) enterSelectionMode(item.tx.id);
-                else toggleSelection(item.tx.id);
-              }}
-              onIconPress={() => {
-                if (!selectionMode) enterSelectionMode(item.tx.id);
-                else toggleSelection(item.tx.id);
-              }}
-              selected={selectedIds.has(item.tx.id)}
-              selectionMode={selectionMode}
-            />
-          );
-        }}
+        renderItem={renderItem}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListHeaderComponent={
           <View style={styles.headerBlock}>

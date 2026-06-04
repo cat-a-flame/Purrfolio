@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/lib/theme';
@@ -13,7 +14,7 @@ interface Props {
   selectionMode?: boolean;
 }
 
-export default function TransactionsTransactionRow({ transaction: tx, onPress, onLongPress, onIconPress, selected = false, selectionMode = false }: Props) {
+function TransactionsTransactionRow({ transaction: tx, onPress, onLongPress, onIconPress, selected = false, selectionMode = false }: Props) {
   const colors = useTheme();
   const isTransfer = !!tx.transfer_group_id;
   const isIncome = tx.type === 'income';
@@ -109,6 +110,8 @@ export default function TransactionsTransactionRow({ transaction: tx, onPress, o
     </TouchableOpacity>
   );
 }
+
+export default memo(TransactionsTransactionRow);
 
 const styles = StyleSheet.create({
   row: {
