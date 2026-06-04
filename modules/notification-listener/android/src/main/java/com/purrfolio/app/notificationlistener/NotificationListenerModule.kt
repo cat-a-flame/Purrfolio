@@ -25,11 +25,12 @@ class NotificationListenerModule : Module() {
     }
 
     AsyncFunction("openPermissionSettings") {
-      val context = appContext.reactContext ?: return@AsyncFunction
+      val context = appContext.reactContext ?: return@AsyncFunction null
       val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS").apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK
       }
       context.startActivity(intent)
+      null
     }
 
     AsyncFunction("getPendingNotifications") {
@@ -38,6 +39,7 @@ class NotificationListenerModule : Module() {
 
     AsyncFunction("clearPendingNotifications") {
       WalletNotificationListenerService.clearPendingNotifications()
+      null
     }
   }
 }
