@@ -34,11 +34,13 @@ class NotificationListenerModule : Module() {
     }
 
     AsyncFunction("getPendingNotifications") {
-      WalletNotificationListenerService.getPendingNotifications()
+      val context = appContext.reactContext ?: return@AsyncFunction emptyList<Any>()
+      WalletNotificationListenerService.getPendingNotifications(context)
     }
 
     AsyncFunction("clearPendingNotifications") {
-      WalletNotificationListenerService.clearPendingNotifications()
+      val context = appContext.reactContext ?: return@AsyncFunction null
+      WalletNotificationListenerService.clearPendingNotifications(context)
       null
     }
   }
