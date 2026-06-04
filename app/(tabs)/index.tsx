@@ -122,6 +122,14 @@ export default function DashboardScreen() {
       }));
       setPeriodTxs(normalized);
 
+      const pList = prevTxs ?? [];
+      const pInc = pList.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
+      const pExp = pList.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
+      setPrevNet(pInc - pExp);
+
+      // Show content immediately; exchange rates load in the background
+      setLoading(false);
+
       let periodRates = await getExchangeRatesForPeriod(period.from, period.to);
       if (Object.keys(periodRates).length === 0) {
         const current = await getExchangeRates();
@@ -130,11 +138,6 @@ export default function DashboardScreen() {
         }
       }
       setDailyRates(periodRates);
-
-      const pList = prevTxs ?? [];
-      const pInc = pList.filter((t: any) => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0);
-      const pExp = pList.filter((t: any) => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0);
-      setPrevNet(pInc - pExp);
     } catch (e) {
       console.error('[Dashboard] load error:', e);
     } finally {
