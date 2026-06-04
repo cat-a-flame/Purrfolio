@@ -103,17 +103,6 @@ export default function TransactionsScreen() {
     setSelectedIds(new Set());
   }
 
-  const txIds = useMemo(() => filtered.map(t => t.id), [filtered]);
-  const allSelected = txIds.length > 0 && txIds.every(id => selectedIds.has(id));
-
-  function toggleSelectAll() {
-    if (allSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(txIds));
-    }
-  }
-
   const load = useCallback(async (silent = false) => {
     if (!silent) {
       setLoading(true);
@@ -282,6 +271,17 @@ export default function TransactionsScreen() {
       return true;
     }).length;
   }, [transactions, draftTypes, draftWallets, draftCategories, draftLabels]);
+
+  const txIds = useMemo(() => filtered.map(t => t.id), [filtered]);
+  const allSelected = txIds.length > 0 && txIds.every(id => selectedIds.has(id));
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(txIds));
+    }
+  }
 
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
 
