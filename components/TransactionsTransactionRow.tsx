@@ -7,9 +7,13 @@ import { formatCurrency } from '@/lib/utils';
 interface Props {
   transaction: Transaction;
   onPress?: () => void;
+  onLongPress?: () => void;
+  onIconPress?: () => void;
+  selected?: boolean;
+  selectionMode?: boolean;
 }
 
-export default function TransactionsTransactionRow({ transaction: tx, onPress }: Props) {
+export default function TransactionsTransactionRow({ transaction: tx, onPress, onLongPress, onIconPress, selected = false, selectionMode = false }: Props) {
   const colors = useTheme();
   const isTransfer = !!tx.transfer_group_id;
   const isIncome = tx.type === 'income';
@@ -30,21 +34,31 @@ export default function TransactionsTransactionRow({ transaction: tx, onPress }:
 
   return (
     <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={onPress ? 0.7 : 1}
-      style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      onPress={selectionMode ? () => onIconPress?.() : onPress}
+      onLongPress={onLongPress}
+      delayLongPress={350}
+      activeOpacity={0.7}
+      style={[styles.row, { backgroundColor: selected ? colors.accent + '18' : colors.surface, borderColor: selected ? colors.accent + '55' : colors.border }]}
     >
       <View style={[styles.wrapper]}>
-        {/* Icon with coloured background */}
-        <View style={[styles.iconBox, { backgroundColor: '#fcf1ff' }]}>
-          {isTransfer ? (
+        {/* Icon with coloured background — becomes checkbox in selection mode */}
+        <TouchableOpacity
+          onPress={onIconPress}
+          activeOpacity={0.7}
+          style={[styles.iconBox, { backgroundColor: selected ? colors.accent : '#fcf1ff' }]}
+        >
+          {selectionMode ? (
+            selected
+              ? <Ionicons name="checkmark" size={20} color="#fff" />
+              : <Ionicons name="ellipse-outline" size={20} color={colors.muted} />
+          ) : isTransfer ? (
             <Ionicons name="swap-horizontal-outline" size={20} color={colors.muted} />
           ) : icon ? (
             <Text style={styles.icon}>{icon}</Text>
           ) : (
             <Text style={[styles.iconFallback, { color: colors.muted }]}>?</Text>
           )}
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.info}>
           <Text style={[styles.category, { color: colors.text }]}>{label}</Text>

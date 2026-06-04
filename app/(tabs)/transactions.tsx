@@ -82,6 +82,38 @@ export default function TransactionsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', success: true });
 
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  function enterSelectionMode(id: string) {
+    setSelectionMode(true);
+    setSelectedIds(new Set([id]));
+  }
+
+  function toggleSelection(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }
+
+  const txIds = useMemo(() => filtered.map(t => t.id), [filtered]);
+  const allSelected = txIds.length > 0 && txIds.every(id => selectedIds.has(id));
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(txIds));
+    }
+  }
+
   const load = useCallback(async (silent = false) => {
     if (!silent) {
       setLoading(true);
@@ -421,7 +453,20 @@ export default function TransactionsScreen() {
           return (
             <TransactionRow
               transaction={item.tx}
-              onPress={() => router.push(`/transaction/${item.tx.id}`)}
+              onPress={() => {
+                if (selectionMode) { toggleSelection(item.tx.id); return; }
+                router.push(`/transaction/${item.tx.id}`);
+              }}
+              onLongPress={() => {
+                if (!selectionMode) enterSelectionMode(item.tx.id);
+                else toggleSelection(item.tx.id);
+              }}
+              onIconPress={() => {
+                if (!selectionMode) enterSelectionMode(item.tx.id);
+                else toggleSelection(item.tx.id);
+              }}
+              selected={selectedIds.has(item.tx.id)}
+              selectionMode={selectionMode}
             />
           );
         }}
@@ -469,6 +514,23 @@ export default function TransactionsScreen() {
             {/* Period picker */}
             <PeriodPicker value={period} onChange={setPeriod} />
 
+            {/* Select-all bar — visible in selection mode */}
+            {selectionMode && (
+              <View style={[styles.selectAllBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllLeft} activeOpacity={0.7}>
+                  <View style={[styles.selectAllCheckbox, { borderColor: colors.accent, backgroundColor: allSelected ? colors.accent : 'transparent' }]}>
+                    {allSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  </View>
+                  <Text style={[styles.selectAllLabel, { color: colors.text }]}>
+                    {allSelected ? 'Deselect all' : 'Select all'}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={[styles.selectedCount, { color: colors.muted }]}>
+                  {selectedIds.size} selected
+                </Text>
+              </View>
+            )}
+
           </View>
         }
         ListEmptyComponent={
@@ -491,6 +553,38 @@ export default function TransactionsScreen() {
         }
         ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />}
+
+      {/* Selection toolbar */}
+      {selectionMode && (
+        <View style={[styles.selectionToolbar, { backgroundColor: colors.surface, borderTopColor: colors.border, bottom: TAB_BAR_HEIGHT + bottom }]}>
+          <TouchableOpacity onPress={exitSelectionMode} style={styles.toolbarBtn} activeOpacity={0.7}>
+            <Ionicons name="close" size={22} color={colors.muted} />
+            <Text style={[styles.toolbarBtnText, { color: colors.muted }]}>Cancel</Text>
+          </TouchableOpacity>
+          <View style={[styles.toolbarDivider, { backgroundColor: colors.border }]} />
+          <TouchableOpacity
+            style={styles.toolbarBtn}
+            activeOpacity={0.7}
+            onPress={() => {
+              // Placeholder for mass edit — navigate or open modal
+            }}
+          >
+            <Ionicons name="create-outline" size={22} color={colors.accent} />
+            <Text style={[styles.toolbarBtnText, { color: colors.accent }]}>Edit</Text>
+          </TouchableOpacity>
+          <View style={[styles.toolbarDivider, { backgroundColor: colors.border }]} />
+          <TouchableOpacity
+            style={styles.toolbarBtn}
+            activeOpacity={0.7}
+            onPress={() => {
+              // Placeholder for mass delete
+            }}
+          >
+            <Ionicons name="trash-outline" size={22} color={colors.expense} />
+            <Text style={[styles.toolbarBtnText, { color: colors.expense }]}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Toast
         visible={toast.visible}
@@ -922,4 +1016,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   showResultsText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold', color: '#fff' },
+
+  // Selection
+  selectAllBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  selectAllLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  selectAllCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectAllLabel: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
+  selectedCount: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+
+  selectionToolbar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 8,
+  },
+  toolbarBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 6,
+  },
+  toolbarBtnText: { fontSize: 12, fontFamily: 'Figtree_600SemiBold' },
+  toolbarDivider: { width: StyleSheet.hairlineWidth, height: 36 },
 });
