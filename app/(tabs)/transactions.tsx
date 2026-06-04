@@ -11,7 +11,11 @@ import {
   Animated,
   Dimensions,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
+import CategoryPickerModal from '@/components/CategoryPickerModal';
+import BottomModal from '@/components/BottomModal';
+import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
@@ -82,6 +86,78 @@ export default function TransactionsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', success: true });
 
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  function enterSelectionMode(id: string) {
+    setSelectionMode(true);
+    setSelectedIds(new Set([id]));
+  }
+
+  function toggleSelection(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }
+
+  const [bulkEditVisible, setBulkEditVisible] = useState(false);
+  const [bulkView, setBulkView] = useState<'menu' | 'category' | 'labels'>('menu');
+  const [bulkLabelIds, setBulkLabelIds] = useState<string[]>([]);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(null);
+  const [confirmEditVisible, setConfirmEditVisible] = useState(false);
+  const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
+
+  function openBulkEdit() {
+    setBulkView('menu');
+    setBulkEditVisible(true);
+  }
+
+  async function applyBulkCategory() {
+    if (!pendingCategoryId) return;
+    setBulkSaving(true);
+    const ids = Array.from(selectedIds);
+    await supabase.from('transactions').update({ category_id: pendingCategoryId }).in('id', ids);
+    setBulkSaving(false);
+    setConfirmEditVisible(false);
+    setBulkEditVisible(false);
+    setPendingCategoryId(null);
+    exitSelectionMode();
+    load(true);
+  }
+
+  async function applyBulkLabels() {
+    setBulkSaving(true);
+    const ids = Array.from(selectedIds);
+    await supabase.from('transaction_labels').delete().in('transaction_id', ids);
+    if (bulkLabelIds.length > 0) {
+      const rows = ids.flatMap(txId => bulkLabelIds.map(labelId => ({ transaction_id: txId, label_id: labelId })));
+      await supabase.from('transaction_labels').insert(rows);
+    }
+    setBulkSaving(false);
+    setConfirmEditVisible(false);
+    setBulkEditVisible(false);
+    exitSelectionMode();
+    load(true);
+  }
+
+  async function applyBulkDelete() {
+    setBulkSaving(true);
+    const ids = Array.from(selectedIds);
+    await supabase.from('transactions').delete().in('id', ids);
+    setBulkSaving(false);
+    setConfirmDeleteVisible(false);
+    exitSelectionMode();
+    load(true);
+  }
+
   const load = useCallback(async (silent = false) => {
     if (!silent) {
       setLoading(true);
@@ -122,12 +198,14 @@ export default function TransactionsScreen() {
       labels: (tx.labels ?? []).map((l: any) => l.label).filter(Boolean),
     })));
 
-    let periodRates = await getExchangeRatesForPeriod(period.from, period.to);
-    if (Object.keys(periodRates).length === 0) {
-      const current = await getExchangeRates();
-      if (Object.keys(current).length > 0) periodRates = { [period.from]: current };
+    if (!silent) {
+      let periodRates = await getExchangeRatesForPeriod(period.from, period.to);
+      if (Object.keys(periodRates).length === 0) {
+        const current = await getExchangeRates();
+        if (Object.keys(current).length > 0) periodRates = { [period.from]: current };
+      }
+      setDailyRates(periodRates);
     }
-    setDailyRates(periodRates);
 
     setLoading(false);
   }, [period.from, period.to]);
@@ -251,6 +329,17 @@ export default function TransactionsScreen() {
     }).length;
   }, [transactions, draftTypes, draftWallets, draftCategories, draftLabels]);
 
+  const txIds = useMemo(() => filtered.map(t => t.id), [filtered]);
+  const allSelected = txIds.length > 0 && txIds.every(id => selectedIds.has(id));
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      exitSelectionMode();
+    } else {
+      setSelectedIds(new Set(txIds));
+    }
+  }
+
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
 
   type ListItem = { kind: 'header'; date: string; dayNet: number } | { kind: 'tx'; tx: Transaction };
@@ -301,6 +390,41 @@ export default function TransactionsScreen() {
   }
 
   const filterCount = typeFilters.length + walletFilters.length + categoryFilters.length + labelFilters.length;
+
+  const renderItem = useCallback(({ item }: { item: ListItem }) => {
+    if (item.kind === 'header') {
+      const positive = item.dayNet >= 0;
+      return (
+        <View style={styles.dayHeader}>
+          <Text style={[styles.dateHeader, { color: colors.muted }]}>{formatDayHeader(item.date)}</Text>
+          <Text style={[styles.dayNet, { color: positive ? colors.income : colors.expense }]}>
+            {positive ? '+' : '−'}{formatCurrency(Math.abs(item.dayNet), 'HUF')}
+          </Text>
+        </View>
+      );
+    }
+    const id = item.tx.id;
+    return (
+      <TransactionRow
+        transaction={item.tx}
+        onPress={() => {
+          if (selectionMode) { toggleSelection(id); return; }
+          router.push(`/transaction/${id}`);
+        }}
+        onLongPress={() => {
+          if (!selectionMode) enterSelectionMode(id);
+          else toggleSelection(id);
+        }}
+        onIconPress={() => {
+          if (!selectionMode) enterSelectionMode(id);
+          else toggleSelection(id);
+        }}
+        selected={selectedIds.has(id)}
+        selectionMode={selectionMode}
+      />
+    );
+  }, [colors, selectionMode, selectedIds, router]);
+
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -406,25 +530,7 @@ export default function TransactionsScreen() {
         keyExtractor={(item) => item.kind === 'header' ? `h-${item.date}` : item.tx.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => {
-          if (item.kind === 'header') {
-            const positive = item.dayNet >= 0;
-            return (
-              <View style={styles.dayHeader}>
-                <Text style={[styles.dateHeader, { color: colors.muted }]}>{formatDayHeader(item.date)}</Text>
-                <Text style={[styles.dayNet, { color: positive ? colors.income : colors.expense }]}>
-                  {positive ? '+' : '−'}{formatCurrency(Math.abs(item.dayNet), 'HUF')}
-                </Text>
-              </View>
-            );
-          }
-          return (
-            <TransactionRow
-              transaction={item.tx}
-              onPress={() => router.push(`/transaction/${item.tx.id}`)}
-            />
-          );
-        }}
+        renderItem={renderItem}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListHeaderComponent={
           <View style={styles.headerBlock}>
@@ -469,6 +575,23 @@ export default function TransactionsScreen() {
             {/* Period picker */}
             <PeriodPicker value={period} onChange={setPeriod} />
 
+            {/* Select-all bar — visible in selection mode */}
+            {selectionMode && (
+              <View style={[styles.selectAllBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllLeft} activeOpacity={0.7}>
+                  <View style={[styles.selectAllCheckbox, { borderColor: colors.accent, backgroundColor: allSelected ? colors.accent : 'transparent' }]}>
+                    {allSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  </View>
+                  <Text style={[styles.selectAllLabel, { color: colors.text }]}>
+                    {allSelected ? 'Deselect all' : 'Select all'}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={[styles.selectedCount, { color: colors.muted }]}>
+                  {selectedIds.size} selected
+                </Text>
+              </View>
+            )}
+
           </View>
         }
         ListEmptyComponent={
@@ -492,11 +615,131 @@ export default function TransactionsScreen() {
         ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
       />}
 
+      {/* Selection toolbar */}
+      {selectionMode && (
+        <View style={[styles.selectionToolbar, { backgroundColor: colors.surface, borderTopColor: colors.border, bottom: TAB_BAR_HEIGHT + bottom }]}>
+          <TouchableOpacity onPress={exitSelectionMode} style={styles.toolbarBtn} activeOpacity={0.7}>
+            <Ionicons name="close" size={22} color={colors.muted} />
+            <Text style={[styles.toolbarBtnText, { color: colors.muted }]}>Cancel</Text>
+          </TouchableOpacity>
+          <View style={[styles.toolbarDivider, { backgroundColor: colors.border }]} />
+          <TouchableOpacity
+            style={styles.toolbarBtn}
+            activeOpacity={0.7}
+            onPress={openBulkEdit}
+          >
+            <Ionicons name="create-outline" size={22} color={colors.accent} />
+            <Text style={[styles.toolbarBtnText, { color: colors.accent }]}>Edit</Text>
+          </TouchableOpacity>
+          <View style={[styles.toolbarDivider, { backgroundColor: colors.border }]} />
+          <TouchableOpacity
+            style={styles.toolbarBtn}
+            activeOpacity={0.7}
+            onPress={() => setConfirmDeleteVisible(true)}
+          >
+            <Ionicons name="trash-outline" size={22} color={colors.expense} />
+            <Text style={[styles.toolbarBtnText, { color: colors.expense }]}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <Toast
         visible={toast.visible}
         message={toast.message}
         success={toast.success}
         bottomOffset={TAB_BAR_HEIGHT + bottom + 12}
+      />
+
+      {/* Bulk-edit modal */}
+      <CategoryPickerModal
+        visible={bulkEditVisible && bulkView === 'category'}
+        onClose={() => setBulkView('menu')}
+        categories={categories}
+        selectedId=""
+        onSelect={(id) => { setPendingCategoryId(id); setConfirmEditVisible(true); }}
+      />
+
+      <BottomModal
+        visible={bulkEditVisible && bulkView !== 'category'}
+        onClose={() => { if (!bulkSaving) setBulkEditVisible(false); }}
+        title={bulkView === 'labels' ? 'Set labels' : `Edit ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}`}
+        rightAction={bulkView === 'labels' ? (
+          <TouchableOpacity onPress={() => setConfirmEditVisible(true)} disabled={bulkSaving}>
+            <Text style={{ color: colors.accent, fontSize: 15, fontFamily: 'Figtree_600SemiBold' }}>Save</Text>
+          </TouchableOpacity>
+        ) : undefined}
+      >
+        {bulkView === 'menu' && (
+          <View style={styles.bulkMenuList}>
+            <TouchableOpacity
+              style={[styles.bulkMenuItem, { borderBottomColor: colors.border }]}
+              activeOpacity={0.7}
+              onPress={() => setBulkView('category')}
+            >
+              <View style={[styles.bulkMenuIcon, { backgroundColor: colors.accent + '18' }]}>
+                <Ionicons name="grid-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={[styles.bulkMenuLabel, { color: colors.text }]}>Change category</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkMenuItem, { borderBottomColor: colors.border }]}
+              activeOpacity={0.7}
+              onPress={() => {
+                setBulkLabelIds([]);
+                setBulkView('labels');
+              }}
+            >
+              <View style={[styles.bulkMenuIcon, { backgroundColor: colors.accent + '18' }]}>
+                <Ionicons name="pricetag-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={[styles.bulkMenuLabel, { color: colors.text }]}>Set labels</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {bulkView === 'labels' && (
+          <ScrollView contentContainerStyle={styles.bulkMenuList}>
+            {labels.map((lb) => {
+              const sel = bulkLabelIds.includes(lb.id);
+              return (
+                <TouchableOpacity
+                  key={lb.id}
+                  style={[styles.bulkMenuItem, { borderBottomColor: colors.border }, sel && { backgroundColor: colors.accent + '11' }]}
+                  activeOpacity={0.7}
+                  onPress={() => setBulkLabelIds(prev => prev.includes(lb.id) ? prev.filter(x => x !== lb.id) : [...prev, lb.id])}
+                >
+                  {lb.color
+                    ? <View style={[styles.labelDot, { backgroundColor: lb.color }]} />
+                    : <View style={{ width: 12 }} />}
+                  <Text style={[styles.bulkMenuLabel, { color: sel ? colors.accent : colors.text }]}>{lb.name}</Text>
+                  {sel && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+      </BottomModal>
+
+      {/* Confirm edit */}
+      <ConfirmModal
+        visible={confirmEditVisible}
+        title="Apply changes?"
+        message={`This will update ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}. This cannot be undone.`}
+        confirmLabel={bulkSaving ? 'Saving…' : 'Save'}
+        onConfirm={pendingCategoryId ? applyBulkCategory : applyBulkLabels}
+        onCancel={() => { if (!bulkSaving) setConfirmEditVisible(false); }}
+      />
+
+      {/* Confirm delete */}
+      <ConfirmModal
+        visible={confirmDeleteVisible}
+        title="Delete transactions?"
+        message={`Are you sure you want to permanently delete ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.`}
+        confirmLabel={bulkSaving ? 'Deleting…' : 'Delete'}
+        onConfirm={applyBulkDelete}
+        onCancel={() => { if (!bulkSaving) setConfirmDeleteVisible(false); }}
       />
 
       {/* Filter panel — Modal mirroring AppHeader drawer pattern */}
@@ -922,4 +1165,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   showResultsText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold', color: '#fff' },
+
+  // Selection
+  selectAllBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  selectAllLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  selectAllCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectAllLabel: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
+  selectedCount: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+
+  selectionToolbar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 8,
+  },
+  toolbarBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 6,
+  },
+  toolbarBtnText: { fontSize: 12, fontFamily: 'Figtree_600SemiBold' },
+  toolbarDivider: { width: StyleSheet.hairlineWidth, height: 36 },
+
+  bulkMenuList: { paddingVertical: 8 },
+  bulkMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+  },
+  bulkMenuIcon: { width: 34, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  bulkMenuLabel: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
 });
