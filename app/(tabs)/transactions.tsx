@@ -11,7 +11,10 @@ import {
   Animated,
   Dimensions,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
+import CategoryPickerModal from '@/components/CategoryPickerModal';
+import BottomModal from '@/components/BottomModal';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
@@ -101,6 +104,41 @@ export default function TransactionsScreen() {
   function exitSelectionMode() {
     setSelectionMode(false);
     setSelectedIds(new Set());
+  }
+
+  const [bulkEditVisible, setBulkEditVisible] = useState(false);
+  const [bulkView, setBulkView] = useState<'menu' | 'category' | 'labels'>('menu');
+  const [bulkLabelIds, setBulkLabelIds] = useState<string[]>([]);
+  const [bulkSaving, setBulkSaving] = useState(false);
+
+  function openBulkEdit() {
+    setBulkView('menu');
+    setBulkEditVisible(true);
+  }
+
+  async function applyBulkCategory(categoryId: string) {
+    setBulkSaving(true);
+    const ids = Array.from(selectedIds);
+    await supabase.from('transactions').update({ category_id: categoryId }).in('id', ids);
+    setBulkSaving(false);
+    setBulkEditVisible(false);
+    exitSelectionMode();
+    load(true);
+  }
+
+  async function applyBulkLabels() {
+    setBulkSaving(true);
+    const ids = Array.from(selectedIds);
+    // Delete existing labels for selected transactions, then insert chosen ones
+    await supabase.from('transaction_labels').delete().in('transaction_id', ids);
+    if (bulkLabelIds.length > 0) {
+      const rows = ids.flatMap(txId => bulkLabelIds.map(labelId => ({ transaction_id: txId, label_id: labelId })));
+      await supabase.from('transaction_labels').insert(rows);
+    }
+    setBulkSaving(false);
+    setBulkEditVisible(false);
+    exitSelectionMode();
+    load(true);
   }
 
   const load = useCallback(async (silent = false) => {
@@ -565,9 +603,7 @@ export default function TransactionsScreen() {
           <TouchableOpacity
             style={styles.toolbarBtn}
             activeOpacity={0.7}
-            onPress={() => {
-              // Placeholder for mass edit — navigate or open modal
-            }}
+            onPress={openBulkEdit}
           >
             <Ionicons name="create-outline" size={22} color={colors.accent} />
             <Text style={[styles.toolbarBtnText, { color: colors.accent }]}>Edit</Text>
@@ -592,6 +628,80 @@ export default function TransactionsScreen() {
         success={toast.success}
         bottomOffset={TAB_BAR_HEIGHT + bottom + 12}
       />
+
+      {/* Bulk-edit modal */}
+      <CategoryPickerModal
+        visible={bulkEditVisible && bulkView === 'category'}
+        onClose={() => setBulkView('menu')}
+        categories={categories}
+        selectedId=""
+        onSelect={(id) => { applyBulkCategory(id); }}
+      />
+
+      <BottomModal
+        visible={bulkEditVisible && bulkView !== 'category'}
+        onClose={() => { if (!bulkSaving) setBulkEditVisible(false); }}
+        title={bulkView === 'labels' ? 'Set labels' : `Edit ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}`}
+        rightAction={bulkView === 'labels' ? (
+          <TouchableOpacity onPress={applyBulkLabels} disabled={bulkSaving}>
+            {bulkSaving
+              ? <ActivityIndicator size="small" color={colors.accent} />
+              : <Text style={{ color: colors.accent, fontSize: 15, fontFamily: 'Figtree_600SemiBold' }}>Apply</Text>}
+          </TouchableOpacity>
+        ) : undefined}
+      >
+        {bulkView === 'menu' && (
+          <View style={styles.bulkMenuList}>
+            <TouchableOpacity
+              style={[styles.bulkMenuItem, { borderBottomColor: colors.border }]}
+              activeOpacity={0.7}
+              onPress={() => setBulkView('category')}
+            >
+              <View style={[styles.bulkMenuIcon, { backgroundColor: colors.accent + '18' }]}>
+                <Ionicons name="grid-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={[styles.bulkMenuLabel, { color: colors.text }]}>Change category</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkMenuItem, { borderBottomColor: colors.border }]}
+              activeOpacity={0.7}
+              onPress={() => {
+                setBulkLabelIds([]);
+                setBulkView('labels');
+              }}
+            >
+              <View style={[styles.bulkMenuIcon, { backgroundColor: colors.accent + '18' }]}>
+                <Ionicons name="pricetag-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={[styles.bulkMenuLabel, { color: colors.text }]}>Set labels</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {bulkView === 'labels' && (
+          <ScrollView contentContainerStyle={styles.bulkMenuList}>
+            {labels.map((lb) => {
+              const sel = bulkLabelIds.includes(lb.id);
+              return (
+                <TouchableOpacity
+                  key={lb.id}
+                  style={[styles.bulkMenuItem, { borderBottomColor: colors.border }, sel && { backgroundColor: colors.accent + '11' }]}
+                  activeOpacity={0.7}
+                  onPress={() => setBulkLabelIds(prev => prev.includes(lb.id) ? prev.filter(x => x !== lb.id) : [...prev, lb.id])}
+                >
+                  {lb.color
+                    ? <View style={[styles.labelDot, { backgroundColor: lb.color }]} />
+                    : <View style={{ width: 12 }} />}
+                  <Text style={[styles.bulkMenuLabel, { color: sel ? colors.accent : colors.text }]}>{lb.name}</Text>
+                  {sel && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+      </BottomModal>
 
       {/* Filter panel — Modal mirroring AppHeader drawer pattern */}
       <Modal visible={filterPanelVisible} transparent animationType="none" onRequestClose={() => closeFilterPanel(false)}>
@@ -1057,4 +1167,16 @@ const styles = StyleSheet.create({
   },
   toolbarBtnText: { fontSize: 12, fontFamily: 'Figtree_600SemiBold' },
   toolbarDivider: { width: StyleSheet.hairlineWidth, height: 36 },
+
+  bulkMenuList: { paddingVertical: 8 },
+  bulkMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+  },
+  bulkMenuIcon: { width: 34, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  bulkMenuLabel: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
 });
