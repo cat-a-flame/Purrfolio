@@ -1,6 +1,6 @@
-import { NativeModulesProxy } from 'expo-modules-core';
+import { requireNativeModule } from 'expo-modules-core';
 
-const NativeModule = NativeModulesProxy.NotificationListenerModule;
+const NativeModule = requireNativeModule('NotificationListenerModule');
 
 export type WalletNotification = {
   id: string;

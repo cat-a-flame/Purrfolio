@@ -1,15 +1,26 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
-def expoModulesCorePlugin = new File(
-  providers.exec {
-    workingDir(rootDir)
-    commandLine("node", "-e", "process.stdout.write(require.resolve('expo-modules-core/package.json'))")
-  }.standardOutput.asText.get().trim(),
-  ".."
-)
-if (expoModulesCorePlugin.exists()) {
+def resolveExpoModulesCoreDir() {
+  try {
+    def result = providers.exec {
+      workingDir(rootDir)
+      commandLine("node", "--print", "require.resolve('expo-modules-core/package.json')")
+    }.standardOutput.asText.get().trim()
+    return new File(result, "..").canonicalFile
+  } catch (ignored) {
+    return null
+  }
+}
+
+def expoModulesCorePlugin = resolveExpoModulesCoreDir()
+if (expoModulesCorePlugin?.exists()) {
   apply from: "${expoModulesCorePlugin}/android/expo-module-core.gradle"
+}
+
+// Fallback if expo-module-core.gradle wasn't applied (safeExtGet undefined)
+if (!ext.has('safeExtGet')) {
+  ext.safeExtGet = { prop, fallback -> rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback }
 }
 
 android {
