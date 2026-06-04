@@ -277,7 +277,7 @@ export default function TransactionsScreen() {
 
   function toggleSelectAll() {
     if (allSelected) {
-      setSelectedIds(new Set());
+      exitSelectionMode();
     } else {
       setSelectedIds(new Set(txIds));
     }
