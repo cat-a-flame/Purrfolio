@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import CategoryPickerModal from '@/components/CategoryPickerModal';
 import BottomModal from '@/components/BottomModal';
+import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
@@ -110,18 +111,24 @@ export default function TransactionsScreen() {
   const [bulkView, setBulkView] = useState<'menu' | 'category' | 'labels'>('menu');
   const [bulkLabelIds, setBulkLabelIds] = useState<string[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(null);
+  const [confirmEditVisible, setConfirmEditVisible] = useState(false);
+  const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
 
   function openBulkEdit() {
     setBulkView('menu');
     setBulkEditVisible(true);
   }
 
-  async function applyBulkCategory(categoryId: string) {
+  async function applyBulkCategory() {
+    if (!pendingCategoryId) return;
     setBulkSaving(true);
     const ids = Array.from(selectedIds);
-    await supabase.from('transactions').update({ category_id: categoryId }).in('id', ids);
+    await supabase.from('transactions').update({ category_id: pendingCategoryId }).in('id', ids);
     setBulkSaving(false);
+    setConfirmEditVisible(false);
     setBulkEditVisible(false);
+    setPendingCategoryId(null);
     exitSelectionMode();
     load(true);
   }
@@ -129,14 +136,24 @@ export default function TransactionsScreen() {
   async function applyBulkLabels() {
     setBulkSaving(true);
     const ids = Array.from(selectedIds);
-    // Delete existing labels for selected transactions, then insert chosen ones
     await supabase.from('transaction_labels').delete().in('transaction_id', ids);
     if (bulkLabelIds.length > 0) {
       const rows = ids.flatMap(txId => bulkLabelIds.map(labelId => ({ transaction_id: txId, label_id: labelId })));
       await supabase.from('transaction_labels').insert(rows);
     }
     setBulkSaving(false);
+    setConfirmEditVisible(false);
     setBulkEditVisible(false);
+    exitSelectionMode();
+    load(true);
+  }
+
+  async function applyBulkDelete() {
+    setBulkSaving(true);
+    const ids = Array.from(selectedIds);
+    await supabase.from('transactions').delete().in('id', ids);
+    setBulkSaving(false);
+    setConfirmDeleteVisible(false);
     exitSelectionMode();
     load(true);
   }
@@ -612,9 +629,7 @@ export default function TransactionsScreen() {
           <TouchableOpacity
             style={styles.toolbarBtn}
             activeOpacity={0.7}
-            onPress={() => {
-              // Placeholder for mass delete
-            }}
+            onPress={() => setConfirmDeleteVisible(true)}
           >
             <Ionicons name="trash-outline" size={22} color={colors.expense} />
             <Text style={[styles.toolbarBtnText, { color: colors.expense }]}>Delete</Text>
@@ -635,7 +650,7 @@ export default function TransactionsScreen() {
         onClose={() => setBulkView('menu')}
         categories={categories}
         selectedId=""
-        onSelect={(id) => { applyBulkCategory(id); }}
+        onSelect={(id) => { setPendingCategoryId(id); setConfirmEditVisible(true); }}
       />
 
       <BottomModal
@@ -643,10 +658,8 @@ export default function TransactionsScreen() {
         onClose={() => { if (!bulkSaving) setBulkEditVisible(false); }}
         title={bulkView === 'labels' ? 'Set labels' : `Edit ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}`}
         rightAction={bulkView === 'labels' ? (
-          <TouchableOpacity onPress={applyBulkLabels} disabled={bulkSaving}>
-            {bulkSaving
-              ? <ActivityIndicator size="small" color={colors.accent} />
-              : <Text style={{ color: colors.accent, fontSize: 15, fontFamily: 'Figtree_600SemiBold' }}>Apply</Text>}
+          <TouchableOpacity onPress={() => setConfirmEditVisible(true)} disabled={bulkSaving}>
+            <Text style={{ color: colors.accent, fontSize: 15, fontFamily: 'Figtree_600SemiBold' }}>Save</Text>
           </TouchableOpacity>
         ) : undefined}
       >
@@ -702,6 +715,26 @@ export default function TransactionsScreen() {
           </ScrollView>
         )}
       </BottomModal>
+
+      {/* Confirm edit */}
+      <ConfirmModal
+        visible={confirmEditVisible}
+        title="Apply changes?"
+        message={`This will update ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}. This cannot be undone.`}
+        confirmLabel={bulkSaving ? 'Saving…' : 'Save'}
+        onConfirm={pendingCategoryId ? applyBulkCategory : applyBulkLabels}
+        onCancel={() => { if (!bulkSaving) setConfirmEditVisible(false); }}
+      />
+
+      {/* Confirm delete */}
+      <ConfirmModal
+        visible={confirmDeleteVisible}
+        title="Delete transactions?"
+        message={`Are you sure you want to permanently delete ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.`}
+        confirmLabel={bulkSaving ? 'Deleting…' : 'Delete'}
+        onConfirm={applyBulkDelete}
+        onCancel={() => { if (!bulkSaving) setConfirmDeleteVisible(false); }}
+      />
 
       {/* Filter panel — Modal mirroring AppHeader drawer pattern */}
       <Modal visible={filterPanelVisible} transparent animationType="none" onRequestClose={() => closeFilterPanel(false)}>
