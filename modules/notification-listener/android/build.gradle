@@ -6,6 +6,7 @@ def safeExtGet(prop, fallback) {
 }
 
 android {
+  namespace "com.purrfolio.app.notificationlistener"
   compileSdkVersion safeExtGet("compileSdkVersion", 35)
 
   defaultConfig {
