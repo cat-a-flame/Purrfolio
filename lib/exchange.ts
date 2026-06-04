@@ -26,10 +26,18 @@ export function getRatesForDate(date: string, daily: DailyRates): Rates {
   return {};
 }
 
+const FETCH_TIMEOUT_MS = 5000;
+
+function fetchWithTimeout(url: string): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 /** Returns today's rates (EUR→HUF, USD→HUF). */
 export async function getExchangeRates(): Promise<Rates> {
   try {
-    const res = await fetch(`${BASE}/latest?from=HUF&to=EUR,USD`);
+    const res = await fetchWithTimeout(`${BASE}/latest?from=HUF&to=EUR,USD`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     return invertRates(json.rates ?? {});
@@ -46,7 +54,7 @@ export async function getExchangeRates(): Promise<Rates> {
  */
 export async function getExchangeRatesForPeriod(from: string, to: string): Promise<DailyRates> {
   try {
-    const res = await fetch(`${BASE}/${from}..${to}?from=HUF&to=EUR,USD`);
+    const res = await fetchWithTimeout(`${BASE}/${from}..${to}?from=HUF&to=EUR,USD`);
     if (res.status === 404) return {}; // no ECB data for this range (future / holiday-only)
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();

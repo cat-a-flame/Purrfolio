@@ -217,24 +217,6 @@ export default function StatsScreen() {
 
     const hasNonHUF = (walletRows ?? []).some((w: any) => w.currency !== 'HUF');
 
-    const fetchRates = async (from: string, to: string): Promise<DailyRates> => {
-      if (!hasNonHUF) return {};
-      let rates = await getExchangeRatesForPeriod(from, to);
-      if (Object.keys(rates).length === 0) {
-        const current = await getExchangeRates();
-        if (Object.keys(current).length > 0) rates = { [from]: current };
-      }
-      return rates;
-    };
-    const [periodRates, prevRates, todayRates] = await Promise.all([
-      fetchRates(period.from, period.to),
-      fetchRates(prevRange.from, prevRange.to),
-      hasNonHUF ? getExchangeRates() : Promise.resolve({}),
-    ]);
-    setDailyRates(periodRates);
-    setPrevDailyRates(prevRates);
-    setCurrentRates(todayRates);
-
     const walletList = walletRows ?? [];
     const balanceMap = new Map<string, number>();
     for (const w of walletList) {
@@ -246,6 +228,28 @@ export default function StatsScreen() {
     setPrevTxs(prevData ?? []);
     setRecurringPayments(recurringRows ?? []);
     setRecurringOccurrences(occurrenceRows ?? []);
+
+    // Show content immediately; exchange rates load in the background
+    setLoading(false);
+
+    if (hasNonHUF) {
+      const fetchRates = async (from: string, to: string): Promise<DailyRates> => {
+        let rates = await getExchangeRatesForPeriod(from, to);
+        if (Object.keys(rates).length === 0) {
+          const current = await getExchangeRates();
+          if (Object.keys(current).length > 0) rates = { [from]: current };
+        }
+        return rates;
+      };
+      const [periodRates, prevRates, todayRates] = await Promise.all([
+        fetchRates(period.from, period.to),
+        fetchRates(prevRange.from, prevRange.to),
+        getExchangeRates(),
+      ]);
+      setDailyRates(periodRates);
+      setPrevDailyRates(prevRates);
+      setCurrentRates(todayRates);
+    }
     } catch (e) {
       console.error('[Stats] load error:', e);
     } finally {
