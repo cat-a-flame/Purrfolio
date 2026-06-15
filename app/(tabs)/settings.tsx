@@ -40,7 +40,6 @@ export default function SettingsScreen() {
       items: [
         { label: 'Categories', route: '/settings/categories' },
         { label: 'Labels', route: '/settings/labels' },
-        { label: 'Templates', route: '/settings/templates' },
       ],
     },
     {

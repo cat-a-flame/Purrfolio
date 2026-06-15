@@ -70,7 +70,6 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
   const appSettingsItems = [
     { label: 'Categories', route: '/settings/categories', icon: 'grid-outline'     },
     { label: 'Labels',     route: '/settings/labels',     icon: 'pricetag-outline' },
-    { label: 'Templates',  route: '/settings/templates',  icon: 'copy-outline'     },
   ];
 
   return (
