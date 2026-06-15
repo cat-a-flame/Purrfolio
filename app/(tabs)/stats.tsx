@@ -412,7 +412,7 @@ export default function StatsScreen() {
           const remainPct = Math.min((projExpense / totalBar) * 100, 100 - spentPct);
           return (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardTitle, { color: colors.muted }]}>PROJECTED · PERIOD END</Text>
+              <Text style={[styles.cardTitle, { color: colors.muted }]}>PROJECTED</Text>
 
               <View style={styles.projRow}>
                 <Text style={[styles.projRowLabel, { color: colors.muted }]}>Spending</Text>
