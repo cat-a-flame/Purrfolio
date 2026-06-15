@@ -412,16 +412,12 @@ export default function StatsScreen() {
           const remainPct = Math.min((projExpense / totalBar) * 100, 100 - spentPct);
           return (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={styles.projHeader}>
-                <Ionicons name="refresh-outline" size={15} color={colors.muted} />
-                <Text style={[styles.projTitle, { color: colors.muted }]}>Projected · period end</Text>
-              </View>
+              <Text style={[styles.cardTitle, { color: colors.muted }]}>PROJECTED · PERIOD END</Text>
 
               <View style={styles.projRow}>
-                <Text style={[styles.projRowLabel, { color: colors.muted }]}>Projected spending</Text>
+                <Text style={[styles.projRowLabel, { color: colors.muted }]}>Spending</Text>
                 <View style={styles.projAmountGroup}>
                   <Text style={[styles.projTotalAmount, { color: colors.text }]}>{formatCurrency(projectedExpense, defaultCurrency)}</Text>
-                  <Text style={[styles.projCurrency, { color: colors.muted }]}> HUF</Text>
                 </View>
               </View>
 
@@ -446,14 +442,12 @@ export default function StatsScreen() {
 
               <View style={styles.projNetRow}>
                 <View>
-                  <Text style={[styles.projNetLabel, { color: colors.muted }]}>Projected net</Text>
-                  <Text style={[styles.projNetSub, { color: colors.muted }]}>if nothing else changes</Text>
+                  <Text style={[styles.projNetLabel, { color: colors.muted }]}>Net balance</Text>
                 </View>
                 <View style={styles.projNetAmountGroup}>
                   <Text style={[styles.projNetAmount, { color: projectedNet >= 0 ? colors.income : colors.expense }]}>
                     {projectedNet >= 0 ? '+' : '−'}{formatCurrency(Math.abs(projectedNet), defaultCurrency)}
                   </Text>
-                  <Text style={[styles.projNetCurrency, { color: colors.muted }]}> HUF</Text>
                 </View>
               </View>
             </View>
@@ -664,13 +658,10 @@ const styles = StyleSheet.create({
   summaryCardRowAmount: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
 
   // Card 2: Projected
-  projHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingTop: 14, paddingBottom: 10 },
-  projTitle: { fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
   projRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 10 },
   projRowLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
   projAmountGroup: { flexDirection: 'row', alignItems: 'baseline' },
   projTotalAmount: { fontSize: 22, fontFamily: 'Figtree_700Bold' },
-  projCurrency: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
   projBarTrack: { height: 10, borderRadius: 5, marginHorizontal: 14, marginBottom: 12, flexDirection: 'row', overflow: 'hidden' },
   projBarSpent: { height: 10 },
   projBarRemain: { height: 10 },
@@ -681,10 +672,8 @@ const styles = StyleSheet.create({
   projDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 14, marginTop: 12, marginBottom: 10 },
   projNetRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 14 },
   projNetLabel: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
-  projNetSub: { fontSize: 11, fontFamily: 'Figtree_400Regular', marginTop: 2 },
   projNetAmountGroup: { flexDirection: 'row', alignItems: 'baseline' },
   projNetAmount: { fontSize: 24, fontFamily: 'Lora_700Bold' },
-  projNetCurrency: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
 
   // Card shell
   card: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
