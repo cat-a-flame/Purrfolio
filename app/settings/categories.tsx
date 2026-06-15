@@ -37,6 +37,8 @@ export default function CategoriesScreen() {
   const [form, setForm] = useState<CatForm>(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+  const [search, setSearch] = useState('');
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -66,6 +68,14 @@ export default function CategoriesScreen() {
       icon: c.icon,
       color: c.color,
       parent_id: c.parent_id ?? '',
+    });
+  }
+
+  function toggleExpand(id: string) {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
     });
   }
 
@@ -120,18 +130,37 @@ export default function CategoriesScreen() {
     }
   }
 
-  type ListEntry = { kind: 'parent'; cat: Category } | { kind: 'child'; cat: Category };
+  const q = search.trim().toLowerCase();
+
+  type ListEntry = { kind: 'parent'; cat: Category; childCount: number } | { kind: 'child'; cat: Category };
   const flat: ListEntry[] = [];
+
   for (const p of rootCats) {
-    flat.push({ kind: 'parent', cat: p });
-    for (const c of parentMap.get(p.id) ?? []) {
-      flat.push({ kind: 'child', cat: c });
+    const children = parentMap.get(p.id) ?? [];
+    if (q) {
+      const parentMatches = p.name.toLowerCase().includes(q) || p.icon.toLowerCase().includes(q);
+      const matchingChildren = children.filter(c => c.name.toLowerCase().includes(q) || c.icon.toLowerCase().includes(q));
+      if (parentMatches || matchingChildren.length > 0) {
+        flat.push({ kind: 'parent', cat: p, childCount: children.length });
+        const childrenToShow = parentMatches ? children : matchingChildren;
+        for (const c of childrenToShow) flat.push({ kind: 'child', cat: c });
+      }
+    } else {
+      flat.push({ kind: 'parent', cat: p, childCount: children.length });
+      if (expandedIds.has(p.id)) {
+        for (const c of children) flat.push({ kind: 'child', cat: c });
+      }
     }
   }
+
   // Orphan children (parent not listed)
   for (const [pid, children] of parentMap) {
     if (!rootCats.find((p) => p.id === pid)) {
-      for (const c of children) flat.push({ kind: 'child', cat: c });
+      for (const c of children) {
+        if (!q || c.name.toLowerCase().includes(q) || c.icon.toLowerCase().includes(q)) {
+          flat.push({ kind: 'child', cat: c });
+        }
+      }
     }
   }
 
@@ -150,32 +179,76 @@ export default function CategoriesScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.searchWrap}>
+        <AppInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search categories…"
+        />
+      </View>
+
       <FlatList
         data={flat}
         keyExtractor={(i) => i.cat.id}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[
-              styles.row,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-              item.kind === 'child' && { marginLeft: 24 },
-            ]}
-            onPress={() => openEdit(item.cat)}
-            activeOpacity={0.7}
-          >
-            <Text style={{ fontSize: 18 }}>{item.cat.icon}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.rowName, { color: colors.text }]}>{item.cat.name}</Text>
-              <Text style={[styles.rowSub, { color: colors.muted }]}>{item.cat.type}</Text>
-            </View>
-            {item.cat.is_default && (
-              <View style={[styles.badge, { backgroundColor: colors.muted + '22' }]}>
-                <Text style={[styles.badgeText, { color: colors.muted }]}>Default</Text>
+        renderItem={({ item }) => {
+          if (item.kind === 'parent') {
+            const isExpanded = expandedIds.has(item.cat.id);
+            const hasChildren = item.childCount > 0;
+            return (
+              <TouchableOpacity
+                style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => hasChildren ? toggleExpand(item.cat.id) : openEdit(item.cat)}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 18 }}>{item.cat.icon}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rowName, { color: colors.text }]}>{item.cat.name}</Text>
+                  <Text style={[styles.rowSub, { color: colors.muted }]}>{item.cat.type}</Text>
+                </View>
+                {item.cat.is_default && (
+                  <View style={[styles.badge, { backgroundColor: colors.muted + '22' }]}>
+                    <Text style={[styles.badgeText, { color: colors.muted }]}>Default</Text>
+                  </View>
+                )}
+                {hasChildren && !q && (
+                  <Ionicons
+                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={colors.muted}
+                  />
+                )}
+                {hasChildren && (
+                  <TouchableOpacity
+                    onPress={() => openEdit(item.cat)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="pencil-outline" size={16} color={colors.muted} />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            );
+          }
+
+          return (
+            <TouchableOpacity
+              style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border, marginLeft: 24 }]}
+              onPress={() => openEdit(item.cat)}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 18 }}>{item.cat.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.rowName, { color: colors.text }]}>{item.cat.name}</Text>
+                <Text style={[styles.rowSub, { color: colors.muted }]}>{item.cat.type}</Text>
               </View>
-            )}
-          </TouchableOpacity>
-        )}
+              {item.cat.is_default && (
+                <View style={[styles.badge, { backgroundColor: colors.muted + '22' }]}>
+                  <Text style={[styles.badgeText, { color: colors.muted }]}>Default</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        }}
         ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
         ListEmptyComponent={<Text style={[styles.empty, { color: colors.muted }]}>No categories yet.</Text>}
         ListFooterComponent={<View style={{ height: 32 }} />}
@@ -308,6 +381,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   add: { fontSize: 15 },
+  searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   list: { padding: 16 },
   row: {
     flexDirection: 'row',
