@@ -103,7 +103,6 @@ export default function RootLayout() {
         <Stack.Screen name="wallet/[id]" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="settings/categories" options={{ headerShown: false }} />
         <Stack.Screen name="settings/labels" options={{ headerShown: false }} />
-        <Stack.Screen name="settings/templates" options={{ headerShown: false }} />
         <Stack.Screen name="settings/security" options={{ headerShown: false }} />
         <Stack.Screen name="settings/account" options={{ headerShown: false }} />
       </Stack>
