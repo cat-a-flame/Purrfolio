@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import {
   View,
   Text,
@@ -85,7 +86,11 @@ export default function RecurringScreen() {
   const [selectedDue, setSelectedDue] = useState<{ payment: RecurringPayment; dueDate: Date } | null>(null);
   const [toast, setToast] = useState<{ visible: boolean; message: string; success: boolean; undoable: boolean }>({ visible: false, message: '', success: true, undoable: false });
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastPay = useRef<{ transactionId: string; paymentId: string; dueDate: string } | null>(null);
+  const pendingUndo = useRef<
+    | { type: 'pay'; transactionId: string; paymentId: string; dueDate: string }
+    | { type: 'skip'; paymentId: string; dueDate: string }
+    | null
+  >(null);
 
   function showToast(message: string, success: boolean, undoable = false) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -94,18 +99,24 @@ export default function RecurringScreen() {
   }
 
   async function handleUndo() {
-    const ref = lastPay.current;
-    if (!ref) return;
-    lastPay.current = null;
+    const action = pendingUndo.current;
+    if (!action) return;
+    pendingUndo.current = null;
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToast(t => ({ ...t, visible: false }));
-    await Promise.all([
-      supabase.from('transactions').delete().eq('id', ref.transactionId),
-      supabase.from('recurring_occurrences').delete()
-        .eq('recurring_payment_id', ref.paymentId)
-        .eq('due_date', ref.dueDate),
-    ]);
-    Events.emit('transaction-saved', { success: true });
+    if (action.type === 'pay') {
+      await Promise.all([
+        supabase.from('transactions').delete().eq('id', action.transactionId),
+        supabase.from('recurring_occurrences').delete()
+          .eq('recurring_payment_id', action.paymentId)
+          .eq('due_date', action.dueDate),
+      ]);
+      Events.emit('transaction-saved', { success: true });
+    } else {
+      await supabase.from('recurring_occurrences').delete()
+        .eq('recurring_payment_id', action.paymentId)
+        .eq('due_date', action.dueDate);
+    }
     load();
   }
 
@@ -225,7 +236,7 @@ export default function RecurringScreen() {
         status: 'paid',
         transaction_id: txData.id,
       });
-      lastPay.current = { transactionId: txData.id, paymentId: payment.id, dueDate: isoDate(dueDate) };
+      pendingUndo.current = { type: 'pay', transactionId: txData.id, paymentId: payment.id, dueDate: isoDate(dueDate) };
       Events.emit('transaction-saved', { success: true });
       showToast('Payment confirmed!', true, true);
     } else {
@@ -240,13 +251,19 @@ export default function RecurringScreen() {
     setActionLoading(key);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setActionLoading(null); return; }
-    await supabase.from('recurring_occurrences').insert({
+    const { error } = await supabase.from('recurring_occurrences').insert({
       recurring_payment_id: payment.id,
       user_id: user.id,
       due_date: isoDate(dueDate),
       status: 'skipped',
       transaction_id: null,
     });
+    if (!error) {
+      pendingUndo.current = { type: 'skip', paymentId: payment.id, dueDate: isoDate(dueDate) };
+      showToast('Payment skipped.', true, true);
+    } else {
+      showToast('Failed to skip payment.', false);
+    }
     setActionLoading(null);
     load();
   }
@@ -442,13 +459,15 @@ export default function RecurringScreen() {
               {upcomingItems.map(({ payment, dueDate }) => {
                 const key = `${payment.id}|${isoDate(dueDate)}`;
                 return (
-                  <DueCard
+                  <SwipeableDueCard
                     key={key}
                     payment={payment}
                     dueDate={dueDate}
                     today={today}
                     onPress={() => setSelectedDue({ payment, dueDate })}
                     colors={colors}
+                    onSwipePay={() => handlePay(payment, dueDate)}
+                    onSwipeSkip={() => handleSkip(payment, dueDate)}
                   />
                 );
               })}
@@ -627,6 +646,52 @@ function DueCard({
         {payment.type === 'income' ? '+' : '−'}{formatCurrency(payment.amount, currency)}
       </Text>
     </TouchableOpacity>
+  );
+}
+
+// ─── SwipeableDueCard ────────────────────────────────────────────────────────
+
+function SwipeableDueCard({
+  payment, dueDate, today, colors, onPress, onSwipePay, onSwipeSkip,
+}: {
+  payment: RecurringPayment;
+  dueDate: Date;
+  today: Date;
+  colors: any;
+  onPress: () => void;
+  onSwipePay: () => void;
+  onSwipeSkip: () => void;
+}) {
+  const swipeRef = useRef<any>(null);
+
+  function handleOpen(direction: 'left' | 'right') {
+    swipeRef.current?.close();
+    if (direction === 'right') onSwipePay();
+    else onSwipeSkip();
+  }
+
+  return (
+    <ReanimatedSwipeable
+      ref={swipeRef}
+      friction={2}
+      overshootRight={false}
+      overshootLeft={false}
+      renderRightActions={() => (
+        <View style={[styles.swipeAction, { backgroundColor: colors.income, marginLeft: 6 }]}>
+          <Ionicons name="checkmark-circle-outline" size={26} color="#fff" />
+          <Text style={styles.swipeActionText}>Add</Text>
+        </View>
+      )}
+      renderLeftActions={() => (
+        <View style={[styles.swipeAction, { backgroundColor: colors.border, marginRight: 6 }]}>
+          <Ionicons name="close-circle-outline" size={26} color={colors.muted} />
+          <Text style={[styles.swipeActionText, { color: colors.muted }]}>Skip</Text>
+        </View>
+      )}
+      onSwipeableOpen={handleOpen}
+    >
+      <DueCard payment={payment} dueDate={dueDate} today={today} onPress={onPress} colors={colors} />
+    </ReanimatedSwipeable>
   );
 }
 
@@ -1165,6 +1230,15 @@ const styles = StyleSheet.create({
   dueName: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
   dueSub: { fontSize: 12, marginTop: 1 },
   dueAmount: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
+  swipeAction: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginBottom: 2,
+  },
+  swipeActionText: { fontSize: 11, fontFamily: 'Figtree_600SemiBold', color: '#fff' },
 
   // Action sheet
   actionSheetAmount: {
