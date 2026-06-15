@@ -6,6 +6,7 @@ import {
   StyleSheet,
   RefreshControl,
   Dimensions,
+  Pressable,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
@@ -167,6 +168,7 @@ export default function StatsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [recurringPayments, setRecurringPayments] = useState<any[]>([]);
   const [recurringOccurrences, setRecurringOccurrences] = useState<any[]>([]);
+  const [otherExpanded, setOtherExpanded] = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -303,7 +305,7 @@ export default function StatsScreen() {
   const expenseByCategory = useMemo(() => groupByCategory(txsHUF, 'expense'), [txsHUF]);
 
   // Merge categories under 10 000 into "Other" for the chart
-  const displayExpenseByCategory = useMemo(() => {
+  const { displayExpenseByCategory, otherItems } = useMemo(() => {
     const THRESHOLD = 10000;
     const main = expenseByCategory.filter(c => c.amount >= THRESHOLD);
     const small = expenseByCategory.filter(c => c.amount < THRESHOLD);
@@ -313,10 +315,11 @@ export default function StatsScreen() {
       { id: '__other__' as string | null, name: 'Other', icon: null, color: '#94a3b8', amount: otherAmount, count: small.reduce((s, c) => s + c.count, 0) },
     ];
     // Assign unique palette colors by index so segments are always distinguishable
-    return items.map((item, i) => ({
+    const display = items.map((item, i) => ({
       ...item,
       color: item.id === '__other__' ? '#94a3b8' : CHART_PALETTE[i % CHART_PALETTE.length],
     }));
+    return { displayExpenseByCategory: display, otherItems: small };
   }, [expenseByCategory]);
 
   // One entry per currency; bars are sized by HUF-equivalent so EUR/USD align correctly
@@ -492,26 +495,65 @@ export default function StatsScreen() {
               const pct = expense > 0 ? Math.round((cat.amount / expense) * 100) : 0;
               const barPct = displayExpenseByCategory[0]?.amount > 0 ? (cat.amount / displayExpenseByCategory[0].amount) * 100 : 0;
               const dotColor = cat.color || colors.expense;
+              const isOther = cat.id === '__other__';
               return (
-                <View
-                  key={cat.id ?? `null-list-${i}`}
-                  style={[styles.catRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
-                >
-                  <View style={[styles.catIconBox, { backgroundColor: dotColor + '28' }]}>
-                    {cat.icon ? <Text style={styles.catIcon}>{cat.icon}</Text> : <View style={[styles.catDot, { backgroundColor: dotColor }]} />}
-                  </View>
-                  <View style={styles.catInfo}>
-                    <View style={styles.catTopRow}>
-                      <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>{cat.name}</Text>
-                      <Text style={[styles.catAmount, { color: dotColor }]}>{formatCurrency(cat.amount, defaultCurrency)}</Text>
+                <View key={cat.id ?? `null-list-${i}`}>
+                  <Pressable
+                    onPress={isOther ? () => setOtherExpanded(v => !v) : undefined}
+                    style={[styles.catRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
+                  >
+                    <View style={[styles.catIconBox, { backgroundColor: dotColor + '28' }]}>
+                      {cat.icon ? <Text style={styles.catIcon}>{cat.icon}</Text> : <View style={[styles.catDot, { backgroundColor: dotColor }]} />}
                     </View>
-                    <View style={styles.catBarRow}>
-                      <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
-                        <View style={[styles.barFill, { width: `${barPct}%` as any, backgroundColor: dotColor }]} />
+                    <View style={styles.catInfo}>
+                      <View style={styles.catTopRow}>
+                        <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>{cat.name}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Text style={[styles.catAmount, { color: dotColor }]}>{formatCurrency(cat.amount, defaultCurrency)}</Text>
+                          {isOther && (
+                            <Ionicons
+                              name={otherExpanded ? 'chevron-up' : 'chevron-down'}
+                              size={14}
+                              color={colors.muted}
+                            />
+                          )}
+                        </View>
                       </View>
-                      <Text style={[styles.catPct, { color: colors.muted }]}>{pct}%</Text>
+                      <View style={styles.catBarRow}>
+                        <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
+                          <View style={[styles.barFill, { width: `${barPct}%` as any, backgroundColor: dotColor }]} />
+                        </View>
+                        <Text style={[styles.catPct, { color: colors.muted }]}>{pct}%</Text>
+                      </View>
                     </View>
-                  </View>
+                  </Pressable>
+                  {isOther && otherExpanded && otherItems.map((sub, j) => {
+                    const subPct = expense > 0 ? Math.round((sub.amount / expense) * 100) : 0;
+                    const subBarPct = displayExpenseByCategory[0]?.amount > 0 ? (sub.amount / displayExpenseByCategory[0].amount) * 100 : 0;
+                    const subColor = sub.color || colors.expense;
+                    return (
+                      <View
+                        key={sub.id ?? `null-other-sub-${j}`}
+                        style={[styles.catRow, styles.subCatRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
+                      >
+                        <View style={[styles.catIconBox, { backgroundColor: subColor + '28' }]}>
+                          {sub.icon ? <Text style={styles.catIcon}>{sub.icon}</Text> : <View style={[styles.catDot, { backgroundColor: subColor }]} />}
+                        </View>
+                        <View style={styles.catInfo}>
+                          <View style={styles.catTopRow}>
+                            <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>{sub.name}</Text>
+                            <Text style={[styles.catAmount, { color: subColor }]}>{formatCurrency(sub.amount, defaultCurrency)}</Text>
+                          </View>
+                          <View style={styles.catBarRow}>
+                            <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
+                              <View style={[styles.barFill, { width: `${subBarPct}%` as any, backgroundColor: subColor }]} />
+                            </View>
+                            <Text style={[styles.catPct, { color: colors.muted }]}>{subPct}%</Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
                 </View>
               );
             })}
@@ -670,6 +712,7 @@ const styles = StyleSheet.create({
 
   // Category rows
   catRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 10 },
+  subCatRow: { paddingLeft: 28 },
   catIconBox: { width: 36, height: 36, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   catIcon: { fontSize: 18 },
   catDot: { width: 10, height: 10, borderRadius: 5 },
