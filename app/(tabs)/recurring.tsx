@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
-import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import {
   View,
   Text,
@@ -11,6 +10,8 @@ import {
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
@@ -651,6 +652,8 @@ function DueCard({
 
 // ─── SwipeableDueCard ────────────────────────────────────────────────────────
 
+const SWIPE_THRESHOLD = 72;
+
 function SwipeableDueCard({
   payment, dueDate, today, colors, onPress, onSwipePay, onSwipeSkip,
 }: {
@@ -662,36 +665,65 @@ function SwipeableDueCard({
   onSwipePay: () => void;
   onSwipeSkip: () => void;
 }) {
-  const swipeRef = useRef<any>(null);
+  const translateX = useRef(new Animated.Value(0)).current;
+  const triggered = useRef(false);
 
-  function handleOpen(direction: 'left' | 'right') {
-    swipeRef.current?.close();
-    if (direction === 'right') onSwipePay();
-    else onSwipeSkip();
-  }
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 8 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.2,
+      onPanResponderGrant: () => {
+        triggered.current = false;
+        translateX.setOffset((translateX as any)._value ?? 0);
+        translateX.setValue(0);
+      },
+      onPanResponderMove: Animated.event([null, { dx: translateX }], { useNativeDriver: false }),
+      onPanResponderRelease: (_, gs) => {
+        translateX.flattenOffset();
+        if (!triggered.current) {
+          if (gs.dx < -SWIPE_THRESHOLD) {
+            triggered.current = true;
+            Animated.timing(translateX, { toValue: -500, duration: 180, useNativeDriver: true }).start(() => {
+              translateX.setValue(0);
+              onSwipePay();
+            });
+          } else if (gs.dx > SWIPE_THRESHOLD) {
+            triggered.current = true;
+            Animated.timing(translateX, { toValue: 500, duration: 180, useNativeDriver: true }).start(() => {
+              translateX.setValue(0);
+              onSwipeSkip();
+            });
+          } else {
+            Animated.spring(translateX, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+          }
+        }
+      },
+      onPanResponderTerminate: () => {
+        translateX.flattenOffset();
+        Animated.spring(translateX, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+      },
+    })
+  ).current;
+
+  const addOpacity = translateX.interpolate({ inputRange: [-SWIPE_THRESHOLD, -16, 0], outputRange: [1, 0.4, 0], extrapolate: 'clamp' });
+  const skipOpacity = translateX.interpolate({ inputRange: [0, 16, SWIPE_THRESHOLD], outputRange: [0, 0.4, 1], extrapolate: 'clamp' });
 
   return (
-    <ReanimatedSwipeable
-      ref={swipeRef}
-      friction={2}
-      overshootRight={false}
-      overshootLeft={false}
-      renderRightActions={() => (
-        <View style={[styles.swipeAction, { backgroundColor: colors.income, marginLeft: 6 }]}>
-          <Ionicons name="checkmark-circle-outline" size={26} color="#fff" />
-          <Text style={styles.swipeActionText}>Add</Text>
-        </View>
-      )}
-      renderLeftActions={() => (
-        <View style={[styles.swipeAction, { backgroundColor: colors.border, marginRight: 6 }]}>
-          <Ionicons name="close-circle-outline" size={26} color={colors.muted} />
-          <Text style={[styles.swipeActionText, { color: colors.muted }]}>Skip</Text>
-        </View>
-      )}
-      onSwipeableOpen={handleOpen}
-    >
-      <DueCard payment={payment} dueDate={dueDate} today={today} onPress={onPress} colors={colors} />
-    </ReanimatedSwipeable>
+    <View style={{ overflow: 'hidden', borderRadius: 10, marginBottom: 2 }}>
+      {/* Add hint (left swipe) */}
+      <Animated.View style={[StyleSheet.absoluteFillObject, styles.swipeHint, { backgroundColor: colors.income, alignItems: 'flex-end', paddingRight: 18, opacity: addOpacity }]}>
+        <Ionicons name="checkmark-circle-outline" size={24} color="#fff" />
+        <Text style={styles.swipeActionText}>Add</Text>
+      </Animated.View>
+      {/* Skip hint (right swipe) */}
+      <Animated.View style={[StyleSheet.absoluteFillObject, styles.swipeHint, { backgroundColor: colors.border, alignItems: 'flex-start', paddingLeft: 18, opacity: skipOpacity }]}>
+        <Ionicons name="close-circle-outline" size={24} color={colors.muted} />
+        <Text style={[styles.swipeActionText, { color: colors.muted }]}>Skip</Text>
+      </Animated.View>
+      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+        <DueCard payment={payment} dueDate={dueDate} today={today} onPress={onPress} colors={colors} />
+      </Animated.View>
+    </View>
   );
 }
 
@@ -1230,14 +1262,7 @@ const styles = StyleSheet.create({
   dueName: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
   dueSub: { fontSize: 12, marginTop: 1 },
   dueAmount: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
-  swipeAction: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 2,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    marginBottom: 2,
-  },
+  swipeHint: { justifyContent: 'center', gap: 2 },
   swipeActionText: { fontSize: 11, fontFamily: 'Figtree_600SemiBold', color: '#fff' },
 
   // Action sheet
