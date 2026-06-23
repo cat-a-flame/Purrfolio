@@ -1,6 +1,7 @@
-import { Fragment } from 'react';
-import { useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import {
+  AppState,
+  Platform,
   View,
   Text,
   TouchableOpacity,
@@ -26,6 +27,34 @@ export default function SettingsScreen() {
   const colors = useTheme();
   const router = useRouter();
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+  const [notifPermission, setNotifPermission] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    async function checkPermission() {
+      try {
+        const { hasNotificationPermission } = await import('notification-listener');
+        setNotifPermission(await hasNotificationPermission());
+      } catch {
+        // module unavailable (Expo Go / iOS)
+      }
+    }
+
+    checkPermission();
+    // Re-check when app returns to foreground (user may have just granted access)
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') checkPermission();
+    });
+    return () => sub.remove();
+  }, []);
+
+  async function handleNotifPress() {
+    try {
+      const { openNotificationPermissionSettings } = await import('notification-listener');
+      await openNotificationPermissionSettings();
+    } catch {}
+  }
 
   function handleSignOut() {
     setConfirmAction(() => async () => {
@@ -48,6 +77,19 @@ export default function SettingsScreen() {
         { label: 'Security', route: '/settings/security' },
       ],
     },
+    ...(Platform.OS === 'android' && notifPermission !== null
+      ? [{
+          title: 'Integrations',
+          items: [
+            {
+              label: 'Google Wallet auto-capture',
+              onPress: notifPermission ? undefined : handleNotifPress,
+              badge: notifPermission ? 'On' : 'Off — tap to enable',
+              badgeColor: notifPermission ? colors.income : colors.muted,
+            } as any,
+          ],
+        }]
+      : []),
     {
       title: 'Account',
       items: [
@@ -73,7 +115,7 @@ export default function SettingsScreen() {
                   <TouchableOpacity
                     style={styles.row}
                     onPress={item.onPress ?? (() => item.route && router.push(item.route as any))}
-                    activeOpacity={0.7}
+                    activeOpacity={item.onPress || item.route ? 0.7 : 1}
                   >
                     <Text
                       style={[
@@ -83,9 +125,13 @@ export default function SettingsScreen() {
                     >
                       {item.label}
                     </Text>
-                    {!item.danger && (
+                    {item.badge ? (
+                      <Text style={[styles.badge, { color: item.badgeColor ?? colors.muted }]}>
+                        {item.badge}
+                      </Text>
+                    ) : !item.danger ? (
                       <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-                    )}
+                    ) : null}
                   </TouchableOpacity>
                 </Fragment>
               ))}
@@ -128,6 +174,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  rowLabel: { fontSize: 16 },
+  rowLabel: { fontSize: 16, flex: 1 },
+  badge: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
   divider: { height: 1, marginHorizontal: 16 },
 });
