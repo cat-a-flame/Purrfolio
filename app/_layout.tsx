@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Text } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { loadThemePreference, useDarkMode } from '@/lib/theme';
@@ -84,28 +85,33 @@ export default function RootLayout() {
     }
   }, [session, authReady, minTimeReady, pinRequired, unlocked, segments]);
 
+  let content;
   if (!fontsLoaded || loading) {
-    return <LoadingScreen />;
-  }
-
-  if (pinRequired && !unlocked) {
-    return <UnlockScreen onUnlocked={() => setUnlocked(true)} />;
+    content = <LoadingScreen />;
+  } else if (pinRequired && !unlocked) {
+    content = <UnlockScreen onUnlocked={() => setUnlocked(true)} />;
+  } else {
+    content = (
+      <SafeAreaProvider>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="transaction/add" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="transaction/[id]" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="wallet/[id]" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="settings/categories" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/labels" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/security" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/account" options={{ headerShown: false }} />
+        </Stack>
+      </SafeAreaProvider>
+    );
   }
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="transaction/add" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="transaction/[id]" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="wallet/[id]" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="settings/categories" options={{ headerShown: false }} />
-        <Stack.Screen name="settings/labels" options={{ headerShown: false }} />
-        <Stack.Screen name="settings/security" options={{ headerShown: false }} />
-        <Stack.Screen name="settings/account" options={{ headerShown: false }} />
-      </Stack>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      {content}
+    </GestureHandlerRootView>
   );
 }
