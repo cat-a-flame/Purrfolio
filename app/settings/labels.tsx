@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,29 +6,17 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
-import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import type { Label } from '@/lib/types';
-import AppInput from '@/components/AppInput';
-import AppButton from '@/components/AppButton';
-import BottomModal from '@/components/BottomModal';
-
-type LabelForm = { name: string; color: string };
-const DEFAULT_FORM: LabelForm = { name: '', color: '#f26e4d' };
 
 export default function LabelsScreen() {
   const colors = useTheme();
   const router = useRouter();
   const [labels, setLabels] = useState<Label[]>([]);
-  const [addVisible, setAddVisible] = useState(false);
-  const [editLabel, setEditLabel] = useState<Label | null>(null);
-  const [form, setForm] = useState<LabelForm>(DEFAULT_FORM);
-  const [saving, setSaving] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -37,45 +25,7 @@ export default function LabelsScreen() {
     setLabels(data ?? []);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
-
-  function openAdd() {
-    setForm(DEFAULT_FORM);
-    setAddVisible(true);
-  }
-
-  function openEdit(l: Label) {
-    setEditLabel(l);
-    setForm({ name: l.name, color: l.color });
-  }
-
-  async function handleSave() {
-    if (!form.name.trim()) return;
-    setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
-
-    const payload = { name: form.name.trim(), color: form.color };
-    if (editLabel) {
-      await supabase.from('labels').update(payload).eq('id', editLabel.id);
-    } else {
-      await supabase.from('labels').insert({ ...payload, user_id: user.id });
-    }
-
-    setSaving(false);
-    setAddVisible(false);
-    setEditLabel(null);
-    load();
-  }
-
-  async function handleDelete() {
-    if (!editLabel) return;
-    setConfirmAction(() => async () => {
-      await supabase.from('labels').delete().eq('id', editLabel.id);
-      setEditLabel(null);
-      load();
-    });
-  }
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -87,7 +37,7 @@ export default function LabelsScreen() {
           </View>
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Labels</Text>
-        <TouchableOpacity onPress={openAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={() => router.push('/label/add')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="add-circle-outline" size={26} color={colors.accent} />
         </TouchableOpacity>
       </View>
@@ -99,7 +49,7 @@ export default function LabelsScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => openEdit(item)}
+            onPress={() => router.push(`/label/${item.id}`)}
             activeOpacity={0.7}
           >
             <View style={[styles.colorDot, { backgroundColor: item.color }]} />
@@ -109,32 +59,6 @@ export default function LabelsScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         ListEmptyComponent={<Text style={[styles.empty, { color: colors.muted }]}>No labels yet.</Text>}
         ListFooterComponent={<View style={{ height: 32 }} />}
-      />
-
-      <BottomModal visible={addVisible} onClose={() => setAddVisible(false)} title="Add label">
-        <AppInput label="Name" value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} placeholder="Label name" />
-        <AppInput label="Color (hex)" value={form.color} onChangeText={(v) => setForm((f) => ({ ...f, color: v }))} placeholder="#f26e4d" />
-        <View style={[styles.preview, { backgroundColor: form.color + '22', borderColor: form.color + '55' }]}>
-          <Text style={[styles.previewText, { color: form.color }]}>{form.name || 'Preview'}</Text>
-        </View>
-        <AppButton onPress={handleSave} loading={saving} fullWidth>Save</AppButton>
-      </BottomModal>
-
-      <BottomModal visible={!!editLabel} onClose={() => setEditLabel(null)} title="Edit label">
-        <AppInput label="Name" value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} placeholder="Label name" />
-        <AppInput label="Color (hex)" value={form.color} onChangeText={(v) => setForm((f) => ({ ...f, color: v }))} placeholder="#f26e4d" />
-        <View style={styles.modalActions}>
-          <AppButton onPress={handleDelete} variant="danger" style={{ flex: 1 }}>Delete</AppButton>
-          <AppButton onPress={handleSave} loading={saving} style={{ flex: 2 }}>Save</AppButton>
-        </View>
-      </BottomModal>
-      <ConfirmModal
-        visible={!!confirmAction}
-        title="Delete label"
-        message={`Delete "${editLabel?.name}"?`}
-        confirmLabel="Delete"
-        onConfirm={() => { confirmAction?.(); setConfirmAction(null); }}
-        onCancel={() => setConfirmAction(null)}
       />
     </SafeAreaView>
   );
@@ -166,13 +90,4 @@ const styles = StyleSheet.create({
   colorDot: { width: 16, height: 16, borderRadius: 8 },
   rowName: { fontSize: 15, fontFamily: 'Figtree_500Medium' },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
-  preview: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  previewText: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
-  modalActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
 });

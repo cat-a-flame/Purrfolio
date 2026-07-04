@@ -100,6 +100,12 @@ export default function RootLayout() {
           <Stack.Screen name="transaction/add" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="transaction/[id]" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="wallet/[id]" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="payment/add" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="payment/[id]" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="category/add" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="category/[id]" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="label/add" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="label/[id]" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="settings/categories" options={{ headerShown: false }} />
           <Stack.Screen name="settings/labels" options={{ headerShown: false }} />
           <Stack.Screen name="settings/security" options={{ headerShown: false }} />

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,37 +6,18 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
-import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
-import type { Category, TransactionType } from '@/lib/types';
+import type { Category } from '@/lib/types';
 import AppInput from '@/components/AppInput';
-import AppButton from '@/components/AppButton';
-import BottomModal from '@/components/BottomModal';
-
-const TYPES = ['expense', 'income', 'both'] as const;
-
-type CatForm = {
-  name: string;
-  type: TransactionType | 'both';
-  icon: string;
-  color: string;
-  parent_id: string;
-};
-const DEFAULT_FORM: CatForm = { name: '', type: 'expense', icon: '📁', color: '#f26e4d', parent_id: '' };
 
 export default function CategoriesScreen() {
   const colors = useTheme();
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [addVisible, setAddVisible] = useState(false);
-  const [editCat, setEditCat] = useState<Category | null>(null);
-  const [form, setForm] = useState<CatForm>(DEFAULT_FORM);
-  const [saving, setSaving] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
   const [search, setSearch] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -51,70 +32,13 @@ export default function CategoriesScreen() {
     setCategories(data ?? []);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
-
-  const parents = categories.filter((c) => !c.parent_id);
-
-  function openAdd() {
-    setForm(DEFAULT_FORM);
-    setAddVisible(true);
-  }
-
-  function openEdit(c: Category) {
-    setEditCat(c);
-    setForm({
-      name: c.name,
-      type: c.type,
-      icon: c.icon,
-      color: c.color,
-      parent_id: c.parent_id ?? '',
-    });
-  }
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   function toggleExpand(id: string) {
     setExpandedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
-    });
-  }
-
-  function setField<K extends keyof CatForm>(key: K, value: CatForm[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
-
-  async function handleSave() {
-    if (!form.name.trim()) return;
-    setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
-
-    const payload = {
-      name: form.name.trim(),
-      type: form.type,
-      icon: form.icon,
-      color: form.parent_id ? '' : form.color,
-      parent_id: form.parent_id || null,
-    };
-
-    if (editCat) {
-      await supabase.from('categories').update(payload).eq('id', editCat.id);
-    } else {
-      await supabase.from('categories').insert({ ...payload, user_id: user.id });
-    }
-
-    setSaving(false);
-    setAddVisible(false);
-    setEditCat(null);
-    load();
-  }
-
-  async function handleDelete() {
-    if (!editCat || editCat.is_default) return;
-    setConfirmAction(() => async () => {
-      await supabase.from('categories').delete().eq('id', editCat.id);
-      setEditCat(null);
-      load();
     });
   }
 
@@ -174,7 +98,7 @@ export default function CategoriesScreen() {
           </View>
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Categories</Text>
-        <TouchableOpacity onPress={openAdd} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={() => router.push('/category/add')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="add-circle-outline" size={26} color={colors.accent} />
         </TouchableOpacity>
       </View>
@@ -198,7 +122,7 @@ export default function CategoriesScreen() {
             return (
               <TouchableOpacity
                 style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                onPress={() => hasChildren ? toggleExpand(item.cat.id) : openEdit(item.cat)}
+                onPress={() => hasChildren ? toggleExpand(item.cat.id) : router.push(`/category/${item.cat.id}`)}
                 activeOpacity={0.7}
               >
                 <Text style={{ fontSize: 18 }}>{item.cat.icon}</Text>
@@ -220,7 +144,7 @@ export default function CategoriesScreen() {
                 )}
                 {hasChildren && (
                   <TouchableOpacity
-                    onPress={() => openEdit(item.cat)}
+                    onPress={() => router.push(`/category/${item.cat.id}`)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Ionicons name="pencil-outline" size={16} color={colors.muted} />
@@ -233,7 +157,7 @@ export default function CategoriesScreen() {
           return (
             <TouchableOpacity
               style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border, marginLeft: 24 }]}
-              onPress={() => openEdit(item.cat)}
+              onPress={() => router.push(`/category/${item.cat.id}`)}
               activeOpacity={0.7}
             >
               <Text style={{ fontSize: 18 }}>{item.cat.icon}</Text>
@@ -253,117 +177,7 @@ export default function CategoriesScreen() {
         ListEmptyComponent={<Text style={[styles.empty, { color: colors.muted }]}>No categories yet.</Text>}
         ListFooterComponent={<View style={{ height: 32 }} />}
       />
-
-      <BottomModal visible={addVisible} onClose={() => setAddVisible(false)} title="Add category">
-        <CatFormFields form={form} setField={setField} parents={parents} colors={colors} />
-        <AppButton onPress={handleSave} loading={saving} fullWidth>Save</AppButton>
-      </BottomModal>
-
-      <BottomModal visible={!!editCat} onClose={() => setEditCat(null)} title="Edit category">
-        <CatFormFields form={form} setField={setField} parents={parents.filter((p) => p.id !== editCat?.id)} colors={colors} />
-        <View style={styles.modalActions}>
-          {editCat && !editCat.is_default && (
-            <AppButton onPress={handleDelete} variant="danger" style={{ flex: 1 }}>Delete</AppButton>
-          )}
-          <AppButton onPress={handleSave} loading={saving} style={{ flex: 2 }}>Save</AppButton>
-        </View>
-      </BottomModal>
-      <ConfirmModal
-        visible={!!confirmAction}
-        title="Delete category"
-        message={`Delete "${editCat?.name}"?`}
-        confirmLabel="Delete"
-        onConfirm={() => { confirmAction?.(); setConfirmAction(null); }}
-        onCancel={() => setConfirmAction(null)}
-      />
     </SafeAreaView>
-  );
-}
-
-function CatFormFields({
-  form,
-  setField,
-  parents,
-  colors,
-}: {
-  form: CatForm;
-  setField: <K extends keyof CatForm>(k: K, v: CatForm[K]) => void;
-  parents: Category[];
-  colors: any;
-}) {
-  return (
-    <>
-      <AppInput
-        label="Name"
-        value={form.name}
-        onChangeText={(v) => setField('name', v)}
-        placeholder="Category name"
-      />
-      <AppInput
-        label="Icon (emoji)"
-        value={form.icon}
-        onChangeText={(v) => setField('icon', v)}
-        placeholder="📁"
-      />
-      {!form.parent_id && (
-        <AppInput
-          label="Color (hex)"
-          value={form.color}
-          onChangeText={(v) => setField('color', v)}
-          placeholder="#f26e4d"
-        />
-      )}
-      <View style={styles.formRow}>
-        <Text style={{ color: colors.muted, fontSize: 14 }}>Type</Text>
-        <View style={styles.chips}>
-          {TYPES.map((t) => (
-            <TouchableOpacity
-              key={t}
-              style={[
-                styles.chip,
-                { borderColor: form.type === t ? colors.accent : colors.border },
-                form.type === t && { backgroundColor: colors.accent + '22' },
-              ]}
-              onPress={() => setField('type', t)}
-            >
-              <Text style={{ color: form.type === t ? colors.accent : colors.text, fontFamily: 'Figtree_600SemiBold', fontSize: 13 }}>
-                {t}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-      <View style={styles.formRow}>
-        <Text style={{ color: colors.muted, fontSize: 14 }}>Parent category</Text>
-      </View>
-      <View style={styles.chips}>
-        <TouchableOpacity
-          style={[
-            styles.chip,
-            { borderColor: !form.parent_id ? colors.accent : colors.border },
-            !form.parent_id && { backgroundColor: colors.accent + '22' },
-          ]}
-          onPress={() => setField('parent_id', '')}
-        >
-          <Text style={{ color: !form.parent_id ? colors.accent : colors.text, fontSize: 13 }}>None</Text>
-        </TouchableOpacity>
-        {parents.map((p) => (
-          <TouchableOpacity
-            key={p.id}
-            style={[
-              styles.chip,
-              { borderColor: form.parent_id === p.id ? colors.accent : colors.border },
-              form.parent_id === p.id && { backgroundColor: colors.accent + '22' },
-            ]}
-            onPress={() => setField('parent_id', p.id)}
-          >
-            <Text style={{ color: form.parent_id === p.id ? colors.accent : colors.text, fontSize: 13 }}>
-              {p.icon} {p.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </>
   );
 }
 
@@ -396,13 +210,4 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
   badgeText: { fontSize: 11, fontFamily: 'Figtree_600SemiBold' },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
-  formRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  modalActions: { flexDirection: 'row', gap: 8, marginTop: 8 },
 });
