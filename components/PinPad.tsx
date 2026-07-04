@@ -17,7 +17,7 @@ type Props = {
   pin: string;
   error: boolean;
   showBiometrics?: boolean;
-  biometricsType?: 'face' | 'fingerprint' | null;
+  biometricsType?: 'fingerprint' | null;
   onKey: (key: string) => void;
   onDelete: () => void;
   onBiometrics?: () => void;
@@ -47,8 +47,6 @@ export function PinPad({
       Animated.timing(shakeAnim, { toValue: 0, duration: 40, useNativeDriver: true }),
     ]).start();
   }, [error]);
-
-  const biometricsIcon = biometricsType === 'face' ? 'scan-outline' : 'finger-print-outline';
 
   const rows = [
     ['1', '2', '3'],
@@ -113,7 +111,7 @@ export function PinPad({
                     onPress={onBiometrics}
                     activeOpacity={0.6}
                   >
-                    <Ionicons name={biometricsIcon} size={26} color={colors.accent} />
+                    <Ionicons name="finger-print-outline" size={26} color={colors.accent} />
                   </TouchableOpacity>
                 );
               }

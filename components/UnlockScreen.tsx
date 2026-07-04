@@ -23,7 +23,7 @@ export function UnlockScreen({ onUnlocked }: Props) {
   const [phase, setPhase] = useState<Phase>('pin');
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
-  const [biometricsType, setBiometricsType] = useState<'face' | 'fingerprint' | null>(null);
+  const [biometricsType, setBiometricsType] = useState<'fingerprint' | null>(null);
 
   const tryBiometrics = useCallback(async () => {
     const success = await authenticateWithBiometrics();
@@ -39,10 +39,9 @@ export function UnlockScreen({ onUnlocked }: Props) {
     let cancelled = false;
     async function init() {
       const [enabled, sup] = await Promise.all([isBiometricsEnabled(), getSupportedBiometrics()]);
-      const hardwareAvailable = sup.face || sup.fingerprint;
       if (cancelled) return;
-      if (enabled && hardwareAvailable) {
-        setBiometricsType(sup.face ? 'face' : 'fingerprint');
+      if (enabled && sup.fingerprint) {
+        setBiometricsType('fingerprint');
         setPhase('biometric');
         tryBiometrics();
       } else {
@@ -75,8 +74,6 @@ export function UnlockScreen({ onUnlocked }: Props) {
 
   // ── Biometric phase ──────────────────────────────────────────────────────────
   if (phase === 'biometric') {
-    const icon = biometricsType === 'face' ? 'scan-outline' : 'finger-print-outline';
-    const label = biometricsType === 'face' ? 'Face ID' : 'Fingerprint';
     return (
       <View style={[styles.container, { backgroundColor: colors.bg }]}>
         <Text style={[styles.appName, { color: colors.accent }]}>Purrfolio</Text>
@@ -86,10 +83,10 @@ export function UnlockScreen({ onUnlocked }: Props) {
             onPress={tryBiometrics}
             activeOpacity={0.7}
           >
-            <Ionicons name={icon} size={52} color={colors.accent} />
+            <Ionicons name="finger-print-outline" size={52} color={colors.accent} />
           </TouchableOpacity>
           <Text style={[styles.bioLabel, { color: colors.muted }]}>
-            Tap to unlock with {label}
+            Tap to unlock with Fingerprint
           </Text>
           <TouchableOpacity onPress={() => setPhase('pin')} activeOpacity={0.7}>
             <Text style={[styles.usePinLink, { color: colors.accent }]}>Use PIN instead</Text>

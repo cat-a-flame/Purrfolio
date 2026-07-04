@@ -17,8 +17,6 @@ import {
   verifyPin,
   savePin,
   disablePin,
-  isFaceEnabled,
-  setFaceEnabled,
   isFingerprintEnabled,
   setFingerprintEnabled,
   getSupportedBiometrics,
@@ -40,9 +38,8 @@ export default function SecurityScreen() {
   const router = useRouter();
 
   const [pinEnabled, setPinEnabled] = useState(false);
-  const [faceEnabled, setFaceEnabledState] = useState(false);
   const [fingerprintEnabled, setFingerprintEnabledState] = useState(false);
-  const [supported, setSupported] = useState({ face: false, fingerprint: false });
+  const [supported, setSupported] = useState({ fingerprint: false });
   const [phase, setPhase] = useState<Phase>('idle');
   const [pin, setPin] = useState('');
   const [newPin, setNewPin] = useState('');
@@ -53,14 +50,12 @@ export default function SecurityScreen() {
   }, []);
 
   async function load() {
-    const [pe, fe, fpe, sup] = await Promise.all([
+    const [pe, fpe, sup] = await Promise.all([
       isPinEnabled(),
-      isFaceEnabled(),
       isFingerprintEnabled(),
       getSupportedBiometrics(),
     ]);
     setPinEnabled(pe);
-    setFaceEnabledState(fe);
     setFingerprintEnabledState(fpe);
     setSupported(sup);
   }
@@ -78,11 +73,6 @@ export default function SecurityScreen() {
   }
 
   // ── Biometrics toggles ──────────────────────────────────────────────────────
-
-  async function handleFaceToggle(value: boolean) {
-    await setFaceEnabled(value);
-    setFaceEnabledState(value);
-  }
 
   async function handleFingerprintToggle(value: boolean) {
     await setFingerprintEnabled(value);
@@ -104,7 +94,7 @@ export default function SecurityScreen() {
         if (ok) {
           await disablePin();
           setPinEnabled(false);
-          setBioEnabled(false);
+          setFingerprintEnabledState(false);
           setPhase('idle');
           setPin('');
         } else {
@@ -212,11 +202,6 @@ export default function SecurityScreen() {
 
   // ── Idle: settings list ─────────────────────────────────────────────────────
 
-  const bioOptions = [
-    { key: 'face',        label: 'Face ID',     available: supported.face,        enabled: faceEnabled,        onToggle: handleFaceToggle },
-    { key: 'fingerprint', label: 'Fingerprint', available: supported.fingerprint, enabled: fingerprintEnabled, onToggle: handleFingerprintToggle },
-  ];
-
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <AppHeader title="Security" showBack />
@@ -254,30 +239,25 @@ export default function SecurityScreen() {
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.muted }]}>BIOMETRICS</Text>
             <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              {bioOptions.map((opt, idx) => (
-                <React.Fragment key={opt.key}>
-                  {idx > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
-                  <View style={styles.row}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.rowLabel, { color: opt.available ? colors.text : colors.muted }]}>
-                        {opt.label}
-                      </Text>
-                      {!opt.available && (
-                        <Text style={[styles.rowHint, { color: colors.muted }]}>
-                          Requires a development build
-                        </Text>
-                      )}
-                    </View>
-                    <Switch
-                      value={opt.enabled}
-                      onValueChange={opt.available ? opt.onToggle : undefined}
-                      disabled={!opt.available}
-                      trackColor={{ true: colors.accent }}
-                      thumbColor="#fff"
-                    />
-                  </View>
-                </React.Fragment>
-              ))}
+              <View style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rowLabel, { color: supported.fingerprint ? colors.text : colors.muted }]}>
+                    Fingerprint
+                  </Text>
+                  {!supported.fingerprint && (
+                    <Text style={[styles.rowHint, { color: colors.muted }]}>
+                      Requires a development build
+                    </Text>
+                  )}
+                </View>
+                <Switch
+                  value={fingerprintEnabled}
+                  onValueChange={supported.fingerprint ? handleFingerprintToggle : undefined}
+                  disabled={!supported.fingerprint}
+                  trackColor={{ true: colors.accent }}
+                  thumbColor="#fff"
+                />
+              </View>
             </View>
           </View>
         )}

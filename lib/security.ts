@@ -11,7 +11,6 @@ try {
 
 const KEY_PIN = 'purrfolio_pin';
 const KEY_PIN_ENABLED = 'purrfolio_pin_enabled';
-const KEY_FACE_ENABLED = 'purrfolio_face_enabled';
 const KEY_FINGERPRINT_ENABLED = 'purrfolio_fingerprint_enabled';
 
 export async function isPinEnabled(): Promise<boolean> {
@@ -31,16 +30,7 @@ export async function savePin(pin: string): Promise<void> {
 export async function disablePin(): Promise<void> {
   await SecureStore.deleteItemAsync(KEY_PIN);
   await SecureStore.setItemAsync(KEY_PIN_ENABLED, 'false');
-  await SecureStore.setItemAsync(KEY_FACE_ENABLED, 'false');
   await SecureStore.setItemAsync(KEY_FINGERPRINT_ENABLED, 'false');
-}
-
-export async function isFaceEnabled(): Promise<boolean> {
-  return (await SecureStore.getItemAsync(KEY_FACE_ENABLED)) === 'true';
-}
-
-export async function setFaceEnabled(enabled: boolean): Promise<void> {
-  await SecureStore.setItemAsync(KEY_FACE_ENABLED, enabled ? 'true' : 'false');
 }
 
 export async function isFingerprintEnabled(): Promise<boolean> {
@@ -52,25 +42,23 @@ export async function setFingerprintEnabled(enabled: boolean): Promise<void> {
 }
 
 // Returns which biometric types the device hardware supports
-export async function getSupportedBiometrics(): Promise<{ face: boolean; fingerprint: boolean }> {
-  if (!LA) return { face: false, fingerprint: false };
+export async function getSupportedBiometrics(): Promise<{ fingerprint: boolean }> {
+  if (!LA) return { fingerprint: false };
   try {
     const hasHardware = await LA.hasHardwareAsync();
     const isEnrolled = await LA.isEnrolledAsync();
-    if (!hasHardware || !isEnrolled) return { face: false, fingerprint: false };
+    if (!hasHardware || !isEnrolled) return { fingerprint: false };
     const types = await LA.supportedAuthenticationTypesAsync();
     return {
-      face: types.includes(LA.AuthenticationType.FACIAL_RECOGNITION),
       fingerprint: types.includes(LA.AuthenticationType.FINGERPRINT),
     };
   } catch {
-    return { face: false, fingerprint: false };
+    return { fingerprint: false };
   }
 }
 
 export async function isBiometricsEnabled(): Promise<boolean> {
-  const [face, fingerprint] = await Promise.all([isFaceEnabled(), isFingerprintEnabled()]);
-  return face || fingerprint;
+  return isFingerprintEnabled();
 }
 
 export async function authenticateWithBiometrics(): Promise<boolean> {
