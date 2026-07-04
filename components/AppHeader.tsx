@@ -67,10 +67,13 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
 
   function navigate(route: string) { closeDrawer(() => router.push(route as any)); }
 
-  const appSettingsItems = [
-    { label: 'Categories', route: '/settings/categories', icon: 'grid-outline'     },
-    { label: 'Labels',     route: '/settings/labels',     icon: 'pricetag-outline' },
+  const menuItems = [
+    { label: 'Categories', route: '/settings/categories', icon: 'grid-outline'         },
+    { label: 'Labels',     route: '/settings/labels',     icon: 'pricetag-outline'     },
+    { label: 'Security',   route: '/settings/security',   icon: 'lock-closed-outline'  },
   ];
+
+  const initial = (username || email || '?').charAt(0).toUpperCase();
 
   return (
     <>
@@ -108,56 +111,43 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
             <View style={[styles.drawerInner, { paddingTop: top || 16 }]}>
               <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                {/* ── App Settings ───────────────────────────── */}
-                <Text style={[styles.sectionLabel, { color: colors.muted }]}>App Settings</Text>
-                <View style={[styles.group, { borderColor: colors.border }]}>
-                  {appSettingsItems.map((item, i) => (
-                    <TouchableOpacity
-                      key={item.route}
-                      style={[styles.row, i < appSettingsItems.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
-                      onPress={() => navigate(item.route)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name={item.icon as any} size={18} color={colors.muted} />
-                      <Text style={[styles.rowText, { color: colors.text }]}>{item.label}</Text>
-                      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                {/* ── User info ────────────────────────────────── */}
+                <TouchableOpacity style={styles.userRow} onPress={() => navigate('/settings/account')} activeOpacity={0.7}>
+                  <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
+                    <Text style={styles.avatarText}>{initial}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
+                      {username || 'My Account'}
+                    </Text>
+                    {email ? (
+                      <Text style={[styles.userEmail, { color: colors.muted }]} numberOfLines={1}>{email}</Text>
+                    ) : null}
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                </TouchableOpacity>
 
-                {/* ── Account Settings ───────────────────────── */}
-                <Text style={[styles.sectionLabel, { color: colors.muted }]}>Account Settings</Text>
-                <View style={[styles.group, { borderColor: colors.border }]}>
-                  <TouchableOpacity style={styles.row} onPress={() => navigate('/settings/account')} activeOpacity={0.7}>
-                    <Ionicons name="person-outline" size={18} color={colors.muted} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.rowText, { color: colors.text }]} numberOfLines={1}>
-                        {username || email || 'My Account'}
-                      </Text>
-                      {username && email ? (
-                        <Text style={[styles.rowSubLabel, { color: colors.muted }]} numberOfLines={1}>{email}</Text>
-                      ) : null}
-                    </View>
+                {/* ── Menu ─────────────────────────────────────── */}
+                <Text style={[styles.sectionLabel, { color: colors.muted }]}>Menu</Text>
+                {menuItems.map((item) => (
+                  <TouchableOpacity
+                    key={item.route}
+                    style={styles.row}
+                    onPress={() => navigate(item.route)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={item.icon as any} size={20} color={colors.muted} />
+                    <Text style={[styles.rowText, { color: colors.text }]}>{item.label}</Text>
                     <Ionicons name="chevron-forward" size={16} color={colors.muted} />
                   </TouchableOpacity>
-                </View>
-
-                {/* ── Security ───────────────────────────────── */}
-                <Text style={[styles.sectionLabel, { color: colors.muted }]}>Security</Text>
-                <View style={[styles.group, { borderColor: colors.border }]}>
-                  <TouchableOpacity style={styles.row} onPress={() => navigate('/settings/security')} activeOpacity={0.7}>
-                    <Ionicons name="lock-closed-outline" size={18} color={colors.muted} />
-                    <Text style={[styles.rowText, { color: colors.text }]}>Security</Text>
-                    <Ionicons name="chevron-forward" size={16} color={colors.muted} />
-                  </TouchableOpacity>
-                </View>
+                ))}
 
               </ScrollView>
 
-              {/* Dark mode toggle pinned to bottom */}
+              {/* Light/Dark mode toggle pinned to bottom */}
               <View style={[styles.darkRow, { borderTopColor: colors.border, paddingBottom: bottom || 16 }]}>
                 <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={18} color={colors.muted} />
-                <Text style={[styles.rowText, { color: colors.text, flex: 1 }]}>Dark mode</Text>
+                <Text style={[styles.rowText, { color: colors.text, flex: 1 }]}>{isDark ? 'Dark mode' : 'Light mode'}</Text>
                 <Switch
                   value={isDark}
                   onValueChange={setIsDark}
@@ -198,36 +188,47 @@ const styles = StyleSheet.create({
   drawerInner: { flex: 1 },
   scrollContent: { paddingBottom: 8 },
 
+  userRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { fontSize: 20, fontFamily: 'Figtree_700Bold', color: '#fff' },
+  userName: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
+  userEmail: { fontSize: 13, fontFamily: 'Figtree_400Regular', marginTop: 2 },
+
   sectionLabel: {
     fontSize: 11,
     fontFamily: 'Figtree_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 6,
-  },
-  group: {
-    marginHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
   },
-  rowText: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
-  rowSubLabel: { fontSize: 11, fontFamily: 'Figtree_400Regular', marginBottom: 1 },
+  rowText: { flex: 1, fontSize: 16, fontFamily: 'Figtree_600SemiBold' },
 
   darkRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 20,
     paddingTop: 14,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
