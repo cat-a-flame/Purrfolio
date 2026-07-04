@@ -14,7 +14,6 @@ import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
-import BottomModal from '@/components/BottomModal';
 import { Ionicons } from '@expo/vector-icons';
 import type { RecurringPayment, RecurrenceFrequency, Wallet, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
@@ -34,8 +33,6 @@ export default function RecurringScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [selectedDue, setSelectedDue] = useState<{ payment: RecurringPayment; dueDate: Date } | null>(null);
   const [toast, setToast] = useState<{ visible: boolean; message: string; success: boolean; undoable: boolean }>({ visible: false, message: '', success: true, undoable: false });
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingUndo = useRef<
@@ -127,9 +124,15 @@ export default function RecurringScreen() {
   useEffect(() => { loadRef.current = load; }, [load]);
 
   useEffect(() => {
-    return Events.on('recurring-saved', ({ success, message }: { success: boolean; message?: string }) => {
+    return Events.on('recurring-saved', ({ success, message, undo }: {
+      success: boolean;
+      message?: string;
+      undo?: { type: 'pay'; transactionId: string; paymentId: string; dueDate: string }
+        | { type: 'skip'; paymentId: string; dueDate: string };
+    }) => {
       loadRef.current();
-      showToast(message ?? (success ? 'Done.' : 'Something went wrong.'), success);
+      if (undo) pendingUndo.current = undo;
+      showToast(message ?? (success ? 'Done.' : 'Something went wrong.'), success, !!undo);
     });
   }, []);
 
@@ -166,10 +169,8 @@ export default function RecurringScreen() {
   const monthLabel = new Date(viewYear, viewMonth, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
 
   async function handlePay(payment: RecurringPayment, dueDate: Date) {
-    const key = `${payment.id}|${isoDate(dueDate)}`;
-    setActionLoading(key);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setActionLoading(null); return; }
+    if (!user) return;
 
     const { data: txData, error: txErr } = await supabase
       .from('transactions')
@@ -200,15 +201,12 @@ export default function RecurringScreen() {
     } else {
       showToast('Failed to confirm payment.', false);
     }
-    setActionLoading(null);
     load();
   }
 
   async function handleSkip(payment: RecurringPayment, dueDate: Date) {
-    const key = `${payment.id}|${isoDate(dueDate)}`;
-    setActionLoading(key);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setActionLoading(null); return; }
+    if (!user) return;
     const { error } = await supabase.from('recurring_occurrences').insert({
       recurring_payment_id: payment.id,
       user_id: user.id,
@@ -222,7 +220,6 @@ export default function RecurringScreen() {
     } else {
       showToast('Failed to skip payment.', false);
     }
-    setActionLoading(null);
     load();
   }
 
@@ -299,7 +296,7 @@ export default function RecurringScreen() {
                     payment={payment}
                     dueDate={dueDate}
                     today={today}
-                    onPress={() => setSelectedDue({ payment, dueDate })}
+                    onPress={() => router.push({ pathname: '/payment/due', params: { paymentId: payment.id, dueDate: isoDate(dueDate) } })}
                     colors={colors}
                   />
                 );
@@ -318,7 +315,7 @@ export default function RecurringScreen() {
                     payment={payment}
                     dueDate={dueDate}
                     today={today}
-                    onPress={() => setSelectedDue({ payment, dueDate })}
+                    onPress={() => router.push({ pathname: '/payment/due', params: { paymentId: payment.id, dueDate: isoDate(dueDate) } })}
                     colors={colors}
                   />
                 );
@@ -339,7 +336,7 @@ export default function RecurringScreen() {
                     payment={payment}
                     dueDate={dueDate}
                     today={today}
-                    onPress={() => setSelectedDue({ payment, dueDate })}
+                    onPress={() => router.push({ pathname: '/payment/due', params: { paymentId: payment.id, dueDate: isoDate(dueDate) } })}
                     colors={colors}
                     onSwipePay={() => handlePay(payment, dueDate)}
                     onSwipeSkip={() => handleSkip(payment, dueDate)}
@@ -381,50 +378,6 @@ export default function RecurringScreen() {
           }
         </ScrollView>
       )}
-
-      {/* Due item action sheet */}
-      <BottomModal
-        visible={!!selectedDue}
-        onClose={() => setSelectedDue(null)}
-        title={selectedDue?.payment.name}
-      >
-        {selectedDue && (() => {
-          const { payment, dueDate } = selectedDue;
-          const key = `${payment.id}|${isoDate(dueDate)}`;
-          const loading = actionLoading === key;
-          const currency = payment.wallet?.currency ?? 'HUF';
-          return (
-            <>
-              <View style={[styles.actionSheetAmount, { borderColor: colors.border }]}>
-                <Text style={[styles.actionSheetAmountLabel, { color: colors.muted }]}>
-                  {dueDate.toLocaleDateString('default', { month: 'long', day: 'numeric', year: 'numeric' })}
-                </Text>
-                <Text style={[styles.actionSheetAmountValue, { color: payment.type === 'income' ? colors.income : colors.expense }]}>
-                  {payment.type === 'income' ? '+' : '−'}{formatCurrency(payment.amount, currency)}
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={[styles.actionSheetBtn, { backgroundColor: colors.accent }]}
-                onPress={() => { setSelectedDue(null); handlePay(payment, dueDate); }}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.actionSheetBtnText}>Mark as paid</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionSheetBtn, styles.actionSheetBtnOutline, { borderColor: colors.border }]}
-                onPress={() => { setSelectedDue(null); handleSkip(payment, dueDate); }}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.actionSheetBtnText, { color: colors.muted }]}>Skip</Text>
-              </TouchableOpacity>
-            </>
-          );
-        })()}
-      </BottomModal>
 
       <Toast
         visible={toast.visible}
@@ -629,19 +582,6 @@ const styles = StyleSheet.create({
   },
   swipeActionText: { fontSize: 11, fontFamily: 'Figtree_600SemiBold', color: '#fff' },
 
-  // Action sheet
-  actionSheetAmount: {
-    borderWidth: 1, borderRadius: 12, padding: 14,
-    alignItems: 'center', gap: 4, marginBottom: 4,
-  },
-  actionSheetAmountLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
-  actionSheetAmountValue: { fontSize: 28, fontFamily: 'Lora_700Bold' },
-  actionSheetBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, borderRadius: 12, paddingVertical: 14,
-  },
-  actionSheetBtnOutline: { borderWidth: 1 },
-  actionSheetBtnText: { fontSize: 16, fontFamily: 'Figtree_600SemiBold', color: '#fff' },
   paymentGroup: {
     borderRadius: 12, borderWidth: 1, overflow: 'hidden',
   },
