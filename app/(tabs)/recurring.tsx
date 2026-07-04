@@ -95,7 +95,7 @@ export default function RecurringScreen() {
   function showToast(message: string, success: boolean, undoable = false) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToast({ visible: true, message, success, undoable });
-    toastTimer.current = setTimeout(() => { setToast(t => ({ ...t, visible: false })); lastPay.current = null; }, 3000);
+    toastTimer.current = setTimeout(() => { setToast(t => ({ ...t, visible: false })); pendingUndo.current = null; }, 3000);
   }
 
   async function handleUndo() {
