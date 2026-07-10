@@ -587,14 +587,25 @@ export default function TransactionsScreen() {
             <PeriodPicker value={period} onChange={setPeriod} />
 
             {/* Summary — count and total of currently filtered items */}
-            <View style={styles.summaryBar}>
-              <Text style={[styles.summaryCount, { color: colors.muted }]}>
-                {summary.count} transaction{summary.count !== 1 ? 's' : ''}
-              </Text>
-              <Text style={[styles.summaryTotal, { color: summary.net >= 0 ? colors.income : colors.expense }]}>
-                {summary.net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(summary.net), 'HUF')}
-              </Text>
-            </View>
+            {hasActiveFilters && (
+              <View style={styles.summaryBar}>
+                {loading ? (
+                  <>
+                    <SkeletonBox style={{ width: 90, height: 13, borderRadius: 4 }} />
+                    <SkeletonBox style={{ width: 70, height: 14, borderRadius: 4 }} />
+                  </>
+                ) : (
+                  <>
+                    <Text style={[styles.summaryCount, { color: colors.muted }]}>
+                      {summary.count} transaction{summary.count !== 1 ? 's' : ''}
+                    </Text>
+                    <Text style={[styles.summaryTotal, { color: summary.net >= 0 ? colors.income : colors.expense }]}>
+                      {summary.net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(summary.net), 'HUF')}
+                    </Text>
+                  </>
+                )}
+              </View>
+            )}
 
             {/* Select-all bar — visible in selection mode */}
             {selectionMode && (
