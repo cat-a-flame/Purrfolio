@@ -12,11 +12,13 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import type { Label } from '@/lib/types';
+import AppInput from '@/components/AppInput';
 
 export default function LabelsScreen() {
   const colors = useTheme();
   const router = useRouter();
   const [labels, setLabels] = useState<Label[]>([]);
+  const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -26,6 +28,9 @@ export default function LabelsScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const q = search.trim().toLowerCase();
+  const filtered = q ? labels.filter(l => l.name.toLowerCase().includes(q)) : labels;
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -37,13 +42,31 @@ export default function LabelsScreen() {
           </View>
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Labels</Text>
-        <TouchableOpacity onPress={() => router.push('/label/add')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={() => router.push('/label/new')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="add-circle-outline" size={26} color={colors.accent} />
         </TouchableOpacity>
       </View>
 
+      <View style={styles.searchWrap}>
+        <AppInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search labels…"
+          style={search ? { paddingRight: 36 } : undefined}
+        />
+        {search ? (
+          <TouchableOpacity
+            onPress={() => setSearch('')}
+            style={styles.searchClearBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close-circle" size={18} color={colors.muted} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
       <FlatList
-        data={labels}
+        data={filtered}
         keyExtractor={(l) => l.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
@@ -76,8 +99,8 @@ const styles = StyleSheet.create({
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   back: { fontSize: 15 },
   title: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
-  addRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  add: { fontSize: 15 },
+  searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, justifyContent: 'center' },
+  searchClearBtn: { position: 'absolute', right: 10, top: 0, bottom: 0, justifyContent: 'center' },
   list: { padding: 16 },
   row: {
     flexDirection: 'row',
