@@ -2,53 +2,86 @@ import { useEffect, useState } from 'react';
 import {
   View,
   Text,
+  ScrollView,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import ConfirmModal from '@/components/ConfirmModal';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
-import type { Category, TransactionType } from '@/lib/types';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
+import ConfirmModal from '@/components/ConfirmModal';
+import type { TransactionType } from '@/lib/types';
 
-const TYPES = ['expense', 'income', 'both'] as const;
+type CatType = TransactionType | 'both';
+
+type SubDraft = { id?: string; _key: string; icon: string; name: string };
 
 type CatForm = {
   name: string;
-  type: TransactionType | 'both';
   icon: string;
   color: string;
-  parent_id: string;
+  type: CatType;
+  subs: SubDraft[];
 };
 
-export default function EditCategoryScreen() {
+const TYPES: { value: CatType; label: string }[] = [
+  { value: 'expense', label: 'Expense' },
+  { value: 'income', label: 'Income' },
+  { value: 'both', label: 'Both' },
+];
+
+const CATEGORY_COLORS = [
+  '#6C63FF', '#FF6B6B', '#43BCCD', '#F9A826', '#5CB85C',
+  '#E8468A', '#3ABFB1', '#FF8C42', '#9B59B6', '#2ECC71',
+  '#E74C3C', '#3498DB',
+];
+
+function typeColor(t: CatType, colors: any): string {
+  if (t === 'income') return colors.income;
+  if (t === 'expense') return colors.expense;
+  return colors.accent;
+}
+
+let subKeySeq = 0;
+function nextSubKey() { return `new-${++subKeySeq}`; }
+
+export default function CategoryScreen() {
   const colors = useTheme();
   const router = useRouter();
+  const { bottom } = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [parents, setParents] = useState<Category[]>([]);
-  const [category, setCategory] = useState<Category | null>(null);
-  const [form, setForm] = useState<CatForm | null>(null);
+  const isNew = id === 'new';
+
+  const [form, setForm] = useState<CatForm>({
+    name: '', icon: '🙂', color: CATEGORY_COLORS[0], type: 'both', subs: [],
+  });
+  const [isDefault, setIsDefault] = useState(false);
+  const [fetching, setFetching] = useState(!isNew);
   const [saving, setSaving] = useState(false);
-  const [fetching, setFetching] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
+    if (isNew) return;
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const [{ data: p }, { data: c }] = await Promise.all([
-        supabase.from('categories').select('*').eq('user_id', user.id).is('parent_id', null).order('name'),
+      const [{ data: category }, { data: children }] = await Promise.all([
         supabase.from('categories').select('*').eq('id', id).single(),
+        supabase.from('categories').select('*').eq('parent_id', id).order('name'),
       ]);
-      setParents((p ?? []).filter((x: Category) => x.id !== id));
-      if (c) {
-        setCategory(c);
-        setForm({ name: c.name, type: c.type, icon: c.icon, color: c.color, parent_id: c.parent_id ?? '' });
+      if (category) {
+        setForm({
+          name: category.name,
+          icon: category.icon,
+          color: category.color || CATEGORY_COLORS[0],
+          type: category.type,
+          subs: (children ?? []).map((c: any) => ({ id: c.id, _key: c.id, icon: c.icon, name: c.name })),
+        });
+        setIsDefault(category.is_default);
       }
       setFetching(false);
     }
@@ -56,139 +89,208 @@ export default function EditCategoryScreen() {
   }, [id]);
 
   function setField<K extends keyof CatForm>(key: K, value: CatForm[K]) {
-    setForm((f) => f && ({ ...f, [key]: value }));
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function patchSub(key: string, patch: Partial<SubDraft>) {
+    setForm((f) => ({ ...f, subs: f.subs.map((s) => (s._key === key ? { ...s, ...patch } : s)) }));
+  }
+
+  function removeSub(key: string) {
+    setForm((f) => ({ ...f, subs: f.subs.filter((s) => s._key !== key) }));
+  }
+
+  function addSub() {
+    setForm((f) => ({ ...f, subs: [...f.subs, { _key: nextSubKey(), icon: '🏷️', name: '' }] }));
   }
 
   async function handleSave() {
-    if (!form || !form.name.trim()) return;
+    if (!form.name.trim()) return;
     setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
 
-    const { error } = await supabase.from('categories').update({
-      name: form.name.trim(),
-      type: form.type,
-      icon: form.icon,
-      color: form.parent_id ? '' : form.color,
-      parent_id: form.parent_id || null,
-    }).eq('id', id);
+    const name = form.name.trim();
+    const icon = form.icon.trim() || '📁';
+    const subs = form.subs.filter((s) => s.name.trim());
+
+    if (isNew) {
+      const { data: created, error } = await supabase.from('categories')
+        .insert({ user_id: user.id, name, type: form.type, icon, color: form.color, is_default: false, parent_id: null })
+        .select('id').single();
+
+      if (error || !created) { setSaving(false); return; }
+
+      if (subs.length) {
+        await supabase.from('categories').insert(subs.map((s) => ({
+          user_id: user.id, name: s.name.trim(), type: form.type, icon: s.icon.trim() || '📁',
+          color: form.color, is_default: false, parent_id: created.id,
+        })));
+      }
+
+      setSaving(false);
+      router.back();
+      return;
+    }
+
+    const { error } = await supabase.from('categories')
+      .update({ name, icon, color: form.color, type: form.type })
+      .eq('id', id);
+
+    if (error) { setSaving(false); return; }
+
+    const keptIds = new Set(subs.filter((s) => s.id).map((s) => s.id as string));
+    const { data: existingChildren } = await supabase.from('categories').select('id').eq('parent_id', id);
+    const removedIds = (existingChildren ?? []).map((c) => c.id).filter((cid) => !keptIds.has(cid));
+    const toUpdate = subs.filter((s) => s.id);
+    const toInsert = subs.filter((s) => !s.id);
+
+    await Promise.all([
+      ...toUpdate.map((s) => supabase.from('categories')
+        .update({ name: s.name.trim(), icon: s.icon.trim() || '📁', color: form.color, type: form.type })
+        .eq('id', s.id as string)),
+      ...(toInsert.length ? [supabase.from('categories').insert(toInsert.map((s) => ({
+        user_id: user.id, name: s.name.trim(), type: form.type, icon: s.icon.trim() || '📁',
+        color: form.color, is_default: false, parent_id: id,
+      })))] : []),
+      ...(removedIds.length ? [supabase.from('categories').delete().in('id', removedIds)] : []),
+    ]);
 
     setSaving(false);
-    if (error) return;
     router.back();
   }
 
   async function handleDelete() {
-    setConfirmDelete(false);
+    await supabase.from('categories').delete().eq('parent_id', id);
     await supabase.from('categories').delete().eq('id', id);
     router.back();
   }
 
-  if (fetching || !form) {
-    return (
-      <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-        <ActivityIndicator style={{ flex: 1 }} color={colors.accent} />
-      </SafeAreaView>
-    );
+  if (fetching) {
+    return <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]} />;
   }
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <View style={styles.backRow}>
-            <Ionicons name="arrow-back" size={18} color={colors.accent} />
-            <Text style={[styles.back, { color: colors.accent }]}>Back</Text>
-          </View>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={colors.accent} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Edit category</Text>
-        <View style={{ width: 48 }} />
-      </View>
-
-      <View style={styles.content}>
-        <AppInput
-          label="Name"
-          value={form.name}
-          onChangeText={(v) => setField('name', v)}
-          placeholder="Category name"
-        />
-        <AppInput
-          label="Icon (emoji)"
-          value={form.icon}
-          onChangeText={(v) => setField('icon', v)}
-          placeholder="📁"
-        />
-        {!form.parent_id && (
-          <AppInput
-            label="Color (hex)"
-            value={form.color}
-            onChangeText={(v) => setField('color', v)}
-            placeholder="#f26e4d"
-          />
-        )}
-        <View style={styles.formRow}>
-          <Text style={{ color: colors.muted, fontSize: 14 }}>Type</Text>
-          <View style={styles.chips}>
-            {TYPES.map((t) => (
-              <TouchableOpacity
-                key={t}
-                style={[
-                  styles.chip,
-                  { borderColor: form.type === t ? colors.accent : colors.border },
-                  form.type === t && { backgroundColor: colors.accent + '22' },
-                ]}
-                onPress={() => setField('type', t)}
-              >
-                <Text style={{ color: form.type === t ? colors.accent : colors.text, fontFamily: 'Figtree_600SemiBold', fontSize: 13 }}>
-                  {t}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-        <View style={styles.formRow}>
-          <Text style={{ color: colors.muted, fontSize: 14 }}>Parent category</Text>
-        </View>
-        <View style={styles.chips}>
-          <TouchableOpacity
-            style={[
-              styles.chip,
-              { borderColor: !form.parent_id ? colors.accent : colors.border },
-              !form.parent_id && { backgroundColor: colors.accent + '22' },
-            ]}
-            onPress={() => setField('parent_id', '')}
-          >
-            <Text style={{ color: !form.parent_id ? colors.accent : colors.text, fontSize: 13 }}>None</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          {isNew ? 'Add category' : 'Edit category'}
+        </Text>
+        {!isNew && !isDefault ? (
+          <TouchableOpacity onPress={() => setConfirmDelete(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="trash-outline" size={22} color={colors.danger} />
           </TouchableOpacity>
-          {parents.map((p) => (
-            <TouchableOpacity
-              key={p.id}
-              style={[
-                styles.chip,
-                { borderColor: form.parent_id === p.id ? colors.accent : colors.border },
-                form.parent_id === p.id && { backgroundColor: colors.accent + '22' },
-              ]}
-              onPress={() => setField('parent_id', p.id)}
-            >
-              <Text style={{ color: form.parent_id === p.id ? colors.accent : colors.text, fontSize: 13 }}>
-                {p.icon} {p.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.actions}>
-          {category && !category.is_default && (
-            <AppButton onPress={() => setConfirmDelete(true)} variant="danger" style={{ flex: 1 }}>Delete</AppButton>
-          )}
-          <AppButton onPress={handleSave} loading={saving} style={{ flex: 2 }}>Save</AppButton>
-        </View>
+        ) : (
+          <View style={{ width: 24 }} />
+        )}
       </View>
+
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingBottom: bottom + 32 }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.iconNameRow}>
+            <AppInput
+              label="Icon"
+              value={form.icon}
+              onChangeText={(v) => setField('icon', v)}
+              maxLength={4}
+              placeholder="🙂"
+              style={{ width: 72, textAlign: 'center' }}
+            />
+            <View style={{ flex: 1 }}>
+              <AppInput
+                label="Category name"
+                value={form.name}
+                onChangeText={(v) => setField('name', v)}
+                placeholder="e.g. Food & Dining"
+              />
+            </View>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Type</Text>
+            <View style={[styles.typeToggle, { backgroundColor: colors.surface }]}>
+              {TYPES.map((t) => (
+                <TouchableOpacity
+                  key={t.value}
+                  style={[styles.typeBtn, form.type === t.value && { backgroundColor: typeColor(t.value, colors) }]}
+                  onPress={() => setField('type', t.value)}
+                >
+                  <Text style={[styles.typeBtnText, { color: form.type === t.value ? '#fff' : colors.muted }]}>
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Color</Text>
+            <View style={styles.colorRow}>
+              {CATEGORY_COLORS.map((c) => {
+                const selected = form.color.toLowerCase() === c.toLowerCase();
+                return (
+                  <TouchableOpacity
+                    key={c}
+                    onPress={() => setField('color', c)}
+                    style={[
+                      styles.colorSwatch,
+                      { backgroundColor: c },
+                      selected && [styles.colorSwatchSelected, { borderColor: colors.text }],
+                    ]}
+                  />
+                );
+              })}
+            </View>
+          </View>
+
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Subcategories</Text>
+          <View style={styles.subsList}>
+            {form.subs.map((s) => (
+              <View key={s._key} style={[styles.subRow, { backgroundColor: colors.bg }]}>
+                <View style={{ width: 42 }}>
+                  <AppInput
+                    value={s.icon}
+                    onChangeText={(v) => patchSub(s._key, { icon: v })}
+                    maxLength={4}
+                    style={styles.subEmojiInput}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppInput
+                    value={s.name}
+                    onChangeText={(v) => patchSub(s._key, { name: v })}
+                    placeholder="Subcategory name"
+                  />
+                </View>
+                <TouchableOpacity style={styles.subRemoveBtn} onPress={() => removeSub(s._key)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={{ color: colors.danger, fontSize: 15, fontFamily: 'Figtree_700Bold' }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity style={[styles.addSubBtn, { borderColor: colors.accent }]} onPress={addSub} activeOpacity={0.7}>
+              <Text style={[styles.addSubText, { color: colors.accent }]}>+ Add subcategory</Text>
+            </TouchableOpacity>
+          </View>
+
+          <AppButton onPress={handleSave} loading={saving} fullWidth style={{ marginTop: 8 }}>
+            Save
+          </AppButton>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <ConfirmModal
         visible={confirmDelete}
         title="Delete category"
-        message={`Delete "${category?.name}"?`}
+        message={`Delete "${form.name}"? This category and its subcategories will be removed. Existing transactions will become uncategorized.`}
         confirmLabel="Delete"
-        onConfirm={handleDelete}
+        onConfirm={() => { setConfirmDelete(false); handleDelete(); }}
         onCancel={() => setConfirmDelete(false)}
       />
     </SafeAreaView>
@@ -201,20 +303,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
   },
-  backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  back: { fontSize: 15 },
-  title: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
-  content: { padding: 16, gap: 12 },
-  formRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
-    borderWidth: 1,
+  headerTitle: { fontSize: 17, fontFamily: 'Figtree_700Bold' },
+  content: { padding: 16, gap: 14 },
+  iconNameRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
+  fieldGroup: { gap: 8 },
+  fieldLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  typeToggle: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    overflow: 'hidden',
+    padding: 4,
+    gap: 4,
   },
-  actions: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  typeBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
+  typeBtnText: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
+  colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  colorSwatch: { width: 32, height: 32, borderRadius: 16 },
+  colorSwatchSelected: { borderWidth: 3 },
+  subsList: { gap: 8 },
+  subRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, padding: 8 },
+  subEmojiInput: { textAlign: 'center', fontSize: 16 },
+  subRemoveBtn: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  addSubBtn: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  addSubText: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
 });

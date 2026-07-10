@@ -5,6 +5,7 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -17,6 +18,7 @@ export default function LabelsScreen() {
   const colors = useTheme();
   const router = useRouter();
   const [labels, setLabels] = useState<Label[]>([]);
+  const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -26,6 +28,9 @@ export default function LabelsScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const q = search.trim().toLowerCase();
+  const filtered = q ? labels.filter(l => l.name.toLowerCase().includes(q)) : labels;
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -37,13 +42,31 @@ export default function LabelsScreen() {
           </View>
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Labels</Text>
-        <TouchableOpacity onPress={() => router.push('/label/add')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={() => router.push('/label/new')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="add-circle-outline" size={26} color={colors.accent} />
         </TouchableOpacity>
       </View>
 
+      <View style={styles.searchWrap}>
+        <View style={[styles.searchBox, { backgroundColor: colors.surface }]}>
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search labels…"
+            placeholderTextColor={colors.placeholder}
+            returnKeyType="search"
+          />
+          {search ? (
+            <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={18} color={colors.muted} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </View>
+
       <FlatList
-        data={labels}
+        data={filtered}
         keyExtractor={(l) => l.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
@@ -76,8 +99,16 @@ const styles = StyleSheet.create({
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   back: { fontSize: 15 },
   title: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
-  addRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  add: { fontSize: 15 },
+  searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  searchInput: { flex: 1, fontSize: 15, padding: 0 },
   list: { padding: 16 },
   row: {
     flexDirection: 'row',

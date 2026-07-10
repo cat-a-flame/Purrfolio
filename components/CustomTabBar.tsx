@@ -1,4 +1,4 @@
-import { View, TouchableOpacity, StyleSheet, useColorScheme, Dimensions } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 type Route = { key: string; name: string };
 type TabBarProps = {
   state: { routes: Route[]; index: number };
@@ -11,7 +11,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { lightColors, darkColors } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { useRecurring } from '@/lib/recurringContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -84,8 +84,7 @@ const TAB_ICONS: Record<string, { outline: string; filled: string }> = {
 
 
 export default function CustomTabBar({ state, navigation }: TabBarProps) {
-  const scheme = useColorScheme();
-  const colors = scheme === 'dark' ? darkColors : lightColors;
+  const colors = useTheme();
   const { hasDueToday } = useRecurring();
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
@@ -107,7 +106,7 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
     const isFocused = state.routes[state.index].key === route.key;
     const icons = TAB_ICONS[route.name] ?? { outline: 'ellipse-outline', filled: 'ellipse' };
     const iconName = isFocused ? icons.filled : icons.outline;
-    const color = isFocused ? '#692f7c' : '#998aa7';
+    const color = isFocused ? colors.accent : '#998aa7';
     const showDot = route.name === 'recurring' && hasDueToday;
     return (
       <TouchableOpacity
@@ -158,11 +157,11 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
           style={{ marginBottom: -EAR_OVERLAP }}
           pointerEvents="none"
         >
-          <Path d={`M 2 ${EAR_SVG_H} L 9 9 Q 13 1 17 9 L 24 ${EAR_SVG_H} Z`} fill="#692f7c" transform={`rotate(-28, 13, ${EAR_SVG_H})`} />
-          <Path d={`M 32 ${EAR_SVG_H} L 39 9 Q 43 1 47 9 L 54 ${EAR_SVG_H} Z`} fill="#692f7c" transform={`rotate(28, 43, ${EAR_SVG_H})`} />
+          <Path d={`M 2 ${EAR_SVG_H} L 9 9 Q 13 1 17 9 L 24 ${EAR_SVG_H} Z`} fill={colors.accent} transform={`rotate(-28, 13, ${EAR_SVG_H})`} />
+          <Path d={`M 32 ${EAR_SVG_H} L 39 9 Q 43 1 47 9 L 54 ${EAR_SVG_H} Z`} fill={colors.accent} transform={`rotate(28, 43, ${EAR_SVG_H})`} />
         </Svg>
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: '#692f7c' }]}
+          style={[styles.fab, { backgroundColor: colors.accent, shadowColor: colors.accent }]}
           onPress={() => router.push('/transaction/add')}
           activeOpacity={0.85}
         >
@@ -232,7 +231,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 5,
-    shadowColor: '#692f7c',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 10,

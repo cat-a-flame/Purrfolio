@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const lightColors = {
   bg: '#f5f3f7',
+  bg2: '#fcf1ff',
   surface: '#ffffff',
   accent: '#692f7c',
   text: '#523e5c',
@@ -21,6 +22,7 @@ export const lightColors = {
 
 export const darkColors = {
   bg: '#0f0b1a',
+  bg2: '#312751',
   surface: '#1a1028',
   accent: '#d946a8',
   text: '#f0e6ff',

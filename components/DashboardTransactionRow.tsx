@@ -35,7 +35,7 @@ export default function DashboardTransactionRow({ transaction: tx, onPress }: Pr
       style={[styles.row, { backgroundColor: colors.surface, borderWidth: 0 }]}
     >
       {/* Icon with coloured background */}
-      <View style={[styles.iconBox, { backgroundColor: '#fcf1ff' }]}>
+      <View style={[styles.iconBox, { backgroundColor: colors.bg2 }]}>
         {isTransfer ? (
           <Ionicons name="swap-horizontal-outline" size={20} color={colors.muted} />
         ) : icon ? (
@@ -46,7 +46,15 @@ export default function DashboardTransactionRow({ transaction: tx, onPress }: Pr
       </View>
 
       <View style={styles.info}>
-        <Text style={[styles.category, { color: colors.text }]}>{label}</Text>
+        <View style={styles.categoryRow}>
+          <Text style={[styles.category, { color: colors.text }]}>{label}</Text>
+          {tx.labels && tx.labels.length > 0 && tx.labels.map((l) => (
+            <View key={l.id} style={styles.labelChip}>
+              <Ionicons name="pricetag" size={12} color={colors.muted} />
+              <Text style={[styles.labelText, { color: colors.muted }]}>{l.name}</Text>
+            </View>
+          ))}
+        </View>
 
         <View style={styles.walletLabelRow}>
           {tx.wallet ? (
@@ -55,16 +63,12 @@ export default function DashboardTransactionRow({ transaction: tx, onPress }: Pr
               <Text style={[styles.sub, { color: colors.muted }]}>{tx.wallet.name}</Text>
             </View>
           ) : null}
-          {tx.labels && tx.labels.length > 0 && (
-            <View style={styles.labels}>
-              {tx.labels.map((l) => (
-                <View key={l.id} style={[styles.labelChip]}>
-                  <Ionicons name="pricetag" size={12} color={colors.muted} />
-                  <Text style={[styles.labelText, { color: colors.muted }]}>{l.name}</Text>
-                </View>
-              ))}
+          {tx.payer ? (
+            <View style={styles.walletRow}>
+              <Text style={[styles.sub, { color: colors.muted }]}>•</Text>
+              <Text style={[styles.sub, { color: colors.muted }]}>{tx.payer}</Text>
             </View>
-          )}
+          ) : null}
         </View>
       </View>
 
@@ -102,6 +106,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Figtree_600SemiBold',
   },
+  categoryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+  },
   walletDot: {
     width: 8,
     height: 8,
@@ -109,11 +119,6 @@ const styles = StyleSheet.create({
   },
   sub: {
     fontSize: 13,
-  },
-  labels: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
   },
   labelChip: {
     display: 'flex',
@@ -137,7 +142,7 @@ const styles = StyleSheet.create({
   walletLabelRow: {
     display: 'flex',
     flexDirection: 'row',
-    gap: 10,
+    gap: 5,
     alignItems: 'center',
 }
 });
