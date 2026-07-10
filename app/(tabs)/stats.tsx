@@ -286,20 +286,20 @@ export default function StatsScreen() {
 
   const defaultCurrency: Currency = 'HUF';
 
-  const { projIncome, projExpense, recurringLeftCount } = useMemo(() => {
+  const { projIncome, projExpense, recurringIncomeLeftCount, recurringExpenseLeftCount } = useMemo(() => {
     const actionedKeys = new Set(recurringOccurrences.map((o: any) => `${o.recurring_payment_id}|${o.due_date}`));
     const from = new Date(period.from + 'T00:00:00');
     const to = new Date(period.to + 'T23:59:59');
-    let projIncome = 0, projExpense = 0, recurringLeftCount = 0;
+    let projIncome = 0, projExpense = 0, recurringIncomeLeftCount = 0, recurringExpenseLeftCount = 0;
     for (const p of recurringPayments) {
       for (const date of generateDueDates(p, from, to)) {
         if (actionedKeys.has(`${p.id}|${recurringIsoDate(date)}`)) continue;
         const amtHUF = toHUF(p.amount, (p.wallet as any)?.currency, currentRates);
-        if (p.type === 'income') projIncome += amtHUF;
-        else { projExpense += amtHUF; recurringLeftCount += 1; }
+        if (p.type === 'income') { projIncome += amtHUF; recurringIncomeLeftCount += 1; }
+        else { projExpense += amtHUF; recurringExpenseLeftCount += 1; }
       }
     }
-    return { projIncome, projExpense, recurringLeftCount };
+    return { projIncome, projExpense, recurringIncomeLeftCount, recurringExpenseLeftCount };
   }, [recurringPayments, recurringOccurrences, period.from, period.to, currentRates]);
 
   const expenseByCategory = useMemo(() => groupByCategory(txsHUF, 'expense'), [txsHUF]);
@@ -404,45 +404,97 @@ export default function StatsScreen() {
         </View>
 
         {/* ── Card 2: Projected month end ──────────────────────────────── */}
-        {(projExpense > 0 || projIncome > 0) && (() => {
+        {(recurringIncomeLeftCount > 0 || recurringExpenseLeftCount > 0) && (() => {
+          const hasIncomeProj = recurringIncomeLeftCount > 0;
+          const hasExpenseProj = recurringExpenseLeftCount > 0;
+
+          const projectedIncome = income + projIncome;
           const projectedExpense = expense + projExpense;
           const projectedNet = net + projIncome - projExpense;
-          const totalBar = projectedExpense > 0 ? projectedExpense : 1;
-          const spentPct = Math.min((expense / totalBar) * 100, 100);
-          const remainPct = Math.min((projExpense / totalBar) * 100, 100 - spentPct);
+
+          const incomeTotalBar = projectedIncome > 0 ? projectedIncome : 1;
+          const receivedPct = Math.min((income / incomeTotalBar) * 100, 100);
+          const incomeRemainPct = Math.min((projIncome / incomeTotalBar) * 100, 100 - receivedPct);
+
+          const expenseTotalBar = projectedExpense > 0 ? projectedExpense : 1;
+          const spentPct = Math.min((expense / expenseTotalBar) * 100, 100);
+          const expenseRemainPct = Math.min((projExpense / expenseTotalBar) * 100, 100 - spentPct);
+
           return (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.cardTitle, { color: colors.muted }]}>PROJECTED</Text>
 
-              <View style={styles.projRow}>
-                <Text style={[styles.projRowLabel, { color: colors.muted }]}>Spending</Text>
-                <View style={styles.projAmountGroup}>
-                  <Text style={[styles.projTotalAmount, { color: colors.text }]}>{formatCurrency(projectedExpense, defaultCurrency)}</Text>
+              {hasIncomeProj ? (
+                <>
+                  <View style={styles.projRow}>
+                    <Text style={[styles.projRowLabel, { color: colors.muted }]}>Projected income</Text>
+                    <View style={styles.projAmountGroup}>
+                      <Text style={[styles.projTotalAmount, { color: colors.text }]}>{formatCurrency(projectedIncome, defaultCurrency)}</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.projBarTrack, { backgroundColor: colors.border }]}>
+                    <View style={[styles.projBarSpent, { width: `${receivedPct}%` as any, backgroundColor: colors.income }]} />
+                    <View style={[styles.projBarRemain, { width: `${incomeRemainPct}%` as any, backgroundColor: colors.income + '44' }]} />
+                  </View>
+
+                  <View style={styles.projLegendRow}>
+                    <View style={[styles.projLegendDot, { backgroundColor: colors.income }]} />
+                    <Text style={[styles.projLegendLabel, { color: colors.text }]}>Received so far</Text>
+                    <Text style={[styles.projLegendAmount, { color: colors.text }]}>{formatCurrency(income, defaultCurrency)}</Text>
+                  </View>
+                  <View style={styles.projLegendRow}>
+                    <View style={[styles.projLegendDot, { backgroundColor: colors.income + '44' }]} />
+                    <Text style={[styles.projLegendLabel, { color: colors.text }]}>{recurringIncomeLeftCount} recurring left</Text>
+                    <Text style={[styles.projLegendAmount, { color: colors.text }]}>+{formatCurrency(projIncome, defaultCurrency)}</Text>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.projPlainBlock}>
+                  <Text style={[styles.projRowLabel, { color: colors.muted }]}>Income</Text>
+                  <Text style={[styles.projTotalAmount, { color: colors.text }]}>{formatCurrency(income, defaultCurrency)}</Text>
                 </View>
-              </View>
+              )}
 
-              {/* Progress bar */}
-              <View style={[styles.projBarTrack, { backgroundColor: colors.border }]}>
-                <View style={[styles.projBarSpent, { width: `${spentPct}%` as any, backgroundColor: colors.accent }]} />
-                <View style={[styles.projBarRemain, { width: `${remainPct}%` as any, backgroundColor: colors.accent + '44' }]} />
-              </View>
+              <View style={[styles.projDivider, { backgroundColor: colors.border }]} />
 
-              <View style={styles.projLegendRow}>
-                <View style={[styles.projLegendDot, { backgroundColor: colors.accent }]} />
-                <Text style={[styles.projLegendLabel, { color: colors.text }]}>Spent so far</Text>
-                <Text style={[styles.projLegendAmount, { color: colors.text }]}>{formatCurrency(expense, defaultCurrency)}</Text>
-              </View>
-              <View style={styles.projLegendRow}>
-                <View style={[styles.projLegendDot, { backgroundColor: colors.accent + '44' }]} />
-                <Text style={[styles.projLegendLabel, { color: colors.text }]}>{recurringLeftCount} recurring left</Text>
-                <Text style={[styles.projLegendAmount, { color: colors.text }]}>+{formatCurrency(projExpense, defaultCurrency)}</Text>
-              </View>
+              {hasExpenseProj ? (
+                <>
+                  <View style={styles.projRow}>
+                    <Text style={[styles.projRowLabel, { color: colors.muted }]}>Projected spending</Text>
+                    <View style={styles.projAmountGroup}>
+                      <Text style={[styles.projTotalAmount, { color: colors.text }]}>{formatCurrency(projectedExpense, defaultCurrency)}</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.projBarTrack, { backgroundColor: colors.border }]}>
+                    <View style={[styles.projBarSpent, { width: `${spentPct}%` as any, backgroundColor: colors.accent }]} />
+                    <View style={[styles.projBarRemain, { width: `${expenseRemainPct}%` as any, backgroundColor: colors.accent + '44' }]} />
+                  </View>
+
+                  <View style={styles.projLegendRow}>
+                    <View style={[styles.projLegendDot, { backgroundColor: colors.accent }]} />
+                    <Text style={[styles.projLegendLabel, { color: colors.text }]}>Spent so far</Text>
+                    <Text style={[styles.projLegendAmount, { color: colors.text }]}>{formatCurrency(expense, defaultCurrency)}</Text>
+                  </View>
+                  <View style={styles.projLegendRow}>
+                    <View style={[styles.projLegendDot, { backgroundColor: colors.accent + '44' }]} />
+                    <Text style={[styles.projLegendLabel, { color: colors.text }]}>{recurringExpenseLeftCount} recurring left</Text>
+                    <Text style={[styles.projLegendAmount, { color: colors.text }]}>+{formatCurrency(projExpense, defaultCurrency)}</Text>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.projPlainBlock}>
+                  <Text style={[styles.projRowLabel, { color: colors.muted }]}>Spending</Text>
+                  <Text style={[styles.projTotalAmount, { color: colors.text }]}>{formatCurrency(expense, defaultCurrency)}</Text>
+                </View>
+              )}
 
               <View style={[styles.projDivider, { backgroundColor: colors.border }]} />
 
               <View style={styles.projNetRow}>
                 <View>
-                  <Text style={[styles.projNetLabel, { color: colors.muted }]}>Net balance</Text>
+                  <Text style={[styles.projNetLabel, { color: colors.muted }]}>Projected net</Text>
                 </View>
                 <View style={styles.projNetAmountGroup}>
                   <Text style={[styles.projNetAmount, { color: projectedNet >= 0 ? colors.income : colors.expense }]}>
@@ -659,6 +711,7 @@ const styles = StyleSheet.create({
 
   // Card 2: Projected
   projRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 10 },
+  projPlainBlock: { paddingHorizontal: 14, paddingBottom: 14, gap: 6 },
   projRowLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
   projAmountGroup: { flexDirection: 'row', alignItems: 'baseline' },
   projTotalAmount: { fontSize: 22, fontFamily: 'Figtree_700Bold' },
