@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   walletLabelRow: {
     display: 'flex',
     flexDirection: 'row',
-    gap: 10,
+    gap: 5,
     alignItems: 'center',
 }
 });

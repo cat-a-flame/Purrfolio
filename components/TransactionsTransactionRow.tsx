@@ -99,7 +99,7 @@ function TransactionsTransactionRow({ transaction: tx, onPress, onLongPress, onI
       </View>
 
       {tx.notes && tx.notes.length > 0 && (
-        <View style={[styles.subtext, { borderColor: colors.border2 }]}>
+        <View style={[styles.subtext]}>
           <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={2}>
             {tx.notes}
           </Text>
@@ -176,12 +176,11 @@ const styles = StyleSheet.create({
   walletLabelRow: {
     display: 'flex',
     flexDirection: 'row',
-    gap: 10,
+    gap: 5,
     alignItems: 'center',
   },
   subtext: {
-    borderTopWidth: 1,
-    marginTop: 11,
+    marginTop: 4,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
