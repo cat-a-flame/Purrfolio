@@ -57,7 +57,17 @@ export default function CategoriesScreen() {
           value={search}
           onChangeText={setSearch}
           placeholder="Search categories…"
+          style={search ? { paddingRight: 36 } : undefined}
         />
+        {search ? (
+          <TouchableOpacity
+            onPress={() => setSearch('')}
+            style={styles.searchClearBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close-circle" size={18} color={colors.muted} />
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {loading ? (
@@ -119,7 +129,8 @@ const styles = StyleSheet.create({
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   back: { fontSize: 15 },
   title: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
-  searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, justifyContent: 'center' },
+  searchClearBtn: { position: 'absolute', right: 10, top: 0, bottom: 0, justifyContent: 'center' },
   list: { padding: 16 },
   card: {
     flexDirection: 'row',
