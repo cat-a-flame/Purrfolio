@@ -250,19 +250,18 @@ export default function CategoryScreen() {
             </View>
           </View>
 
-          <View style={styles.subsHeader}>
-            <Text style={[styles.fieldLabel, { color: colors.muted }]}>Subcategories</Text>
-            <Text style={[styles.optional, { color: colors.muted }]}>Optional</Text>
-          </View>
+          <Text style={[styles.fieldLabel, { color: colors.muted }]}>Subcategories</Text>
           <View style={styles.subsList}>
             {form.subs.map((s) => (
-              <View key={s._key} style={[styles.subRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <AppInput
-                  value={s.icon}
-                  onChangeText={(v) => patchSub(s._key, { icon: v })}
-                  maxLength={4}
-                  style={{ width: 44, textAlign: 'center' }}
-                />
+              <View key={s._key} style={[styles.subRow, { backgroundColor: colors.bg }]}>
+                <View style={{ width: 42 }}>
+                  <AppInput
+                    value={s.icon}
+                    onChangeText={(v) => patchSub(s._key, { icon: v })}
+                    maxLength={4}
+                    style={styles.subEmojiInput}
+                  />
+                </View>
                 <View style={{ flex: 1 }}>
                   <AppInput
                     value={s.name}
@@ -271,13 +270,12 @@ export default function CategoryScreen() {
                   />
                 </View>
                 <TouchableOpacity style={styles.subRemoveBtn} onPress={() => removeSub(s._key)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="close" size={18} color={colors.danger} />
+                  <Text style={{ color: colors.danger, fontSize: 15, fontFamily: 'Figtree_700Bold' }}>✕</Text>
                 </TouchableOpacity>
               </View>
             ))}
             <TouchableOpacity style={[styles.addSubBtn, { borderColor: colors.accent }]} onPress={addSub} activeOpacity={0.7}>
-              <Ionicons name="add" size={16} color={colors.accent} />
-              <Text style={[styles.addSubText, { color: colors.accent }]}>Add subcategory</Text>
+              <Text style={[styles.addSubText, { color: colors.accent }]}>+ Add subcategory</Text>
             </TouchableOpacity>
           </View>
 
@@ -326,11 +324,10 @@ const styles = StyleSheet.create({
   colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   colorSwatch: { width: 32, height: 32, borderRadius: 16 },
   colorSwatchSelected: { borderWidth: 3 },
-  subsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
-  optional: { fontSize: 11, fontFamily: 'Figtree_500Medium' },
   subsList: { gap: 8 },
-  subRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, borderWidth: 1, padding: 8 },
-  subRemoveBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  subRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, padding: 8 },
+  subEmojiInput: { textAlign: 'center', fontSize: 16 },
+  subRemoveBtn: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   addSubBtn: {
     flexDirection: 'row',
     gap: 6,
