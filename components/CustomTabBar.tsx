@@ -1,4 +1,4 @@
-import { View, TouchableOpacity, StyleSheet, useColorScheme, Dimensions } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 type Route = { key: string; name: string };
 type TabBarProps = {
   state: { routes: Route[]; index: number };
@@ -11,7 +11,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { lightColors, darkColors } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { useRecurring } from '@/lib/recurringContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -84,8 +84,7 @@ const TAB_ICONS: Record<string, { outline: string; filled: string }> = {
 
 
 export default function CustomTabBar({ state, navigation }: TabBarProps) {
-  const scheme = useColorScheme();
-  const colors = scheme === 'dark' ? darkColors : lightColors;
+  const colors = useTheme();
   const { hasDueToday } = useRecurring();
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
