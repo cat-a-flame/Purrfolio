@@ -35,7 +35,7 @@ export default function DashboardTransactionRow({ transaction: tx, onPress }: Pr
       style={[styles.row, { backgroundColor: colors.surface, borderWidth: 0 }]}
     >
       {/* Icon with coloured background */}
-      <View style={[styles.iconBox, { backgroundColor: '#fcf1ff' }]}>
+      <View style={[styles.iconBox, { backgroundColor: colors.bg2 }]}>
         {isTransfer ? (
           <Ionicons name="swap-horizontal-outline" size={20} color={colors.muted} />
         ) : icon ? (

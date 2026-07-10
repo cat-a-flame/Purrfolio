@@ -46,7 +46,7 @@ function TransactionsTransactionRow({ transaction: tx, onPress, onLongPress, onI
         <TouchableOpacity
           onPress={onIconPress}
           activeOpacity={0.7}
-          style={[styles.iconBox, { backgroundColor: selected ? colors.accent : '#fcf1ff' }]}
+          style={[styles.iconBox, { backgroundColor: selected ? colors.accent : colors.bg2 }]}
         >
           {selectionMode ? (
             selected
