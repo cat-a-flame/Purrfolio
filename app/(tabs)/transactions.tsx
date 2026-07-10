@@ -340,6 +340,17 @@ export default function TransactionsScreen() {
     }
   }
 
+  const summary = useMemo(() => {
+    let net = 0;
+    for (const tx of filtered) {
+      if (tx.transfer_group_id) continue;
+      const rates = getRatesForDate(tx.date, dailyRates);
+      const huf = toHUF(tx.amount, (tx.wallet as any)?.currency, rates);
+      net += tx.type === 'income' ? huf : -huf;
+    }
+    return { count: filtered.length, net };
+  }, [filtered, dailyRates]);
+
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
 
   type ListItem = { kind: 'header'; date: string; dayNet: number } | { kind: 'tx'; tx: Transaction };
@@ -574,6 +585,16 @@ export default function TransactionsScreen() {
 
             {/* Period picker */}
             <PeriodPicker value={period} onChange={setPeriod} />
+
+            {/* Summary — count and total of currently filtered items */}
+            <View style={styles.summaryBar}>
+              <Text style={[styles.summaryCount, { color: colors.muted }]}>
+                {summary.count} transaction{summary.count !== 1 ? 's' : ''}
+              </Text>
+              <Text style={[styles.summaryTotal, { color: summary.net >= 0 ? colors.income : colors.expense }]}>
+                {summary.net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(summary.net), 'HUF')}
+              </Text>
+            </View>
 
             {/* Select-all bar — visible in selection mode */}
             {selectionMode && (
@@ -1041,6 +1062,15 @@ const styles = StyleSheet.create({
 
   resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   resetBtnText: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+
+  summaryBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  summaryCount: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  summaryTotal: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
 
   dayHeader: {
     flexDirection: 'row',
