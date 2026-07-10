@@ -62,10 +62,18 @@ function TransactionsTransactionRow({ transaction: tx, onPress, onLongPress, onI
         </TouchableOpacity>
 
         <View style={styles.info}>
-          <Text style={[styles.category, { color: colors.text }]}>{label}</Text>
+          <View style={styles.categoryRow}>
+            <Text style={[styles.category, { color: colors.text }]}>{label}</Text>
+            {tx.labels && tx.labels.length > 0 && tx.labels.map((l) => (
+              <View key={l.id} style={styles.labelChip}>
+                <Ionicons name="pricetag" size={12} color={colors.muted} />
+                <Text style={[styles.labelText, { color: colors.muted }]}>{l.name}</Text>
+              </View>
+            ))}
+          </View>
 
           <View style={styles.walletLabelRow}>
-            {/* Wallet: coloured dot + name */}
+            {/* Wallet: icon + name */}
             {tx.wallet ? (
               <View style={styles.walletRow}>
                 <Ionicons name="wallet" size={12} color={colors.muted} />
@@ -73,16 +81,12 @@ function TransactionsTransactionRow({ transaction: tx, onPress, onLongPress, onI
               </View>
             ) : null}
 
-            {tx.labels && tx.labels.length > 0 && (
-              <View style={styles.labels}>
-                {tx.labels.map((l) => (
-                  <View key={l.id} style={[styles.labelChip]}>
-                    <Ionicons name="pricetag" size={12} color={colors.muted} />
-                    <Text style={[styles.labelText, { color: colors.muted }]}>{l.name}</Text>
-                  </View>
-                ))}
+            {tx.payer ? (
+              <View style={styles.walletRow}>
+                <Text style={[styles.sub, { color: colors.muted }]}>•</Text>
+                <Text style={[styles.sub, { color: colors.muted }]}>{tx.payer}</Text>
               </View>
-            )}
+            ) : null}
           </View>
 
         </View>
@@ -94,17 +98,11 @@ function TransactionsTransactionRow({ transaction: tx, onPress, onLongPress, onI
         </View>
       </View>
 
-      {(tx.payer || (tx.notes && tx.notes.length > 0)) && (
+      {tx.notes && tx.notes.length > 0 && (
         <View style={[styles.subtext, { borderColor: colors.border2 }]}>
-          {tx.payer ? (
-            <Text style={[styles.sub, { color: colors.text }]}>{tx.payer}</Text>
-          ) : null}
-
-          {tx.notes ? (
-            <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={2}>
-              {tx.notes}
-            </Text>
-          ) : null}
+          <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={2}>
+            {tx.notes}
+          </Text>
         </View>
       )}
     </TouchableOpacity>
@@ -144,6 +142,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Figtree_600SemiBold',
   },
+  categoryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+  },
   walletRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -151,11 +155,6 @@ const styles = StyleSheet.create({
   },
   sub: {
     fontSize: 13,
-  },
-  labels: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
   },
   labelChip: {
     display: 'flex',
