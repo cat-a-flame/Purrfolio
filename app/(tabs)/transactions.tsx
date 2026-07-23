@@ -110,6 +110,7 @@ export default function TransactionsScreen() {
   const [bulkEditVisible, setBulkEditVisible] = useState(false);
   const [bulkView, setBulkView] = useState<'menu' | 'category' | 'labels'>('menu');
   const [bulkLabelIds, setBulkLabelIds] = useState<string[]>([]);
+  const [initialBulkLabelIds, setInitialBulkLabelIds] = useState<string[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
   const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(null);
   const [confirmEditVisible, setConfirmEditVisible] = useState(false);
@@ -117,6 +118,7 @@ export default function TransactionsScreen() {
 
   function openBulkEdit() {
     setBulkView('menu');
+    setPendingCategoryId(null);
     setBulkEditVisible(true);
   }
 
@@ -136,11 +138,21 @@ export default function TransactionsScreen() {
   async function applyBulkLabels() {
     setBulkSaving(true);
     const ids = Array.from(selectedIds);
-    await supabase.from('transaction_labels').delete().in('transaction_id', ids);
-    if (bulkLabelIds.length > 0) {
-      const rows = ids.flatMap(txId => bulkLabelIds.map(labelId => ({ transaction_id: txId, label_id: labelId })));
-      await supabase.from('transaction_labels').insert(rows);
+    const added = bulkLabelIds.filter(id => !initialBulkLabelIds.includes(id));
+    const removed = initialBulkLabelIds.filter(id => !bulkLabelIds.includes(id));
+
+    if (removed.length > 0) {
+      await supabase.from('transaction_labels').delete().in('transaction_id', ids).in('label_id', removed);
     }
+    if (added.length > 0) {
+      const selectedTxs = transactions.filter(tx => selectedIds.has(tx.id));
+      const rows = selectedTxs.flatMap(tx => {
+        const existingIds = new Set((tx.labels ?? []).map((l: Label) => l.id));
+        return added.filter(labelId => !existingIds.has(labelId)).map(labelId => ({ transaction_id: tx.id, label_id: labelId }));
+      });
+      if (rows.length > 0) await supabase.from('transaction_labels').insert(rows);
+    }
+
     setBulkSaving(false);
     setConfirmEditVisible(false);
     setBulkEditVisible(false);
@@ -685,7 +697,7 @@ export default function TransactionsScreen() {
       {/* Bulk-edit modal */}
       <CategoryPickerModal
         visible={bulkEditVisible && bulkView === 'category'}
-        onClose={() => setBulkView('menu')}
+        onClose={() => { setPendingCategoryId(null); setBulkView('menu'); }}
         categories={categories}
         selectedId=""
         onSelect={(id) => { setPendingCategoryId(id); setConfirmEditVisible(true); }}
@@ -693,7 +705,7 @@ export default function TransactionsScreen() {
 
       <BottomModal
         visible={bulkEditVisible && bulkView !== 'category'}
-        onClose={() => { if (!bulkSaving) setBulkEditVisible(false); }}
+        onClose={() => { if (!bulkSaving) { setPendingCategoryId(null); setBulkEditVisible(false); } }}
         title={bulkView === 'labels' ? 'Set labels' : `Edit ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}`}
         rightAction={bulkView === 'labels' ? (
           <TouchableOpacity onPress={() => setConfirmEditVisible(true)} disabled={bulkSaving}>
@@ -718,7 +730,13 @@ export default function TransactionsScreen() {
               style={[styles.bulkMenuItem, { borderBottomColor: colors.border }]}
               activeOpacity={0.7}
               onPress={() => {
-                setBulkLabelIds([]);
+                const selectedTxs = transactions.filter(tx => selectedIds.has(tx.id));
+                const commonLabelIds = selectedTxs.reduce<string[]>((common, tx, i) => {
+                  const txLabelIds = (tx.labels ?? []).map((l: Label) => l.id);
+                  return i === 0 ? txLabelIds : common.filter(id => txLabelIds.includes(id));
+                }, []);
+                setBulkLabelIds(commonLabelIds);
+                setInitialBulkLabelIds(commonLabelIds);
                 setBulkView('labels');
               }}
             >
@@ -760,8 +778,8 @@ export default function TransactionsScreen() {
         title="Apply changes?"
         message={`This will update ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}. This cannot be undone.`}
         confirmLabel={bulkSaving ? 'Saving…' : 'Save'}
-        onConfirm={pendingCategoryId ? applyBulkCategory : applyBulkLabels}
-        onCancel={() => { if (!bulkSaving) setConfirmEditVisible(false); }}
+        onConfirm={bulkView === 'category' ? applyBulkCategory : applyBulkLabels}
+        onCancel={() => { if (!bulkSaving) { setPendingCategoryId(null); setConfirmEditVisible(false); } }}
       />
 
       {/* Confirm delete */}
