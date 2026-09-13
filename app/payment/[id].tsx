@@ -22,7 +22,7 @@ import CategoryPickerModal from '@/components/CategoryPickerModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, RecurrenceFrequency } from '@/lib/types';
-import { frequencyLabel, isoDate } from '@/lib/recurringUtils';
+import { frequencyLabel, generateDueDates, isoDate } from '@/lib/recurringUtils';
 import { Events } from '@/lib/events';
 
 function formatAmountDisplay(raw: string): string {
@@ -196,10 +196,62 @@ export default function EditPaymentScreen() {
     setShowDotMenu(false);
     (async () => {
       const next = !isActive;
-      const { error } = await supabase.from('recurring_payments').update({ is_active: next }).eq('id', id);
+
+      if (!next) {
+        const { error } = await supabase.from('recurring_payments').update({ is_active: false }).eq('id', id);
+        Events.emit('recurring-saved', {
+          success: !error,
+          message: error ? (error.message ?? 'Failed to update.') : 'Paused.',
+        });
+        isSaved.current = true;
+        router.back();
+        return;
+      }
+
+      // Resuming: while paused, no due dates were generated, but generateDueDates has no
+      // memory of that — it just walks forward from start_date. Auto-skip any date that
+      // fell inside the paused window so it doesn't reappear as a due occurrence.
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const todayIso = isoDate(new Date());
+      const pastDueDates = generateDueDates(
+        { start_date: form.start_date, end_date: form.end_date || null, frequency: form.frequency, is_active: true },
+        new Date(form.start_date + 'T00:00:00'),
+        new Date()
+      ).filter((d) => isoDate(d) <= todayIso);
+
+      let skippedCount = 0;
+      if (pastDueDates.length > 0) {
+        const { data: existing } = await supabase
+          .from('recurring_occurrences')
+          .select('due_date')
+          .eq('recurring_payment_id', id);
+        const actioned = new Set((existing ?? []).map((o: any) => o.due_date.slice(0, 10)));
+        const toSkip = pastDueDates.filter((d) => !actioned.has(isoDate(d)));
+
+        if (toSkip.length > 0) {
+          const { error: skipError } = await supabase.from('recurring_occurrences').insert(
+            toSkip.map((d) => ({
+              recurring_payment_id: id,
+              user_id: user.id,
+              due_date: isoDate(d),
+              status: 'skipped' as const,
+              transaction_id: null,
+            }))
+          );
+          if (!skipError) skippedCount = toSkip.length;
+        }
+      }
+
+      const { error } = await supabase.from('recurring_payments').update({ is_active: true }).eq('id', id);
       Events.emit('recurring-saved', {
         success: !error,
-        message: error ? (error.message ?? 'Failed to update.') : (next ? 'Resumed.' : 'Paused.'),
+        message: error
+          ? (error.message ?? 'Failed to update.')
+          : skippedCount > 0
+          ? `Resumed — ${skippedCount} missed occurrence${skippedCount === 1 ? '' : 's'} skipped.`
+          : 'Resumed.',
       });
       isSaved.current = true;
       router.back();
