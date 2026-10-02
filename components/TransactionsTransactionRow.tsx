@@ -46,7 +46,7 @@ function TransactionsTransactionRow({ transaction: tx, onPress, onLongPress, onI
         <TouchableOpacity
           onPress={onIconPress}
           activeOpacity={0.7}
-          style={[styles.iconBox, { backgroundColor: selected ? colors.accent : colors.bg2 }]}
+          style={[styles.iconBox, { backgroundColor: selected ? colors.accent : colors.accentLight }]}
         >
           {selectionMode ? (
             selected
@@ -114,8 +114,8 @@ export default memo(TransactionsTransactionRow);
 const styles = StyleSheet.create({
   row: {
     paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 0,
+    borderRadius: 18,
+    borderWidth: 1,
   },
   wrapper: {
     display: 'flex',
@@ -127,20 +127,20 @@ const styles = StyleSheet.create({
   iconBox: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   icon: { fontSize: 20 },
-  iconFallback: { fontSize: 16, fontFamily: 'Figtree_600SemiBold' },
+  iconFallback: { fontSize: 16, fontFamily: 'Nunito_600SemiBold' },
   info: {
     flex: 1,
     gap: 2,
   },
   category: {
     fontSize: 15,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_600SemiBold',
   },
   categoryRow: {
     flexDirection: 'row',
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 15,
-    fontFamily: 'Figtree_700Bold',
+    fontFamily: 'Nunito_700Bold',
   },
   walletLabelRow: {
     display: 'flex',

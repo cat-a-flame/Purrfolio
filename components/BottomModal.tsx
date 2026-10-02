@@ -38,7 +38,7 @@ export default function BottomModal({ visible, onClose, title, rightAction, chil
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
       >
-        <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
+        <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.glassBorder }]}>
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           {title && (
             <View style={styles.titleRow}>
@@ -65,8 +65,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    borderWidth: 1,
+    borderBottomWidth: 0,
     paddingTop: 8,
     paddingHorizontal: 20,
     paddingBottom: 32,
@@ -86,8 +88,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 18,
-    fontFamily: 'Figtree_700Bold',
+    fontSize: 22,
+    fontFamily: 'Lora_700Bold',
+    letterSpacing: -0.4,
   },
   content: {
     gap: 12,

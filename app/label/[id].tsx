@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
 import ConfirmModal from '@/components/ConfirmModal';
+import AuroraBackground from '@/components/AuroraBackground';
 
 const LABEL_COLORS = [
   '#6C63FF', '#FF6B6B', '#43BCCD', '#F9A826', '#5CB85C',
@@ -76,6 +77,7 @@ export default function LabelScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="arrow-back" size={24} color={colors.accent} />
@@ -147,10 +149,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 17, fontFamily: 'Figtree_700Bold' },
+  headerTitle: { fontSize: 17, fontFamily: 'Nunito_700Bold' },
   content: { padding: 16, gap: 14 },
   fieldGroup: { gap: 8 },
-  fieldLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  fieldLabel: { fontSize: 13, fontFamily: 'Nunito_500Medium' },
   colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   colorSwatch: { width: 32, height: 32, borderRadius: 16 },
   colorSwatchSelected: { borderWidth: 3 },

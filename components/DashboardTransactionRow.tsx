@@ -32,10 +32,10 @@ export default function DashboardTransactionRow({ transaction: tx, onPress }: Pr
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={onPress ? 0.7 : 1}
-      style={[styles.row, { backgroundColor: colors.surface, borderWidth: 0 }]}
+      style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
       {/* Icon with coloured background */}
-      <View style={[styles.iconBox, { backgroundColor: colors.bg2 }]}>
+      <View style={[styles.iconBox, { backgroundColor: colors.accentLight }]}>
         {isTransfer ? (
           <Ionicons name="swap-horizontal-outline" size={20} color={colors.muted} />
         ) : icon ? (
@@ -84,27 +84,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderRadius: 12,
-    borderWidth: 0,
+    borderRadius: 18,
+    borderWidth: 1,
     gap: 10,
   },
   iconBox: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   icon: { fontSize: 20 },
-  iconFallback: { fontSize: 16, fontFamily: 'Figtree_600SemiBold' },
+  iconFallback: { fontSize: 16, fontFamily: 'Nunito_600SemiBold' },
   info: {
     flex: 1,
     gap: 2,
   },
   category: {
     fontSize: 15,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_600SemiBold',
   },
   categoryRow: {
     flexDirection: 'row',
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 15,
-    fontFamily: 'Figtree_700Bold',
+    fontFamily: 'Nunito_700Bold',
   },
   walletRow: {
     display: 'flex',

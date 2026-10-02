@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/lib/theme';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -30,10 +31,11 @@ export default function AppButton({
   fullWidth = false,
 }: Props) {
   const colors = useTheme();
+  const isPrimary = variant === 'primary';
 
   const bgColor = {
     primary: colors.accent,
-    secondary: 'transparent',
+    secondary: colors.surface,
     danger: colors.danger,
     ghost: 'transparent',
   }[variant];
@@ -45,12 +47,11 @@ export default function AppButton({
     ghost: colors.accent,
   }[variant];
 
-  const borderColor = {
-    primary: 'transparent',
-    secondary: colors.border,
-    danger: 'transparent',
-    ghost: 'transparent',
-  }[variant];
+  const content = loading ? (
+    <ActivityIndicator color={textColor} size="small" />
+  ) : (
+    <Text style={[styles.text, { color: textColor }]}>{children}</Text>
+  );
 
   return (
     <TouchableOpacity
@@ -58,31 +59,50 @@ export default function AppButton({
       disabled={disabled || loading}
       style={[
         styles.base,
-        { backgroundColor: bgColor, borderColor, borderWidth: variant === 'secondary' ? 1 : 0 },
+        { backgroundColor: bgColor },
+        variant === 'secondary' && { borderWidth: 1, borderColor: colors.border },
+        isPrimary && [styles.primaryShadow, { shadowColor: colors.accent }],
         fullWidth && styles.fullWidth,
         (disabled || loading) && styles.disabled,
         style,
       ]}
-      activeOpacity={0.75}
+      activeOpacity={0.8}
     >
-      {loading ? (
-        <ActivityIndicator color={textColor} size="small" />
-      ) : (
-        <Text style={[styles.text, { color: textColor }]}>{children}</Text>
+      {isPrimary && (
+        <LinearGradient
+          colors={colors.gradientAccent}
+          start={{ x: 0, y: 0.3 }}
+          end={{ x: 1, y: 0.7 }}
+          style={styles.gradient}
+        />
       )}
+      {content}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    borderRadius: 10,
+    borderRadius: 9999,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    minHeight: 42,
+    minHeight: 52,
+    paddingHorizontal: 24,
+  },
+  gradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 9999,
+  },
+  primaryShadow: {
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    elevation: 6,
   },
   fullWidth: {
     width: '100%',
@@ -92,6 +112,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 16,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_700Bold',
+    letterSpacing: -0.1,
   },
 });

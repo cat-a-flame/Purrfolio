@@ -21,6 +21,7 @@ import {
   setFingerprintEnabled,
   getSupportedBiometrics,
 } from '@/lib/security';
+import AuroraBackground from '@/components/AuroraBackground';
 
 type Phase =
   | 'idle'
@@ -187,6 +188,7 @@ export default function SecurityScreen() {
   if (phase !== 'idle') {
     return (
       <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+        <AuroraBackground />
         <AppHeader title="Security" showBack onBack={cancelPhase} />
         <PinPad
           title={phaseTitle[phase]}
@@ -204,6 +206,7 @@ export default function SecurityScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       <AppHeader title="Security" showBack />
       <View style={styles.container}>
 
@@ -273,7 +276,7 @@ const styles = StyleSheet.create({
   section: { gap: 8 },
   sectionTitle: {
     fontSize: 13,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_600SemiBold',
     letterSpacing: 0.5,
     paddingHorizontal: 4,
   },

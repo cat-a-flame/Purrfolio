@@ -9,6 +9,7 @@ import {
   authenticateWithBiometrics,
 } from '@/lib/security';
 import { useTheme } from '@/lib/theme';
+import AuroraBackground from '@/components/AuroraBackground';
 
 const PIN_LENGTH = 4;
 
@@ -76,7 +77,8 @@ export function UnlockScreen({ onUnlocked }: Props) {
   if (phase === 'biometric') {
     return (
       <View style={[styles.container, { backgroundColor: colors.bg }]}>
-        <Text style={[styles.appName, { color: colors.accent }]}>Purrfolio</Text>
+        <AuroraBackground />
+        <Text style={[styles.appName, { color: colors.heading }]}>Purrfolio</Text>
         <View style={styles.biometricCenter}>
           <TouchableOpacity
             style={[styles.bioButton, { borderColor: colors.accent }]}
@@ -99,7 +101,8 @@ export function UnlockScreen({ onUnlocked }: Props) {
   // ── PIN phase ────────────────────────────────────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <Text style={[styles.appName, { color: colors.accent }]}>Purrfolio</Text>
+      <AuroraBackground />
+      <Text style={[styles.appName, { color: colors.heading }]}>Purrfolio</Text>
       <PinPad
         title="Enter your PIN"
         pin={pin}
@@ -138,11 +141,11 @@ const styles = StyleSheet.create({
   },
   bioLabel: {
     fontSize: 15,
-    fontFamily: 'Figtree_400Regular',
+    fontFamily: 'Nunito_400Regular',
   },
   usePinLink: {
     fontSize: 15,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_600SemiBold',
     marginTop: 8,
   },
 });

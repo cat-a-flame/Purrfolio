@@ -12,6 +12,18 @@ export function toHUF(amount: number, currency: string | undefined | null, rates
   return rate ? amount * rate : amount;
 }
 
+/** Like toHUF but prefers a stored per-transaction rate over a looked-up one. */
+export function txToHUF(
+  amount: number,
+  currency: string | undefined | null,
+  storedRate: number | null | undefined,
+  rates: Rates,
+): number {
+  if (!currency || currency === 'HUF') return amount;
+  if (storedRate != null) return amount * storedRate;
+  return toHUF(amount, currency, rates);
+}
+
 /**
  * Find rates for a specific date. Falls back to nearest prior business day
  * when the exact date has no entry (weekends / Hungarian public holidays).

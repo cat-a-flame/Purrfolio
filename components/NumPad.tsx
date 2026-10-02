@@ -64,6 +64,6 @@ const styles = StyleSheet.create({
   },
   keyText: {
     fontSize: 22,
-    fontFamily: 'Figtree_500Medium',
+    fontFamily: 'Nunito_500Medium',
   },
 });

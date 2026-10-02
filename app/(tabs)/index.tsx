@@ -22,6 +22,8 @@ import Toast from '@/components/Toast';
 import { useRouter } from 'expo-router';
 import { useRecurring } from '@/lib/recurringContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
+import AuroraBackground from '@/components/AuroraBackground';
 
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -220,7 +222,8 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AppHeader title="Dashaboard" />
+      <AuroraBackground />
+      <AppHeader title="Dashboard" />
       <FlatList
         style={{ paddingTop: 16 }}
         data={flat}
@@ -256,62 +259,93 @@ export default function DashboardScreen() {
             {/* Period picker */}
             <PeriodPicker value={period} onChange={setPeriod} />
             
-            {/* Cash Flow card */}
+            {/* Cash Flow hero card — mirrors the web dashboard's .cashFlowCard */}
             <LinearGradient
-              colors={[
-                '#4D7BE7',
-                '#C064BC',
-                '#F78162',
-              ]}
+              colors={colors.gradientCashflow}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.cashFlow}
             >
-              {/* Title row + VS badge */}
-              <View style={styles.cashFlowHeader}>
-                <Text style={[styles.cashFlowTitle, { color: '#fff' }]}>Cash Flow</Text>
-                {!loading && vsPct !== null && (
-                  <View style={[styles.vsBadge, { backgroundColor: '#ffffff33' }]}>
-                    <Text style={[styles.vsText, { color: '#fff' }]}>
-                      {vsPct >= 0 ? '↑' : '↓'} {Math.abs(vsPct)}%
+              {/* Soft light orbs (pink top-right, cyan bottom-left) */}
+              <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+                <Defs>
+                  <RadialGradient id="orbPink" cx="100%" cy="0%" r="75%">
+                    <Stop offset="0" stopColor="#ff6eaa" stopOpacity={0.85} />
+                    <Stop offset="1" stopColor="#ff6eaa" stopOpacity={0} />
+                  </RadialGradient>
+                  <RadialGradient id="orbCyan" cx="0%" cy="100%" r="65%">
+                    <Stop offset="0" stopColor="#28c8e6" stopOpacity={0.55} />
+                    <Stop offset="1" stopColor="#28c8e6" stopOpacity={0} />
+                  </RadialGradient>
+                </Defs>
+                <Rect width="100%" height="100%" fill="url(#orbPink)" />
+                <Rect width="100%" height="100%" fill="url(#orbCyan)" />
+              </Svg>
+
+              {/* Title pill */}
+              <View style={styles.cashFlowTitlePill}>
+                <View style={styles.cashFlowDot} />
+                <Text style={styles.cashFlowTitle}>Cash Flow</Text>
+              </View>
+
+              {/* Net + VS tag */}
+              <View style={styles.cashFlowTop}>
+                <View style={{ flexShrink: 1, gap: 2 }}>
+                  <Text style={styles.cashFlowPeriod}>{period.label}</Text>
+                  {loading
+                    ? <SkeletonBox style={{ height: 38, width: 170, borderRadius: 8, backgroundColor: '#ffffff30' }} />
+                    : <Text style={styles.cashFlowNet} numberOfLines={1} adjustsFontSizeToFit>
+                      {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), 'HUF')}
                     </Text>
+                  }
+                </View>
+                {!loading && vsPct !== null && (
+                  <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                    <Text style={styles.vsLabel}>vs previous</Text>
+                    <View style={[styles.vsBadge, vsPct >= 0 ? styles.vsBadgePos : styles.vsBadgeNeg]}>
+                      <Text style={[styles.vsText, { color: vsPct >= 0 ? '#c9ffe8' : '#ffe0e5' }]}>
+                        {vsPct >= 0 ? '↑' : '↓'} {Math.abs(vsPct)}%
+                      </Text>
+                    </View>
                   </View>
                 )}
               </View>
 
-              {/* Net */}
-              {loading
-                ? <SkeletonBox style={{ height: 34, width: 170, borderRadius: 6, backgroundColor: '#ffffff40' }} />
-                : <Text style={[styles.cashFlowNet, { color: net >= 0 ? '#fff' : '#ffcaca' }]}>
-                  {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), 'HUF')}
-                </Text>
-              }
-
               {/* Income bar */}
-              <View style={[styles.barSection, { marginBottom: 12 }]}>
+              <View style={styles.barSection}>
                 <View style={styles.barLabelRow}>
-                  <Text style={[styles.cashFlowLabel, { color: '#fff' }]}>Income</Text>
+                  <Text style={styles.cashFlowLabel}>Income</Text>
                   {loading
-                    ? <SkeletonBox style={{ height: 13, width: 90, borderRadius: 4, backgroundColor: '#ffffff40' }} />
-                    : <Text style={[styles.cashFlowValue, { color: '#fff' }]}>+{formatCurrency(income, 'HUF')}</Text>
+                    ? <SkeletonBox style={{ height: 13, width: 90, borderRadius: 4, backgroundColor: '#ffffff30' }} />
+                    : <Text style={styles.cashFlowValue}>+{formatCurrency(income, 'HUF')}</Text>
                   }
                 </View>
-                <View style={[styles.barTrack, { backgroundColor: '#ffffff94' }]}>
-                  <View style={[styles.barFill, { width: `${incomePct}%` as any, backgroundColor: '#449f90' }]} />
+                <View style={styles.barTrack}>
+                  <LinearGradient
+                    colors={['#2ee6a6', '#8dffd4']}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={[styles.barFill, { width: `${incomePct}%` as any }]}
+                  />
                 </View>
               </View>
 
               {/* Expense bar */}
               <View style={styles.barSection}>
                 <View style={styles.barLabelRow}>
-                  <Text style={[styles.cashFlowLabel, { color: '#fff' }]}>Expenses</Text>
+                  <Text style={styles.cashFlowLabel}>Expenses</Text>
                   {loading
-                    ? <SkeletonBox style={{ height: 13, width: 90, borderRadius: 4, backgroundColor: '#ffffff40' }} />
-                    : <Text style={[styles.cashFlowValue, { color: '#fee5e5' }]}>−{formatCurrency(expense, 'HUF')}</Text>
+                    ? <SkeletonBox style={{ height: 13, width: 90, borderRadius: 4, backgroundColor: '#ffffff30' }} />
+                    : <Text style={styles.cashFlowValue}>−{formatCurrency(expense, 'HUF')}</Text>
                   }
                 </View>
-                <View style={[styles.barTrack, { backgroundColor: '#ffffff94' }]}>
-                  <View style={[styles.barFill, { width: `${expensePct}%` as any, backgroundColor: '#f44c4c' }]} />
+                <View style={styles.barTrack}>
+                  <LinearGradient
+                    colors={['#ff6a5b', '#ffb36b']}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={[styles.barFill, { width: `${expensePct}%` as any }]}
+                  />
                 </View>
               </View>
             </LinearGradient>
@@ -364,27 +398,68 @@ const styles = StyleSheet.create({
   header: { gap: 12, marginBottom: 8 },
 
   cashFlow: {
-    borderRadius: 12,
-    borderWidth: 0,
-    paddingHorizontal: 20,
-    paddingVertical: 22,
-    gap: 10,
+    borderRadius: 26,
+    overflow: 'hidden',
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 24,
+    gap: 16,
     marginBottom: 8,
     marginTop: 6,
+    shadowColor: '#5c22c8',
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.45,
+    shadowRadius: 24,
+    elevation: 10,
   },
-  cashFlowHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cashFlowTitle: { fontSize: 13, fontFamily: 'Figtree_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.5 },
-  cashFlowNet: { fontSize: 30, fontFamily: 'Figtree_700Bold' },
-  cashFlowLabel: { fontSize: 12 },
-  cashFlowValue: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
-  vsBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  vsText: { fontSize: 12, fontFamily: 'Figtree_600SemiBold', paddingVertical: 1 },
-  barSection: { gap: 4 },
+  cashFlowTitlePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    paddingVertical: 5,
+    paddingLeft: 10,
+    paddingRight: 12,
+    borderRadius: 9999,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  cashFlowDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#7cf5c4',
+    shadowColor: '#7cf5c4',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+  },
+  cashFlowTitle: { fontSize: 11, fontFamily: 'Nunito_800ExtraBold', textTransform: 'uppercase', letterSpacing: 1.3, color: '#fff' },
+  cashFlowTop: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 },
+  cashFlowPeriod: { fontSize: 13, fontFamily: 'Nunito_700Bold', color: 'rgba(255,255,255,0.82)' },
+  cashFlowNet: {
+    fontSize: 36,
+    fontFamily: 'Nunito_900Black',
+    letterSpacing: -0.4,
+    color: '#fff',
+    textShadowColor: 'rgba(40,0,90,0.35)',
+    textShadowOffset: { width: 0, height: 6 },
+    textShadowRadius: 18,
+  },
+  cashFlowLabel: { fontSize: 14, fontFamily: 'Nunito_700Bold', color: 'rgba(255,255,255,0.9)' },
+  cashFlowValue: { fontSize: 14, fontFamily: 'Nunito_800ExtraBold', color: '#fff' },
+  vsLabel: { fontSize: 12, fontFamily: 'Nunito_700Bold', color: 'rgba(255,255,255,0.82)' },
+  vsBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 9999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
+  vsBadgePos: { backgroundColor: 'rgba(124,245,196,0.2)' },
+  vsBadgeNeg: { backgroundColor: 'rgba(255,120,140,0.22)' },
+  vsText: { fontSize: 13, fontFamily: 'Nunito_800ExtraBold' },
+  barSection: { gap: 8 },
   barLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  barTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
-  barFill: { height: 6, borderRadius: 3 },
+  barTrack: { height: 10, borderRadius: 5, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.16)' },
+  barFill: { height: 10, borderRadius: 5 },
 
-  sectionTitle: { fontSize: 13, fontFamily: 'Figtree_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionTitle: { fontSize: 13, fontFamily: 'Nunito_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   dayHeader: {
     flexDirection: 'row',
@@ -394,8 +469,8 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     paddingHorizontal: 4,
   },
-  dayDate: { fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
-  dayNet: { fontSize: 13, fontFamily: 'Figtree_700Bold' },
+  dayDate: { fontSize: 13, fontFamily: 'Nunito_600SemiBold' },
+  dayNet: { fontSize: 13, fontFamily: 'Nunito_700Bold' },
 
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
   skeletonRow: {

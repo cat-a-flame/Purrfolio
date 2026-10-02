@@ -89,27 +89,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 18,
     borderWidth: 1,
     gap: 10,
   },
   iconBox: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   icon: { fontSize: 20 },
-  iconFallback: { fontSize: 16, fontFamily: 'Figtree_600SemiBold' },
+  iconFallback: { fontSize: 16, fontFamily: 'Nunito_600SemiBold' },
   info: {
     flex: 1,
     gap: 2,
   },
   category: {
     fontSize: 15,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_600SemiBold',
   },
   walletRow: {
     flexDirection: 'row',
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   },
   labelText: {
     fontSize: 11,
-    fontFamily: 'Figtree_500Medium',
+    fontFamily: 'Nunito_500Medium',
   },
   amountCol: {
     alignItems: 'flex-end',
@@ -146,6 +146,6 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 15,
-    fontFamily: 'Figtree_700Bold',
+    fontFamily: 'Nunito_700Bold',
   },
 });

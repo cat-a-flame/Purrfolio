@@ -21,6 +21,7 @@ import CategoryPickerModal from '@/components/CategoryPickerModal';
 import NumPad from '@/components/NumPad';
 import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
+import AuroraBackground from '@/components/AuroraBackground';
 
 function formatAmountDisplay(raw: string): string {
   if (!raw) return '';
@@ -251,6 +252,7 @@ export default function EditTransactionScreen() {
   if (fetching) {
     return (
       <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+        <AuroraBackground />
         <ActivityIndicator style={{ flex: 1 }} color={colors.accent} />
       </SafeAreaView>
     );
@@ -258,6 +260,7 @@ export default function EditTransactionScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       {/* Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
@@ -538,7 +541,7 @@ const styles = StyleSheet.create({
   },
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
   headerBtnRight: { width: 40, alignItems: 'flex-end', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontFamily: 'Figtree_600SemiBold' },
+  headerTitle: { fontSize: 17, fontFamily: 'Nunito_600SemiBold' },
   form: { padding: 16, gap: 14 },
   error: { fontSize: 14, textAlign: 'center' },
   transferBadge: {
@@ -551,7 +554,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
   },
-  transferBadgeText: { fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
+  transferBadgeText: { fontSize: 13, fontFamily: 'Nunito_600SemiBold' },
   typeToggle: {
     flexDirection: 'row',
     borderRadius: 12,
@@ -565,7 +568,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
   },
-  typeBtnText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
+  typeBtnText: { fontSize: 15, fontFamily: 'Nunito_600SemiBold' },
   amountSection: {
     alignItems: 'center',
     gap: 4,
@@ -584,7 +587,7 @@ const styles = StyleSheet.create({
   },
   currencyLabel: {
     fontSize: 15,
-    fontFamily: 'Figtree_700Bold',
+    fontFamily: 'Nunito_700Bold',
     marginBottom: 10,
   },
   row: { flexDirection: 'row', gap: 8 },
@@ -604,7 +607,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
   },
-  moreToggleText: { fontSize: 15, fontFamily: 'Figtree_500Medium' },
+  moreToggleText: { fontSize: 15, fontFamily: 'Nunito_500Medium' },
   bottomBlock: {
     borderTopWidth: StyleSheet.hairlineWidth,
   },

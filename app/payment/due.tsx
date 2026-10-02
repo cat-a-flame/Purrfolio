@@ -9,6 +9,7 @@ import type { RecurringPayment, Currency } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { isoDate } from '@/lib/recurringUtils';
 import { Events } from '@/lib/events';
+import AuroraBackground from '@/components/AuroraBackground';
 
 export default function DuePaymentScreen() {
   const colors = useTheme();
@@ -107,6 +108,7 @@ export default function DuePaymentScreen() {
   if (fetching || !payment) {
     return (
       <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+        <AuroraBackground />
         <ActivityIndicator style={{ flex: 1 }} color={colors.accent} />
       </SafeAreaView>
     );
@@ -116,6 +118,7 @@ export default function DuePaymentScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -163,18 +166,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1,
   },
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontFamily: 'Figtree_600SemiBold' },
+  headerTitle: { fontSize: 17, fontFamily: 'Nunito_600SemiBold' },
   content: { padding: 16, gap: 12 },
   amountCard: {
     borderWidth: 1, borderRadius: 12, padding: 14,
     alignItems: 'center', gap: 4, marginBottom: 4,
   },
-  dateLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  dateLabel: { fontSize: 13, fontFamily: 'Nunito_500Medium' },
   amountValue: { fontSize: 28, fontFamily: 'Lora_700Bold' },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, borderRadius: 12, paddingVertical: 14,
   },
   actionBtnOutline: { borderWidth: 1 },
-  actionBtnText: { fontSize: 16, fontFamily: 'Figtree_600SemiBold', color: '#fff' },
+  actionBtnText: { fontSize: 16, fontFamily: 'Nunito_600SemiBold', color: '#fff' },
 });

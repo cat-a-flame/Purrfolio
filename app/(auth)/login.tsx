@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
+import AuroraBackground from '@/components/AuroraBackground';
 
 export default function LoginScreen() {
   const colors = useTheme();
@@ -46,18 +48,20 @@ export default function LoginScreen() {
       style={[styles.flex, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <AuroraBackground />
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={[styles.logo, { color: colors.accent }]}>Purrfolio</Text>
+          <Image source={require('@/assets/images/logo.png')} style={styles.logoImage} />
+          <Text style={[styles.logo, { color: colors.heading }]}>Purrfolio</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>
             Your personal budget pawsisstant
           </Text>
         </View>
 
-        <View style={styles.form}>
+        <View style={[styles.form, styles.card, { backgroundColor: colors.glassStrong, borderColor: colors.glassBorder, shadowColor: colors.shadow }]}>
           {error ? (
             <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>
           ) : null}
@@ -114,15 +118,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  logoImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    marginBottom: 8,
+  },
   logo: {
     fontSize: 36,
+    letterSpacing: -0.7,
     fontFamily: 'Lora_700Bold',
   },
   subtitle: {
     fontSize: 15,
+    fontFamily: 'Nunito_600SemiBold',
   },
   form: {
     gap: 16,
+  },
+  card: {
+    borderRadius: 26,
+    borderWidth: 1,
+    padding: 24,
+    shadowOffset: { width: 0, height: 24 },
+    shadowOpacity: 0.18,
+    shadowRadius: 32,
+    elevation: 6,
   },
   error: {
     fontSize: 14,
@@ -130,18 +151,19 @@ const styles = StyleSheet.create({
   },
   link: {
     fontSize: 14,
+    fontFamily: 'Nunito_700Bold',
     textAlign: 'center',
   },
   passwordWrapper: { gap: 4 },
-  passwordLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium', marginBottom: 2 },
+  passwordLabel: { fontSize: 13, fontFamily: 'Nunito_700Bold', marginBottom: 2 },
   passwordField: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 0,
-    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    minHeight: 42,
+    minHeight: 48,
   },
   passwordInput: { flex: 1, fontSize: 15, padding: 0 },
 });

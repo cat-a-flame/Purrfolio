@@ -143,12 +143,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_600SemiBold',
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
-    fontFamily: 'Figtree_400Regular',
+    fontFamily: 'Nunito_400Regular',
     textAlign: 'center',
     marginTop: -20,
   },
@@ -182,6 +182,6 @@ const styles = StyleSheet.create({
   },
   keyLabel: {
     fontSize: 26,
-    fontFamily: 'Figtree_400Regular',
+    fontFamily: 'Nunito_400Regular',
   },
 });
