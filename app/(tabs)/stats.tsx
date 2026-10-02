@@ -1,33 +1,53 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   RefreshControl,
-  Dimensions,
   Pressable,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
 import { useTheme, type Colors } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
+import AuroraBackground from '@/components/AuroraBackground';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
-import { formatCurrency, formatHUF, formatNumber } from '@/lib/utils';
-import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import NetWorthCard, { type WalletSummary } from '@/components/NetWorthCard';
+import EmojiTile from '@/components/EmojiTile';
+import SkeletonBox from '@/components/SkeletonBox';
+import { formatHUF, formatNumber } from '@/lib/utils';
+import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, txToHUF, type DailyRates, type Rates } from '@/lib/exchange';
 import { fetchWalletBalanceSums } from '@/lib/fetchWalletBalanceSums';
 import { generateDueDates, isoDate as recurringIsoDate } from '@/lib/recurringUtils';
-import SkeletonBox from '@/components/SkeletonBox';
-import type { Currency, TransactionType, Wallet } from '@/lib/types';
-import AuroraBackground from '@/components/AuroraBackground';
+import { useCountUp } from '@/lib/useCountUp';
+import { Events } from '@/lib/events';
+import type { RecurringPayment, Transaction, TransactionType, Wallet } from '@/lib/types';
 
-const SCREEN_W = Dimensions.get('window').width;
+// The sections, numbers and prediction logic mirror PurrfolioWeb's
+// app/statistics/page.tsx so both apps tell the same story.
 
-// ─── date helpers ─────────────────────────────────────────────────────────────
+// ─── palette ────────────────────────────────────────────────────────────────
+const PALETTE = [
+  '#f26e4d', '#f59e0b', '#10b981', '#6366f1', '#ec4899',
+  '#14b8a6', '#8b5cf6', '#f97316', '#06b6d4', '#84cc16',
+  '#a78bfa', '#fb7185', '#0ea5e9', '#d946ef', '#22c55e',
+];
 
+// Categories under this amount (HUF) in the period are folded into "Other"
+const OTHER_THRESHOLD_HUF = 5_000;
+const OTHER_COLOR = '#94a3b8';
+// Category rows shown before "Show N more categories"
+const VISIBLE_CATEGORIES = 8;
+
+function formatShare(share: number): string {
+  const pct = Math.round(share * 100);
+  return pct === 0 && share > 0 ? '<1%' : `${pct}%`;
+}
+
+// ─── date helpers ───────────────────────────────────────────────────────────
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
@@ -45,129 +65,69 @@ function defaultPeriod(): PeriodValue {
 function getPrevRange(v: PeriodValue): { from: string; to: string } {
   const f = new Date(v.from + 'T12:00:00');
   const t = new Date(v.to + 'T12:00:00');
-  if (v.tab === 'weeks') {
-    return {
-      from: isoDate(new Date(f.getTime() - 7 * 86400000)),
-      to: isoDate(new Date(t.getTime() - 7 * 86400000)),
-    };
-  }
-  if (v.tab === 'months') {
-    return {
-      from: isoDate(new Date(f.getFullYear(), f.getMonth() - 1, 1)),
-      to: isoDate(new Date(f.getFullYear(), f.getMonth(), 0)),
-    };
-  }
-  if (v.tab === 'years') {
-    const y = f.getFullYear() - 1;
-    return { from: `${y}-01-01`, to: `${y}-12-31` };
-  }
+  if (v.tab === 'weeks') return { from: isoDate(new Date(f.getTime() - 7 * 86400000)), to: isoDate(new Date(t.getTime() - 7 * 86400000)) };
+  if (v.tab === 'months') return { from: isoDate(new Date(f.getFullYear(), f.getMonth() - 1, 1)), to: isoDate(new Date(f.getFullYear(), f.getMonth(), 0)) };
+  if (v.tab === 'years') { const y = f.getFullYear() - 1; return { from: `${y}-01-01`, to: `${y}-12-31` }; }
   const days = Math.round((t.getTime() - f.getTime()) / 86400000) + 1;
-  return {
-    from: isoDate(new Date(f.getTime() - days * 86400000)),
-    to: isoDate(new Date(f.getTime() - 86400000)),
-  };
+  return { from: isoDate(new Date(f.getTime() - days * 86400000)), to: isoDate(new Date(f.getTime() - 86400000)) };
 }
 
-// ─── types ────────────────────────────────────────────────────────────────────
-
-type CategoryStat = {
-  id: string | null;
-  name: string;
-  icon: string | null;
-  color: string | null;
-  amount: number;
-  count: number;
-};
-
-function groupByCategory(txs: any[], type: 'income' | 'expense'): CategoryStat[] {
-  const map = new Map<string | null, CategoryStat>();
-  for (const tx of txs) {
-    if (tx.type !== type) continue;
-    const cat = tx.category;
-    const key = cat?.id ?? null;
-    if (!map.has(key)) {
-      map.set(key, { id: key, name: cat?.name ?? 'Uncategorised', icon: cat?.icon ?? null, color: cat?.color ?? null, amount: 0, count: 0 });
-    }
-    const s = map.get(key)!;
-    s.amount += tx.amount;
-    s.count += 1;
+// "August" / "December 2025" / "2025" / "the previous week", for "… in <name>" copy
+function prevPeriodName(v: PeriodValue, fallback: string): string {
+  const prev = getPrevRange(v);
+  const prevFrom = new Date(prev.from + 'T12:00:00');
+  if (v.tab === 'months') {
+    const sameYear = prevFrom.getFullYear() === new Date(v.from + 'T12:00:00').getFullYear();
+    return prevFrom.toLocaleDateString('en-GB', sameYear ? { month: 'long' } : { month: 'long', year: 'numeric' });
   }
-  return Array.from(map.values()).sort((a, b) => b.amount - a.amount);
+  if (v.tab === 'years') return String(prevFrom.getFullYear());
+  return `the ${fallback}`;
 }
 
-// ─── SVG donut helpers ────────────────────────────────────────────────────────
-
-function polarToCart(cx: number, cy: number, r: number, angleDeg: number) {
-  const rad = ((angleDeg - 90) * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+function progressPct(actual: number, projected: number): number {
+  if (projected <= 0) return 0;
+  return Math.max(0, Math.min(100, (actual / projected) * 100));
 }
 
-function buildArcPath(cx: number, cy: number, outerR: number, innerR: number, startDeg: number, endDeg: number): string {
-  const s = polarToCart(cx, cy, outerR, startDeg);
-  const e = polarToCart(cx, cy, outerR, endDeg);
-  const si = polarToCart(cx, cy, innerR, endDeg);
-  const ei = polarToCart(cx, cy, innerR, startDeg);
-  const large = endDeg - startDeg > 180 ? 1 : 0;
-  return [
-    `M ${s.x.toFixed(2)} ${s.y.toFixed(2)}`,
-    `A ${outerR} ${outerR} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`,
-    `L ${si.x.toFixed(2)} ${si.y.toFixed(2)}`,
-    `A ${innerR} ${innerR} 0 ${large} 0 ${ei.x.toFixed(2)} ${ei.y.toFixed(2)}`,
-    'Z',
-  ].join(' ');
-}
+type Tone = 'up' | 'down' | 'flat';
 
-const CHART_SIZE = SCREEN_W - 32 - 28; // full-width donut
-const DONUT_SIDE_SIZE = Math.round((SCREEN_W - 32 - 28) * 0.48); // side-by-side donut
-
-const CHART_PALETTE = [
-  '#6C63FF', '#FF6B6B', '#43BCCD', '#F9A826', '#5CB85C',
-  '#E8468A', '#3ABFB1', '#FF8C42', '#9B59B6', '#2ECC71',
-  '#E74C3C', '#3498DB',
-];
-
-function DonutChart({ items, total, fallback, size: sizeProp }: { items: CategoryStat[]; total: number; fallback: string; size?: number }) {
-  const size = sizeProp ?? CHART_SIZE;
-  const cx = size / 2, cy = size / 2;
-  const outerR = size / 2 - 6;
-  const innerR = outerR - 22;
-  const GAP_DEG = items.length > 1 ? 2 : 0;
-
-  if (total === 0) return null;
-
-  const segments: { path: string; color: string }[] = [];
-  let cursor = 0;
-  for (const item of items) {
-    const sweep = (item.amount / total) * 360;
-    if (sweep < 0.5) { cursor += sweep; continue; }
-    segments.push({ path: buildArcPath(cx, cy, outerR, innerR, cursor, cursor + sweep - GAP_DEG), color: item.color || fallback });
-    cursor += sweep;
-  }
-
-  return (
-    <Svg width={size} height={size}>
-      {segments.map((seg, i) => (
-        <Path key={i} d={seg.path} fill={seg.color} />
-      ))}
-    </Svg>
-  );
+function changeInfo(current: number, prev: number): { text: string; tone: Tone } {
+  if (Math.abs(current - prev) < 1) return { text: 'no change', tone: 'flat' };
+  if (prev <= 0) return { text: 'new', tone: 'up' };
+  const pct = Math.round(((current - prev) / prev) * 100);
+  if (pct === 0) return { text: 'no change', tone: 'flat' };
+  return { text: `${pct > 0 ? '+' : ''}${pct}%`, tone: pct > 0 ? 'up' : 'down' };
 }
 
 // ─── predictions ────────────────────────────────────────────────────────────
-
 const HISTORY_MONTHS = 6;
 // A category needs to show up in at least this many of the history buckets
 // before it's treated as a real pattern rather than a one-off transaction.
 const MIN_BUCKETS_SEEN = 2;
 const MAX_PREDICTIONS_PER_TYPE = 10;
 
+const AVG_DAYS_PER_MONTH = 365.25 / 12;
+
+// How many months a period spans: whole calendar months count exactly (so a
+// monthly bill predicts its real amount), anything else is pro-rated by days.
+function periodLengthInMonths(fromIso: string, toIso: string): number {
+  const from = new Date(fromIso + 'T00:00:00');
+  const to = new Date(toIso + 'T00:00:00');
+  const dayAfterTo = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1);
+  if (from.getDate() === 1 && dayAfterTo.getDate() === 1) {
+    return (dayAfterTo.getFullYear() * 12 + dayAfterTo.getMonth()) - (from.getFullYear() * 12 + from.getMonth());
+  }
+  const days = Math.round((to.getTime() - from.getTime()) / 86400000) + 1;
+  return Math.max(1, days) / AVG_DAYS_PER_MONTH;
+}
+
 type PredictionItem = {
   key: string;
   title: string;
   subtitle: string;
   type: TransactionType;
-  icon: string | null;
-  color: string | null;
+  icon: string;
+  color: string;
   confidencePct: number;
   predictedAmount: number;
   isStable: boolean;
@@ -184,185 +144,236 @@ function sampleStats(samples: number[]): { mean: number; cv: number } {
   return { mean, cv: Math.sqrt(variance) / mean };
 }
 
-// ─── prediction panel ───────────────────────────────────────────────────────
+// ─── data ───────────────────────────────────────────────────────────────────
+const TX_SELECT = 'id, type, amount, date, payer, category_id, exchange_rate_to_huf, wallet:wallets(currency), category:categories(id, name, icon, color)';
 
-function PredictionPanel({ variant, title, items, colors }: {
+async function fetchTxs(userId: string, from: string, to: string): Promise<Transaction[]> {
+  const { data } = await supabase
+    .from('transactions')
+    .select(TX_SELECT)
+    .eq('user_id', userId)
+    .gte('date', from)
+    .lte('date', to)
+    .filter('transfer_group_id', 'is', null)
+    .limit(10000);
+  return (data ?? []) as unknown as Transaction[];
+}
+
+async function fetchDailyRates(from: string, to: string): Promise<DailyRates> {
+  const rates = await getExchangeRatesForPeriod(from, to);
+  if (Object.keys(rates).length > 0) return rates;
+  const current = await getExchangeRates();
+  return Object.keys(current).length > 0 ? { [from]: current } : {};
+}
+
+// ─── small building blocks ──────────────────────────────────────────────────
+function Card({ colors, children, style }: { colors: Colors; children: React.ReactNode; style?: object }) {
+  return (
+    <View style={[styles.card, { backgroundColor: colors.glassStrong, borderColor: colors.glassBorder, shadowColor: colors.shadow }, style]}>
+      {children}
+    </View>
+  );
+}
+
+function ChangeBadge({ text, tone, colors }: { text: string; tone: Tone; colors: Colors }) {
+  const bg = tone === 'up' ? colors.expenseLight : tone === 'down' ? colors.incomeLight : colors.surface2;
+  const fg = tone === 'up' ? colors.expense : tone === 'down' ? colors.income : colors.muted;
+  return (
+    <View style={[styles.badge, { backgroundColor: bg }]}>
+      <Text style={[styles.badgeText, { color: fg }]}>{text}</Text>
+    </View>
+  );
+}
+
+function StatCard({ colors, icon, iconBg, iconFg, label, amount, amountColor, footer }: {
+  colors: Colors;
+  icon: keyof typeof Ionicons.glyphMap;
+  iconBg: string;
+  iconFg: string;
+  label: string;
+  amount: string;
+  amountColor: string;
+  footer: { label: string; value: string; color: string; pct: number } | string;
+}) {
+  return (
+    <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={styles.statHead}>
+        <View style={[styles.statIcon, { backgroundColor: iconBg }]}>
+          <Ionicons name={icon} size={18} color={iconFg} />
+        </View>
+        <Text style={[styles.statLabel, { color: colors.muted }]} numberOfLines={1}>{label}</Text>
+      </View>
+      <Text style={[styles.statAmount, { color: amountColor }]} numberOfLines={1} adjustsFontSizeToFit>{amount}</Text>
+      <View style={[styles.divider, { backgroundColor: colors.border2 }]} />
+      {typeof footer === 'string' ? (
+        <Text style={[styles.statFooterEmpty, { color: colors.muted }]}>{footer}</Text>
+      ) : (
+        <View style={{ gap: 6 }}>
+          <View style={styles.statFooterRow}>
+            <View style={styles.statFooterLabelWrap}>
+              <View style={[styles.statDot, { backgroundColor: footer.color }]} />
+              <Text style={[styles.statFooterLabel, { color: colors.muted }]}>{footer.label}</Text>
+            </View>
+            <Text style={[styles.statFooterValue, { color: footer.color }]} numberOfLines={1} adjustsFontSizeToFit>{footer.value}</Text>
+          </View>
+          <View style={[styles.track, { backgroundColor: colors.border2 }]}>
+            <View style={[styles.fill, { width: `${footer.pct}%`, backgroundColor: footer.color }]} />
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function EmptyHint({ icon, text, colors }: { icon: string; text: string; colors: Colors }) {
+  return (
+    <View style={styles.empty}>
+      <Text style={styles.emptyIcon}>{icon}</Text>
+      <Text style={[styles.emptyText, { color: colors.muted }]}>{text}</Text>
+    </View>
+  );
+}
+
+function PredictionPanel({ variant, title, items, loading, colors }: {
   variant: 'income' | 'expense';
   title: string;
   items: PredictionItem[];
+  loading: boolean;
   colors: Colors;
 }) {
   const isIncome = variant === 'income';
   const sign = isIncome ? '+' : '−';
   const tone = isIncome ? colors.income : colors.expense;
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Text style={[styles.cardTitle, { color: colors.heading }]}>{title}</Text>
-      {items.length === 0 ? (
-        <Text style={[styles.predictionEmpty, { color: colors.muted }]}>
-          No recurring {variant} pattern found yet.
-        </Text>
-      ) : (
-        items.map((item, i) => (
-          <View
-            key={item.key}
-            style={[styles.predictionRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
-          >
-            <View style={[styles.catIconBox, { backgroundColor: (item.color || tone) + '28' }]}>
-              {item.icon ? <Text style={styles.catIcon}>{item.icon}</Text> : <View style={[styles.catDot, { backgroundColor: item.color || tone }]} />}
-            </View>
-            <View style={styles.predictionInfo}>
-              <View style={styles.catTopRow}>
-                <Text style={[styles.predictionTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
-                <View style={styles.predictionAmountCol}>
-                  <Text style={[styles.predictionAmount, { color: tone }]}>{sign}{formatHUF(item.predictedAmount)}</Text>
-                  <Text style={[styles.predictionRange, { color: colors.muted }]}>
-                    {item.isStable ? 'stable' : `${formatNumber(Math.round(item.rangeLow))} – ${formatNumber(Math.round(item.rangeHigh))}`}
-                  </Text>
+    <Card colors={colors} style={{ padding: 0, overflow: 'hidden' }}>
+      <View style={[styles.predBanner, { backgroundColor: isIncome ? colors.incomeLight : colors.expenseLight }]}>
+        <View style={[styles.predBannerIcon, { backgroundColor: tone }]}>
+          <Ionicons name={isIncome ? 'arrow-up' : 'arrow-down'} size={18} color="#fff" />
+        </View>
+        <Text style={[styles.predBannerTitle, { color: colors.text }]}>{title}</Text>
+      </View>
+      <View style={styles.predBody}>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => <SkeletonBox key={i} style={{ height: 54, borderRadius: 8 }} />)
+        ) : items.length === 0 ? (
+          <EmptyHint icon={isIncome ? '💰' : '🧾'} text={`No recurring ${variant} pattern found yet.`} colors={colors} />
+        ) : (
+          items.map(item => (
+            <View key={item.key} style={styles.predRow}>
+              <EmojiTile emoji={item.icon} color={item.color} />
+              <View style={styles.predMain}>
+                <Text style={[styles.predTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+                <Text style={[styles.predSubtitle, { color: colors.muted }]} numberOfLines={1}>{item.subtitle}</Text>
+                <View style={styles.predConfRow}>
+                  <View style={[styles.track, styles.predConfTrack, { backgroundColor: colors.border2 }]}>
+                    <View style={[styles.fill, { width: `${item.confidencePct}%`, backgroundColor: tone }]} />
+                  </View>
+                  <Text style={[styles.predConfLabel, { color: colors.muted }]}>{item.confidencePct}% sure</Text>
                 </View>
               </View>
-              <Text style={[styles.predictionSubtitle, { color: colors.muted }]} numberOfLines={1}>{item.subtitle}</Text>
-              <View style={styles.catBarRow}>
-                <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
-                  <View style={[styles.barFill, { width: `${item.confidencePct}%` as any, backgroundColor: tone }]} />
-                </View>
-                <Text style={[styles.catPct, { color: colors.muted }]}>{item.confidencePct}%</Text>
+              <View style={styles.predAmountCol}>
+                <Text style={[styles.predAmount, { color: tone }]}>{sign}{formatHUF(item.predictedAmount)}</Text>
+                <Text style={[styles.predRange, { color: colors.muted }]}>
+                  {item.isStable ? 'stable' : `${formatNumber(Math.round(item.rangeLow))} – ${formatNumber(Math.round(item.rangeHigh))}`}
+                </Text>
               </View>
             </View>
-          </View>
-        ))
-      )}
-    </View>
+          ))
+        )}
+      </View>
+    </Card>
   );
 }
 
-// ─── screen ───────────────────────────────────────────────────────────────────
-
+// ─── screen ─────────────────────────────────────────────────────────────────
 export default function StatsScreen() {
   const colors = useTheme();
   const { bottom } = useSafeAreaInsets();
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
-  const [wallets, setWallets] = useState<(Wallet & { _balance: number })[]>([]);
-  const [txs, setTxs] = useState<any[]>([]);
-  const [prevTxs, setPrevTxs] = useState<any[]>([]);
-  const [dailyRates, setDailyRates] = useState<DailyRates>({});
-  const [prevDailyRates, setPrevDailyRates] = useState<DailyRates>({});
-  const [currentRates, setCurrentRates] = useState<Record<string, number>>({});
-  const [historyTxs, setHistoryTxs] = useState<any[]>([]);
-  const [historyDailyRates, setHistoryDailyRates] = useState<DailyRates>({});
+  const [periodTxs, setPeriodTxs] = useState<Transaction[]>([]);
+  const [prevTxs, setPrevTxs] = useState<Transaction[]>([]);
+  const [historyTxs, setHistoryTxs] = useState<Transaction[]>([]);
   const [historyRange, setHistoryRange] = useState<{ from: string; to: string } | null>(null);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [walletSums, setWalletSums] = useState<Map<string, { income: number; expense: number }>>(new Map());
+  const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>([]);
+  const [recurringOccurrences, setRecurringOccurrences] = useState<{ recurring_payment_id: string; due_date: string }[]>([]);
+  const [dailyRates, setDailyRates] = useState<DailyRates>({});
+  const [todayRates, setTodayRates] = useState<Rates>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [recurringPayments, setRecurringPayments] = useState<any[]>([]);
-  const [recurringOccurrences, setRecurringOccurrences] = useState<any[]>([]);
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const [otherExpanded, setOtherExpanded] = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const prevRange = getPrevRange(period);
-    const now = new Date();
-    const histFrom = isoDate(new Date(now.getFullYear(), now.getMonth() - HISTORY_MONTHS, now.getDate()));
-    const histTo = isoDate(now);
+      const prev = getPrevRange(period);
+      const now = new Date();
+      // The last HISTORY_MONTHS full calendar months; the current, partial month is left out
+      const histFrom = isoDate(new Date(now.getFullYear(), now.getMonth() - HISTORY_MONTHS, 1));
+      const histTo = isoDate(new Date(now.getFullYear(), now.getMonth(), 0));
 
-    const [
-      { data: walletRows },
-      allTxSums,
-      { data: periodData },
-      { data: prevData },
-      { data: historyData },
-      { data: recurringRows },
-      { data: occurrenceRows },
-    ] = await Promise.all([
-      supabase.from('wallets').select('*').eq('user_id', user.id).order('is_default', { ascending: false }),
-      fetchWalletBalanceSums(user.id),
-      supabase
-        .from('transactions')
-        .select('type, amount, date, wallet_id, wallet:wallets(currency), category:categories(id, name, icon, color)')
-        .eq('user_id', user.id)
-        .gte('date', period.from)
-        .lte('date', period.to)
-        .filter('transfer_group_id', 'is', null)
-        .limit(10000),
-      supabase
-        .from('transactions')
-        .select('type, amount, date, wallet:wallets(currency), category:categories(id, name, icon, color)')
-        .eq('user_id', user.id)
-        .gte('date', prevRange.from)
-        .lte('date', prevRange.to)
-        .filter('transfer_group_id', 'is', null)
-        .limit(10000),
-      supabase
-        .from('transactions')
-        .select('type, amount, date, payer, category_id, wallet:wallets(currency), category:categories(id, name, icon, color)')
-        .eq('user_id', user.id)
-        .gte('date', histFrom)
-        .lte('date', histTo)
-        .filter('transfer_group_id', 'is', null)
-        .limit(10000),
-      supabase
-        .from('recurring_payments')
-        .select('id, type, amount, frequency, start_date, end_date, is_active, wallet:wallets(currency)')
-        .eq('user_id', user.id)
-        .eq('is_active', true),
-      supabase
-        .from('recurring_occurrences')
-        .select('recurring_payment_id, due_date')
-        .eq('user_id', user.id)
-        .gte('due_date', period.from)
-        .lte('due_date', period.to),
-    ]);
-
-    const hasNonHUF = (walletRows ?? []).some((w: any) => w.currency !== 'HUF');
-
-    const walletList = walletRows ?? [];
-    const balanceMap = new Map<string, number>();
-    for (const w of walletList) {
-      const sums = allTxSums.get(w.id) ?? { income: 0, expense: 0 };
-      balanceMap.set(w.id, (w.starting_balance ?? 0) + sums.income - sums.expense);
-    }
-    setWallets(walletList.map((w: any) => ({ ...w, _balance: balanceMap.get(w.id) ?? w.starting_balance ?? 0 })));
-    setTxs(periodData ?? []);
-    setPrevTxs(prevData ?? []);
-    setHistoryTxs(historyData ?? []);
-    setHistoryRange({ from: histFrom, to: histTo });
-    setRecurringPayments(recurringRows ?? []);
-    setRecurringOccurrences(occurrenceRows ?? []);
-
-    // Show content immediately; exchange rates load in the background
-    setLoading(false);
-
-    if (hasNonHUF) {
-      const fetchRates = async (from: string, to: string): Promise<DailyRates> => {
-        let rates = await getExchangeRatesForPeriod(from, to);
-        if (Object.keys(rates).length === 0) {
-          const current = await getExchangeRates();
-          if (Object.keys(current).length > 0) rates = { [from]: current };
-        }
-        return rates;
-      };
-      const [periodRates, prevRates, historyRates, todayRates] = await Promise.all([
-        fetchRates(period.from, period.to),
-        fetchRates(prevRange.from, prevRange.to),
-        fetchRates(histFrom, histTo),
-        getExchangeRates(),
+      const [txs, prevData, historyData, sums, { data: walletRows }, { data: pmtRows }, { data: occRows }] = await Promise.all([
+        fetchTxs(user.id, period.from, period.to),
+        fetchTxs(user.id, prev.from, prev.to),
+        fetchTxs(user.id, histFrom, histTo),
+        fetchWalletBalanceSums(user.id),
+        supabase.from('wallets').select('*').eq('user_id', user.id),
+        supabase
+          .from('recurring_payments')
+          .select('*, wallet:wallets(currency)')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
+        supabase
+          .from('recurring_occurrences')
+          .select('recurring_payment_id, due_date')
+          .eq('user_id', user.id)
+          .gte('due_date', period.from)
+          .lte('due_date', period.to),
       ]);
-      setDailyRates(periodRates);
-      setPrevDailyRates(prevRates);
-      setHistoryDailyRates(historyRates);
-      setCurrentRates(todayRates);
-    }
+
+      // Resolve exchange rates before anything renders, so every total is
+      // final when the skeleton disappears. Only needed for foreign wallets.
+      const walletList = (walletRows ?? []) as Wallet[];
+      let rates: DailyRates = {};
+      let today: Rates = {};
+      if (walletList.some(w => w.currency !== 'HUF')) {
+        const [r1, r2, r3, t] = await Promise.all([
+          fetchDailyRates(period.from, period.to),
+          fetchDailyRates(prev.from, prev.to),
+          fetchDailyRates(histFrom, histTo),
+          getExchangeRates(),
+        ]);
+        rates = { ...r1, ...r2, ...r3 };
+        today = t;
+      }
+
+      setPeriodTxs(txs);
+      setPrevTxs(prevData);
+      setHistoryTxs(historyData);
+      setHistoryRange({ from: histFrom, to: histTo });
+      setWallets(walletList);
+      setWalletSums(sums);
+      setRecurringPayments((pmtRows ?? []) as RecurringPayment[]);
+      setRecurringOccurrences(occRows ?? []);
+      setDailyRates(rates);
+      setTodayRates(today);
     } catch (e) {
       console.error('[Stats] load error:', e);
     } finally {
       setLoading(false);
     }
-  }, [period.from, period.to]);
+  }, [period]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadRef = useRef(load);
+  useEffect(() => { loadRef.current = load; }, [load]);
+  useEffect(() => Events.on('transaction-saved', () => { loadRef.current(true); }), []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -370,119 +381,120 @@ export default function StatsScreen() {
     setRefreshing(false);
   }, [load]);
 
-  // Pre-convert all amounts to HUF using each transaction's own day rate
-  const txsHUF = useMemo(() => txs.map(t => ({
-    ...t,
-    amount: toHUF(t.amount, (t.wallet as any)?.currency, getRatesForDate(t.date, dailyRates)),
-  })), [txs, dailyRates]);
+  const huf = useCallback(
+    (t: Transaction) => txToHUF(t.amount, t.wallet?.currency, t.exchange_rate_to_huf, getRatesForDate(t.date, dailyRates)),
+    [dailyRates],
+  );
 
-  const prevTxsHUF = useMemo(() => prevTxs.map(t => ({
-    ...t,
-    amount: toHUF(t.amount, (t.wallet as any)?.currency, getRatesForDate(t.date, prevDailyRates)),
-  })), [prevTxs, prevDailyRates]);
+  // ── Net worth ──────────────────────────────────────────────────────────
+  const walletSummaries = useMemo<WalletSummary[]>(() => wallets
+    .filter(w => !w.is_archived)
+    .sort((a, b) => {
+      if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    })
+    .map(wallet => {
+      const sums = walletSums.get(wallet.id) ?? { income: 0, expense: 0 };
+      return { wallet, balance: (wallet.starting_balance ?? 0) + sums.income - sums.expense };
+    }), [wallets, walletSums]);
 
-  // aggregates (all in HUF)
-  const income = useMemo(() => txsHUF.filter(t => t.type === 'income').reduce((s: number, t: any) => s + t.amount, 0), [txsHUF]);
-  const expense = useMemo(() => txsHUF.filter(t => t.type === 'expense').reduce((s: number, t: any) => s + t.amount, 0), [txsHUF]);
-  const net = income - expense;
-  const txCount = txs.length;
+  // ── Summary numbers ────────────────────────────────────────────────────
+  const income = useMemo(() => periodTxs.filter(t => t.type === 'income').reduce((s, t) => s + huf(t), 0), [periodTxs, huf]);
+  const expense = useMemo(() => periodTxs.filter(t => t.type === 'expense').reduce((s, t) => s + huf(t), 0), [periodTxs, huf]);
+  const prevExpense = useMemo(() => prevTxs.filter(t => t.type === 'expense').reduce((s, t) => s + huf(t), 0), [prevTxs, huf]);
 
-  const defaultCurrency: Currency = 'HUF';
+  const txCount = periodTxs.length;
+  const incomeCount = periodTxs.filter(t => t.type === 'income').length;
+  const expenseCount = txCount - incomeCount;
+  const animatedIncome = useCountUp(income);
+  const animatedExpense = useCountUp(expense);
+  const animatedNet = useCountUp(income - expense);
+  const animatedTxCount = useCountUp(txCount);
 
-  const { projIncome, projExpense, recurringIncomeLeftCount, recurringExpenseLeftCount } = useMemo(() => {
-    const actionedKeys = new Set(recurringOccurrences.map((o: any) => `${o.recurring_payment_id}|${o.due_date}`));
+  // ── Cash flow projection (selected period) ─────────────────────────────
+  const { plannedIncome, plannedExpense } = useMemo(() => {
     const from = new Date(period.from + 'T00:00:00');
-    const to = new Date(period.to + 'T23:59:59');
-    let projIncome = 0, projExpense = 0, recurringIncomeLeftCount = 0, recurringExpenseLeftCount = 0;
+    const to = new Date(period.to + 'T00:00:00');
+    // Pending planned payments due within the period, converted with today's rates
+    const actionedKeys = new Set(recurringOccurrences.map(o => `${o.recurring_payment_id}|${o.due_date.slice(0, 10)}`));
+    let plannedIncome = 0;
+    let plannedExpense = 0;
     for (const p of recurringPayments) {
       for (const date of generateDueDates(p, from, to)) {
         if (actionedKeys.has(`${p.id}|${recurringIsoDate(date)}`)) continue;
-        const amtHUF = toHUF(p.amount, (p.wallet as any)?.currency, currentRates);
-        if (p.type === 'income') { projIncome += amtHUF; recurringIncomeLeftCount += 1; }
-        else { projExpense += amtHUF; recurringExpenseLeftCount += 1; }
+        const amount = toHUF(p.amount, p.wallet?.currency, todayRates);
+        if (p.type === 'income') plannedIncome += amount;
+        if (p.type === 'expense') plannedExpense += amount;
       }
     }
-    return { projIncome, projExpense, recurringIncomeLeftCount, recurringExpenseLeftCount };
-  }, [recurringPayments, recurringOccurrences, period.from, period.to, currentRates]);
+    return { plannedIncome, plannedExpense };
+  }, [period, recurringPayments, recurringOccurrences, todayRates]);
 
-  const expenseByCategory = useMemo(() => groupByCategory(txsHUF, 'expense'), [txsHUF]);
+  // ── Expenses by category ───────────────────────────────────────────────
+  const expenseBreakdown = useMemo(() => {
+    const map = new Map<string, { amount: number; icon: string; color: string }>();
+    for (const t of periodTxs) {
+      if (t.type !== 'expense') continue;
+      const name = t.category?.name ?? 'Uncategorised';
+      const prev = map.get(name) ?? { amount: 0, icon: t.category?.icon ?? '📁', color: t.category?.color ?? OTHER_COLOR };
+      map.set(name, { ...prev, amount: prev.amount + huf(t) });
+    }
+    const total = Array.from(map.values()).reduce((s, v) => s + v.amount, 0);
+    const rows = Array.from(map.entries())
+      .sort((a, b) => b[1].amount - a[1].amount)
+      .map(([name, v], i) => ({
+        name,
+        icon: v.icon,
+        amount: v.amount,
+        color: v.color !== OTHER_COLOR ? v.color : PALETTE[i % PALETTE.length],
+        share: total > 0 ? v.amount / total : 0,
+      }));
+    const main = rows.filter(r => r.amount >= OTHER_THRESHOLD_HUF);
+    const small = rows.filter(r => r.amount < OTHER_THRESHOLD_HUF);
+    const otherAmount = small.reduce((s, r) => s + r.amount, 0);
+    return {
+      total,
+      categoryCount: rows.length,
+      main,
+      small,
+      other: small.length > 0 ? { amount: otherAmount, share: total > 0 ? otherAmount / total : 0 } : null,
+      maxAmount: Math.max(1, ...main.map(r => r.amount)),
+    };
+  }, [periodTxs, huf]);
 
-  // Merge categories under 10 000 into "Other" for the chart
-  const { displayExpenseByCategory, otherItems } = useMemo(() => {
-    const THRESHOLD = 10000;
-    const main = expenseByCategory.filter(c => c.amount >= THRESHOLD);
-    const small = expenseByCategory.filter(c => c.amount < THRESHOLD);
-    const otherAmount = small.reduce((s, c) => s + c.amount, 0);
-    const items = otherAmount === 0 ? main : [
-      ...main,
-      { id: '__other__' as string | null, name: 'Other', icon: null, color: '#94a3b8', amount: otherAmount, count: small.reduce((s, c) => s + c.count, 0) },
-    ];
-    // Assign unique palette colors by index so segments are always distinguishable
-    const display = items.map((item, i) => ({
-      ...item,
-      color: item.id === '__other__' ? '#94a3b8' : CHART_PALETTE[i % CHART_PALETTE.length],
-    }));
-    return { displayExpenseByCategory: display, otherItems: small };
-  }, [expenseByCategory]);
-
-  // One entry per currency; bars are sized by HUF-equivalent so EUR/USD align correctly
-  const balanceByCurrency = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const w of wallets) map.set(w.currency, (map.get(w.currency) ?? 0) + w._balance);
-    return Array.from(map.entries())
-      .map(([currency, balance]) => ({
-        currency,
-        balance,
-        balanceHUF: toHUF(balance, currency, currentRates),
-      }))
-      .sort((a, b) => Math.abs(b.balanceHUF) - Math.abs(a.balanceHUF));
-  }, [wallets, currentRates]);
-
-  const prevExpenseByCategory = useMemo(() => groupByCategory(prevTxsHUF, 'expense'), [prevTxsHUF]);
-
+  // ── Period comparison ──────────────────────────────────────────────────
   const comparisonData = useMemo(() => {
-    const allIds = new Set([
-      ...expenseByCategory.map(c => c.id),
-      ...prevExpenseByCategory.map(c => c.id),
-    ]);
-    return Array.from(allIds).map(id => {
-      const cur = expenseByCategory.find(c => c.id === id);
-      const prv = prevExpenseByCategory.find(c => c.id === id);
-      const ref = cur ?? prv!;
-      return { id, name: ref.name, icon: ref.icon, color: ref.color, current: cur?.amount ?? 0, previous: prv?.amount ?? 0 };
-    }).sort((a, b) => b.current - a.current).slice(0, 8);
-  }, [expenseByCategory, prevExpenseByCategory]);
+    const catMap = new Map<string, { current: number; prev: number; icon: string; color: string }>();
+    const add = (t: Transaction, key: 'current' | 'prev') => {
+      if (t.type !== 'expense') return;
+      const name = t.category?.name ?? 'Uncategorised';
+      const entry = catMap.get(name) ?? { current: 0, prev: 0, icon: t.category?.icon ?? '📁', color: t.category?.color ?? OTHER_COLOR };
+      entry[key] += huf(t);
+      catMap.set(name, entry);
+    };
+    periodTxs.forEach(t => add(t, 'current'));
+    prevTxs.forEach(t => add(t, 'prev'));
+    return Array.from(catMap.entries())
+      .sort((a, b) => (b[1].current + b[1].prev) - (a[1].current + a[1].prev))
+      .slice(0, 10)
+      .map(([name, v]) => ({ name, icon: v.icon, color: v.color, current: Math.round(v.current), prev: Math.round(v.prev) }));
+  }, [periodTxs, prevTxs, huf]);
 
-  const historyTxsHUF = useMemo(() => historyTxs.map(t => ({
-    ...t,
-    amount: toHUF(t.amount, (t.wallet as any)?.currency, getRatesForDate(t.date, historyDailyRates)),
-  })), [historyTxs, historyDailyRates]);
-
-  // ── Predicted transactions ──────────────────────────────────────────────
-  // Learns a per-category (and, where one vendor dominates, per-payer) pattern
-  // from the trailing 6-month history window: how many of the 6 buckets it
-  // showed up in, its typical monthly total, and how much that total varies.
-  // That's then scaled onto the selected period's length. A category needs to
-  // show up in at least MIN_BUCKETS_SEEN of the 6 buckets to be treated as a
-  // pattern rather than a one-off transaction, and the most reliable patterns
-  // (highest confidence, then largest typical amount) win the limited slots.
+  // ── Predicted transactions ─────────────────────────────────────────────
+  // Learns a per-category (and, where one payer dominates, per-payer) pattern
+  // from the last 6 full calendar months, then scales it onto the selected
+  // period (1× for a month, 12× for a year).
   const predictions = useMemo(() => {
     if (!historyRange) return { income: [] as PredictionItem[], expense: [] as PredictionItem[] };
 
     const histFrom = new Date(historyRange.from + 'T00:00:00');
-    const histTo = new Date(historyRange.to + 'T00:00:00');
-    const historyDays = Math.max(1, Math.round((histTo.getTime() - histFrom.getTime()) / 86400000) + 1);
-    const bucketSize = historyDays / HISTORY_MONTHS;
-
-    const periodFrom = new Date(period.from + 'T00:00:00');
-    const periodTo = new Date(period.to + 'T00:00:00');
-    const periodDays = Math.max(1, Math.round((periodTo.getTime() - periodFrom.getTime()) / 86400000) + 1);
-    const scale = periodDays / bucketSize;
+    const histStartMonth = histFrom.getFullYear() * 12 + histFrom.getMonth();
+    const scale = periodLengthInMonths(period.from, period.to);
 
     type Group = {
       name: string;
-      icon: string | null;
-      color: string | null;
+      icon: string;
+      color: string;
       type: TransactionType;
       totalCount: number;
       buckets: Map<number, number>; // bucket index -> HUF sum
@@ -490,20 +502,21 @@ export default function StatsScreen() {
     };
     const map = new Map<string, Group>();
 
-    for (const t of historyTxsHUF) {
+    for (const t of historyTxs) {
       const key = `${t.type}|${t.category_id ?? 'none'}`;
       const g = map.get(key) ?? {
         name: t.category?.name ?? 'Uncategorised',
-        icon: t.category?.icon ?? null,
-        color: t.category?.color ?? null,
+        icon: t.category?.icon ?? '📁',
+        color: t.category?.color ?? OTHER_COLOR,
         type: t.type,
         totalCount: 0,
         buckets: new Map<number, number>(),
         payerCounts: new Map<string, number>(),
       };
-      const daysSinceStart = (new Date(t.date + 'T00:00:00').getTime() - histFrom.getTime()) / 86400000;
-      const bucketIdx = Math.min(HISTORY_MONTHS - 1, Math.max(0, Math.floor(daysSinceStart / bucketSize)));
-      g.buckets.set(bucketIdx, (g.buckets.get(bucketIdx) ?? 0) + t.amount);
+      const txDate = new Date(t.date + 'T00:00:00');
+      const bucketIdx = txDate.getFullYear() * 12 + txDate.getMonth() - histStartMonth;
+      if (bucketIdx < 0 || bucketIdx >= HISTORY_MONTHS) continue;
+      g.buckets.set(bucketIdx, (g.buckets.get(bucketIdx) ?? 0) + huf(t));
       g.totalCount += 1;
       if (t.payer) g.payerCounts.set(t.payer, (g.payerCounts.get(t.payer) ?? 0) + 1);
       map.set(key, g);
@@ -551,33 +564,254 @@ export default function StatsScreen() {
       });
     }
 
-    // Rank by how reliable a pattern is (confidence, then typical amount) so a
-    // frequent/consistent category always wins a slot over a sparser one.
+    // Rank by how reliable a pattern is (confidence, then typical amount)
     const byReliability = (a: PredictionItem, b: PredictionItem) =>
       b.confidencePct - a.confidencePct || b.predictedAmount - a.predictedAmount;
 
-    const incomeItems = items.filter(i => i.type === 'income');
-    const expenseItems = items.filter(i => i.type === 'expense');
     return {
-      income: [...incomeItems].sort(byReliability).slice(0, MAX_PREDICTIONS_PER_TYPE),
-      expense: [...expenseItems].sort(byReliability).slice(0, MAX_PREDICTIONS_PER_TYPE),
+      income: items.filter(i => i.type === 'income').sort(byReliability).slice(0, MAX_PREDICTIONS_PER_TYPE),
+      expense: items.filter(i => i.type === 'expense').sort(byReliability).slice(0, MAX_PREDICTIONS_PER_TYPE),
     };
-  }, [historyTxsHUF, historyRange, period.from, period.to]);
+  }, [historyTxs, historyRange, period, huf]);
 
-  if (loading) {
+  const prevLabel = period.tab === 'months' ? 'previous month' : period.tab === 'years' ? 'previous year' : period.tab === 'weeks' ? 'previous week' : 'previous period';
+  const prevName = prevPeriodName(period, prevLabel);
+
+  // ── render helpers ─────────────────────────────────────────────────────
+  function renderSummary() {
+    if (loading) {
+      return (
+        <View style={styles.summaryGrid}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <View key={i} style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.statHead}>
+                <SkeletonBox style={{ width: 38, height: 38, borderRadius: 14 }} />
+                <SkeletonBox style={{ width: 54, height: 11, borderRadius: 4 }} />
+              </View>
+              <SkeletonBox style={{ width: '80%', height: 24, borderRadius: 6 }} />
+              <View style={[styles.divider, { backgroundColor: colors.border2 }]} />
+              <SkeletonBox style={{ width: '70%', height: 12, borderRadius: 4 }} />
+            </View>
+          ))}
+        </View>
+      );
+    }
+    const projIncome = income + plannedIncome;
+    const projExpense = expense + plannedExpense;
+    const projNet = projIncome - projExpense;
+    const net = income - expense;
+    const hasPlanned = recurringPayments.length > 0 && (plannedIncome > 0 || plannedExpense > 0);
     return (
-      <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-        <AuroraBackground />
-        <AppHeader title="Statistics" />
-        <ScrollView contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}>
-          <PeriodPicker value={period} onChange={setPeriod} />
-          <SkeletonBox style={{ height: 148, borderRadius: 14 }} />
-          <SkeletonBox style={{ height: 200, borderRadius: 14 }} />
-          <SkeletonBox style={{ height: 320, borderRadius: 14 }} />
-          <SkeletonBox style={{ height: 160, borderRadius: 14 }} />
-          <SkeletonBox style={{ height: 260, borderRadius: 14 }} />
-        </ScrollView>
-      </SafeAreaView>
+      <View style={styles.summaryGrid}>
+        <StatCard
+          colors={colors}
+          icon="arrow-up"
+          iconBg={colors.incomeLight}
+          iconFg={colors.income}
+          label="Income"
+          amount={formatHUF(animatedIncome)}
+          amountColor={colors.income}
+          footer={hasPlanned && plannedIncome > 0
+            ? { label: 'Projected', value: formatHUF(projIncome), color: colors.income, pct: progressPct(income, projIncome) }
+            : 'No pending income'}
+        />
+        <StatCard
+          colors={colors}
+          icon="arrow-down"
+          iconBg={colors.expenseLight}
+          iconFg={colors.expense}
+          label="Expenses"
+          amount={formatHUF(animatedExpense)}
+          amountColor={colors.expense}
+          footer={hasPlanned
+            ? { label: 'Projected', value: formatHUF(projExpense), color: colors.expense, pct: progressPct(expense, projExpense) }
+            : 'No pending expenses'}
+        />
+        <StatCard
+          colors={colors}
+          icon="swap-horizontal"
+          iconBg={colors.accentLight}
+          iconFg={colors.accent}
+          label="Net"
+          amount={`${net >= 0 ? '+' : ''}${formatHUF(animatedNet)}`}
+          amountColor={colors.text}
+          footer={hasPlanned
+            ? { label: 'Projected', value: `${projNet >= 0 ? '+' : ''}${formatHUF(projNet)}`, color: colors.accent, pct: progressPct(net, projNet) }
+            : 'No projection'}
+        />
+        <StatCard
+          colors={colors}
+          icon="list"
+          iconBg="#fdf1de"
+          iconFg="#b3801f"
+          label="Transactions"
+          amount={String(animatedTxCount)}
+          amountColor={colors.text}
+          footer={`${expenseCount} expense · ${incomeCount} income`}
+        />
+      </View>
+    );
+  }
+
+  function renderCategories() {
+    const { main, small, other, maxAmount, total, categoryCount } = expenseBreakdown;
+    const visible = showAllCategories ? main : main.slice(0, VISIBLE_CATEGORIES);
+    const hiddenCount = main.length - VISIBLE_CATEGORIES;
+    return (
+      <Card colors={colors}>
+        <View style={styles.cardHeader}>
+          <View style={{ flexShrink: 1 }}>
+            <Text style={[styles.cardTitle, { color: colors.heading }]}>Expenses by category</Text>
+            <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{period.label}</Text>
+          </View>
+          {!loading && categoryCount > 0 && (
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={[styles.catTotalAmount, { color: colors.text }]}>{formatHUF(Math.round(total))}</Text>
+              <Text style={[styles.catTotalCount, { color: colors.muted }]}>
+                {categoryCount} {categoryCount === 1 ? 'category' : 'categories'}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {loading ? (
+          <>
+            <SkeletonBox style={{ height: 20, borderRadius: 10 }} />
+            {Array.from({ length: 5 }).map((_, i) => <SkeletonBox key={i} style={{ height: 44, borderRadius: 8 }} />)}
+          </>
+        ) : categoryCount === 0 ? (
+          <EmptyHint icon="🍩" text="No expenses in this period." colors={colors} />
+        ) : (
+          <>
+            <View style={styles.catStack} accessibilityLabel="Share of spending by category">
+              {main.map(r => (
+                <View key={r.name} style={[styles.catStackSegment, { flexGrow: r.amount, backgroundColor: r.color }]} />
+              ))}
+              {other && <View style={[styles.catStackSegment, { flexGrow: other.amount, backgroundColor: OTHER_COLOR }]} />}
+            </View>
+
+            {visible.map(r => (
+              <View key={r.name} style={styles.catRow}>
+                <EmojiTile emoji={r.icon} color={r.color} />
+                <View style={styles.catMain}>
+                  <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>{r.name}</Text>
+                  <View style={[styles.track, { backgroundColor: colors.border2 }]}>
+                    <View style={[styles.fill, { width: `${(r.amount / maxAmount) * 100}%`, backgroundColor: r.color }]} />
+                  </View>
+                </View>
+                <Text style={[styles.catPct, { color: colors.muted }]}>{formatShare(r.share)}</Text>
+                <Text style={[styles.catAmount, { color: colors.text }]}>{formatHUF(Math.round(r.amount))}</Text>
+              </View>
+            ))}
+
+            {hiddenCount > 0 && (
+              <Pressable
+                onPress={() => setShowAllCategories(v => !v)}
+                style={[styles.moreBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              >
+                <Text style={[styles.moreBtnText, { color: colors.text }]}>
+                  {showAllCategories ? 'Show fewer categories' : `Show ${hiddenCount} more ${hiddenCount === 1 ? 'category' : 'categories'}`}
+                </Text>
+              </Pressable>
+            )}
+
+            {other && (
+              <View style={main.length > 0 ? [styles.catOther, { borderTopColor: colors.border2 }] : undefined}>
+                <Pressable style={styles.catRow} onPress={() => setOtherExpanded(v => !v)} accessibilityState={{ expanded: otherExpanded }}>
+                  <EmojiTile emoji="📁" color={OTHER_COLOR} />
+                  <View style={[styles.catMain, styles.catOtherLabel]}>
+                    <Text style={[styles.catName, { color: colors.text }]}>Other</Text>
+                    <Text style={[styles.catOtherHint, { color: colors.muted }]} numberOfLines={1}>
+                      {small.length} under {formatHUF(OTHER_THRESHOLD_HUF)}
+                    </Text>
+                    <Ionicons name={otherExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={colors.muted} />
+                  </View>
+                  <Text style={[styles.catPct, { color: colors.muted }]}>{formatShare(other.share)}</Text>
+                  <Text style={[styles.catAmount, { color: colors.text }]}>{formatHUF(Math.round(other.amount))}</Text>
+                </Pressable>
+                {otherExpanded && small.map(r => (
+                  <View key={r.name} style={[styles.catRow, styles.catSubRow]}>
+                    <EmojiTile emoji={r.icon} color={r.color} size={32} />
+                    <Text style={[styles.catName, styles.catMain, { color: colors.text }]} numberOfLines={1}>{r.name}</Text>
+                    <Text style={[styles.catPct, { color: colors.muted }]}>{formatShare(r.share)}</Text>
+                    <Text style={[styles.catAmount, { color: colors.text }]}>{formatHUF(Math.round(r.amount))}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+      </Card>
+    );
+  }
+
+  function renderComparison() {
+    const maxValue = Math.max(1, ...comparisonData.flatMap(c => [c.current, c.prev]));
+    const total = changeInfo(expense, prevExpense);
+    return (
+      <Card colors={colors}>
+        <View>
+          <Text style={[styles.cardTitle, { color: colors.heading }]}>Expense comparison by category</Text>
+          <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{period.label} vs {prevLabel}</Text>
+        </View>
+        {!loading && comparisonData.length > 0 && (
+          <View style={styles.legend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.accent }]} />
+              <Text style={[styles.legendText, { color: colors.muted }]}>{period.label}</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.accentBorder }]} />
+              <Text style={[styles.legendText, { color: colors.muted }]}>{prevLabel}</Text>
+            </View>
+          </View>
+        )}
+
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => <SkeletonBox key={i} style={{ height: 56, borderRadius: 8 }} />)
+        ) : comparisonData.length === 0 ? (
+          <EmptyHint icon="📊" text="No expense data to compare." colors={colors} />
+        ) : (
+          <>
+            {comparisonData.map(c => {
+              const change = changeInfo(c.current, c.prev);
+              return (
+                <View key={c.name} style={styles.compRow}>
+                  <View style={styles.compTop}>
+                    <EmojiTile emoji={c.icon} color={c.color} size={32} />
+                    <Text style={[styles.compName, { color: colors.text }]} numberOfLines={1}>{c.name}</Text>
+                    <ChangeBadge text={change.text} tone={change.tone} colors={colors} />
+                  </View>
+                  <View style={styles.compBottom}>
+                    <View style={styles.compBars}>
+                      <View style={[styles.track, { backgroundColor: colors.border2 }]}>
+                        <View style={[styles.fill, { width: `${(c.current / maxValue) * 100}%`, backgroundColor: colors.accent }]} />
+                      </View>
+                      <View style={[styles.track, { backgroundColor: colors.border2 }]}>
+                        <View style={[styles.fill, { width: `${(c.prev / maxValue) * 100}%`, backgroundColor: colors.accentBorder }]} />
+                      </View>
+                    </View>
+                    <View style={styles.compAmounts}>
+                      <Text style={[styles.compAmountCurrent, { color: colors.text }]}>{formatHUF(c.current)}</Text>
+                      <Text style={[styles.compAmountPrev, { color: colors.muted }]}>was {formatHUF(c.prev)}</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+            <View style={[styles.compTotal, { backgroundColor: colors.surface2 }]}>
+              <Text style={[styles.compTotalLabel, { color: colors.muted }]}>Total spent</Text>
+              <View style={styles.compTotalFigures}>
+                <Text style={[styles.compTotalAmount, { color: colors.text }]}>{formatHUF(Math.round(expense))}</Text>
+                <ChangeBadge text={total.text} tone={total.tone} colors={colors} />
+              </View>
+              <Text style={[styles.compTotalPrev, { color: colors.muted }]}>
+                vs {formatHUF(Math.round(prevExpense))} in {prevName}
+              </Text>
+            </View>
+          </>
+        )}
+      </Card>
     );
   }
 
@@ -587,432 +821,122 @@ export default function StatsScreen() {
       <AppHeader title="Statistics" />
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16, paddingTop: 16 }]}
+        contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
       >
+        <NetWorthCard summaries={walletSummaries} rates={todayRates} loading={loading && wallets.length === 0} />
+
         <PeriodPicker value={period} onChange={setPeriod} />
 
-        {/* ── Card 1: Saved / Net summary ──────────────────────────────── */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={styles.summaryCardHeader}>
-            <Text style={[styles.summaryCardLabel, { color: colors.muted }]}>
-              {net >= 0 ? 'SAVED THIS PERIOD' : 'DEFICIT THIS PERIOD'}
-            </Text>
-            <Text style={[styles.summaryCardTxCount, { color: colors.muted }]}>{txCount} transactions</Text>
-          </View>
-          <Text style={[styles.summaryCardNet, { color: net >= 0 ? colors.income : colors.expense }]} numberOfLines={1} adjustsFontSizeToFit>
-            {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), defaultCurrency)}
-          </Text>
-          <View style={[styles.summaryCardDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.summaryCardRow}>
-            <View style={[styles.summaryCardIconCircle, { backgroundColor: colors.income + '22' }]}>
-              <Ionicons name="arrow-down-outline" size={18} color={colors.income} />
-            </View>
-            <Text style={[styles.summaryCardRowLabel, { color: colors.text }]}>Income</Text>
-            <Text style={[styles.summaryCardRowAmount, { color: colors.income }]}>+{formatCurrency(income, defaultCurrency)}</Text>
-          </View>
-          <View style={styles.summaryCardRow}>
-            <View style={[styles.summaryCardIconCircle, { backgroundColor: colors.expense + '22' }]}>
-              <Ionicons name="arrow-up-outline" size={18} color={colors.expense} />
-            </View>
-            <Text style={[styles.summaryCardRowLabel, { color: colors.text }]}>Spending</Text>
-            <Text style={[styles.summaryCardRowAmount, { color: colors.expense }]}>−{formatCurrency(expense, defaultCurrency)}</Text>
-          </View>
-        </View>
+        {renderSummary()}
+        {renderCategories()}
+        {renderComparison()}
 
-        {/* ── Card 2: Projected month end ──────────────────────────────── */}
-        {(recurringIncomeLeftCount > 0 || recurringExpenseLeftCount > 0) && (() => {
-          const hasIncomeProj = recurringIncomeLeftCount > 0;
-          const hasExpenseProj = recurringExpenseLeftCount > 0;
-
-          const projectedIncome = income + projIncome;
-          const projectedExpense = expense + projExpense;
-          const projectedNet = net + projIncome - projExpense;
-
-          const incomeTotalBar = projectedIncome > 0 ? projectedIncome : 1;
-          const receivedPct = Math.min((income / incomeTotalBar) * 100, 100);
-          const incomeRemainPct = Math.min((projIncome / incomeTotalBar) * 100, 100 - receivedPct);
-
-          const expenseTotalBar = projectedExpense > 0 ? projectedExpense : 1;
-          const spentPct = Math.min((expense / expenseTotalBar) * 100, 100);
-          const expenseRemainPct = Math.min((projExpense / expenseTotalBar) * 100, 100 - spentPct);
-
-          return (
-            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardTitle, { color: colors.heading }]}>Projected</Text>
-
-              {hasIncomeProj ? (
-                <>
-                  <View style={styles.projRow}>
-                    <Text style={[styles.projRowLabel, { color: colors.muted }]}>Projected income</Text>
-                    <View style={styles.projAmountGroup}>
-                      <Text style={[styles.projTotalAmount, { color: colors.text }]}>{formatCurrency(projectedIncome, defaultCurrency)}</Text>
-                    </View>
-                  </View>
-
-                  <View style={[styles.projBarTrack, { backgroundColor: colors.border }]}>
-                    <View style={[styles.projBarSpent, { width: `${receivedPct}%` as any, backgroundColor: colors.income }]} />
-                    <View style={[styles.projBarRemain, { width: `${incomeRemainPct}%` as any, backgroundColor: colors.income + '44' }]} />
-                  </View>
-
-                  <View style={styles.projLegendRow}>
-                    <View style={[styles.projLegendDot, { backgroundColor: colors.income }]} />
-                    <Text style={[styles.projLegendLabel, { color: colors.text }]}>Received so far</Text>
-                    <Text style={[styles.projLegendAmount, { color: colors.text }]}>{formatCurrency(income, defaultCurrency)}</Text>
-                  </View>
-                  <View style={styles.projLegendRow}>
-                    <View style={[styles.projLegendDot, { backgroundColor: colors.income + '44' }]} />
-                    <Text style={[styles.projLegendLabel, { color: colors.text }]}>{recurringIncomeLeftCount} recurring left</Text>
-                    <Text style={[styles.projLegendAmount, { color: colors.text }]}>+{formatCurrency(projIncome, defaultCurrency)}</Text>
-                  </View>
-                </>
-              ) : (
-                <View style={styles.projPlainBlock}>
-                  <Text style={[styles.projRowLabel, { color: colors.muted }]}>Income</Text>
-                  <Text style={[styles.projTotalAmount, { color: colors.text }]}>{formatCurrency(income, defaultCurrency)}</Text>
-                </View>
-              )}
-
-              <View style={[styles.projDivider, { backgroundColor: colors.border }]} />
-
-              {hasExpenseProj ? (
-                <>
-                  <View style={styles.projRow}>
-                    <Text style={[styles.projRowLabel, { color: colors.muted }]}>Projected spending</Text>
-                    <View style={styles.projAmountGroup}>
-                      <Text style={[styles.projTotalAmount, { color: colors.text }]}>{formatCurrency(projectedExpense, defaultCurrency)}</Text>
-                    </View>
-                  </View>
-
-                  <View style={[styles.projBarTrack, { backgroundColor: colors.border }]}>
-                    <View style={[styles.projBarSpent, { width: `${spentPct}%` as any, backgroundColor: colors.accent }]} />
-                    <View style={[styles.projBarRemain, { width: `${expenseRemainPct}%` as any, backgroundColor: colors.accent + '44' }]} />
-                  </View>
-
-                  <View style={styles.projLegendRow}>
-                    <View style={[styles.projLegendDot, { backgroundColor: colors.accent }]} />
-                    <Text style={[styles.projLegendLabel, { color: colors.text }]}>Spent so far</Text>
-                    <Text style={[styles.projLegendAmount, { color: colors.text }]}>{formatCurrency(expense, defaultCurrency)}</Text>
-                  </View>
-                  <View style={styles.projLegendRow}>
-                    <View style={[styles.projLegendDot, { backgroundColor: colors.accent + '44' }]} />
-                    <Text style={[styles.projLegendLabel, { color: colors.text }]}>{recurringExpenseLeftCount} recurring left</Text>
-                    <Text style={[styles.projLegendAmount, { color: colors.text }]}>+{formatCurrency(projExpense, defaultCurrency)}</Text>
-                  </View>
-                </>
-              ) : (
-                <View style={styles.projPlainBlock}>
-                  <Text style={[styles.projRowLabel, { color: colors.muted }]}>Spending</Text>
-                  <Text style={[styles.projTotalAmount, { color: colors.text }]}>{formatCurrency(expense, defaultCurrency)}</Text>
-                </View>
-              )}
-
-              <View style={[styles.projDivider, { backgroundColor: colors.border }]} />
-
-              <View style={styles.projNetRow}>
-                <View>
-                  <Text style={[styles.projNetLabel, { color: colors.muted }]}>Projected net</Text>
-                </View>
-                <View style={styles.projNetAmountGroup}>
-                  <Text style={[styles.projNetAmount, { color: projectedNet >= 0 ? colors.income : colors.expense }]}>
-                    {projectedNet >= 0 ? '+' : '−'}{formatCurrency(Math.abs(projectedNet), defaultCurrency)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          );
-        })()}
-
-        {/* ── Expenses by Category ─────────────────────────────────────── */}
-        {displayExpenseByCategory.length > 0 && (
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.heading }]}>Expenses by category</Text>
-
-            {/* donut + legend side by side */}
-            <View style={styles.donutRow}>
-              <View style={[styles.donutWrap, { width: DONUT_SIDE_SIZE, height: DONUT_SIDE_SIZE }]}>
-                <DonutChart items={displayExpenseByCategory} total={expense} fallback={colors.expense} size={DONUT_SIDE_SIZE} />
-                <View style={styles.donutCenter} pointerEvents="none">
-                  <Text style={[styles.donutTotal, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
-                    {formatCurrency(expense, defaultCurrency)}
-                  </Text>
-                  <Text style={[styles.donutTotalLabel, { color: colors.muted }]}>total</Text>
-                </View>
-              </View>
-              <View style={styles.donutLegend}>
-                {displayExpenseByCategory.map((cat, i) => {
-                  const pct = expense > 0 ? Math.round((cat.amount / expense) * 100) : 0;
-                  return (
-                    <View key={cat.id ?? `null-${i}`} style={styles.legendRow}>
-                      <View style={[styles.legendDot, { backgroundColor: cat.color || colors.expense }]} />
-                      <Text style={[styles.legendName, { color: colors.text }]} numberOfLines={1}>{cat.name}</Text>
-                      <Text style={[styles.legendPct, { color: colors.muted }]}>{pct}%</Text>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* full list */}
-            {displayExpenseByCategory.map((cat, i) => {
-              const pct = expense > 0 ? Math.round((cat.amount / expense) * 100) : 0;
-              const barPct = displayExpenseByCategory[0]?.amount > 0 ? (cat.amount / displayExpenseByCategory[0].amount) * 100 : 0;
-              const dotColor = cat.color || colors.expense;
-              const isOther = cat.id === '__other__';
-              return (
-                <View key={cat.id ?? `null-list-${i}`}>
-                  <Pressable
-                    onPress={isOther ? () => setOtherExpanded(v => !v) : undefined}
-                    style={[styles.catRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
-                  >
-                    <View style={[styles.catIconBox, { backgroundColor: dotColor + '28' }]}>
-                      {cat.icon ? <Text style={styles.catIcon}>{cat.icon}</Text> : <View style={[styles.catDot, { backgroundColor: dotColor }]} />}
-                    </View>
-                    <View style={styles.catInfo}>
-                      <View style={styles.catTopRow}>
-                        <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>{cat.name}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Text style={[styles.catAmount, { color: dotColor }]}>{formatCurrency(cat.amount, defaultCurrency)}</Text>
-                          {isOther && (
-                            <Ionicons
-                              name={otherExpanded ? 'chevron-up' : 'chevron-down'}
-                              size={14}
-                              color={colors.muted}
-                            />
-                          )}
-                        </View>
-                      </View>
-                      <View style={styles.catBarRow}>
-                        <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
-                          <View style={[styles.barFill, { width: `${barPct}%` as any, backgroundColor: dotColor }]} />
-                        </View>
-                        <Text style={[styles.catPct, { color: colors.muted }]}>{pct}%</Text>
-                      </View>
-                    </View>
-                  </Pressable>
-                  {isOther && otherExpanded && otherItems.map((sub, j) => {
-                    const subPct = expense > 0 ? Math.round((sub.amount / expense) * 100) : 0;
-                    const subBarPct = displayExpenseByCategory[0]?.amount > 0 ? (sub.amount / displayExpenseByCategory[0].amount) * 100 : 0;
-                    const subColor = sub.color || colors.expense;
-                    return (
-                      <View
-                        key={sub.id ?? `null-other-sub-${j}`}
-                        style={[styles.catRow, styles.subCatRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
-                      >
-                        <View style={[styles.catIconBox, { backgroundColor: subColor + '28' }]}>
-                          {sub.icon ? <Text style={styles.catIcon}>{sub.icon}</Text> : <View style={[styles.catDot, { backgroundColor: subColor }]} />}
-                        </View>
-                        <View style={styles.catInfo}>
-                          <View style={styles.catTopRow}>
-                            <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>{sub.name}</Text>
-                            <Text style={[styles.catAmount, { color: subColor }]}>{formatCurrency(sub.amount, defaultCurrency)}</Text>
-                          </View>
-                          <View style={styles.catBarRow}>
-                            <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
-                              <View style={[styles.barFill, { width: `${subBarPct}%` as any, backgroundColor: subColor }]} />
-                            </View>
-                            <Text style={[styles.catPct, { color: colors.muted }]}>{subPct}%</Text>
-                          </View>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              );
-            })}
-          </View>
-        )}
-
-        {/* ── Balance by Currency ──────────────────────────────────────── */}
-        {balanceByCurrency.length > 0 && (
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.heading }]}>Balance by currency</Text>
-            <Text style={[styles.currencySubtitle, { color: colors.muted }]}>Current total across all wallets</Text>
-            {balanceByCurrency.map(({ currency, balance, balanceHUF }, i) => {
-              const amountColor = balance >= 0 ? colors.income : colors.expense;
-              return (
-                <View
-                  key={currency}
-                  style={[styles.currencyRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
-                >
-                  <Text style={[styles.currencyCode, { color: colors.text }]}>{currency}</Text>
-                  <View style={styles.currencyAmountGroup}>
-                    <Text style={[styles.currencyAmount, { color: amountColor }]}>
-                      {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), currency as Currency)}
-                    </Text>
-                    {currency !== 'HUF' && (
-                      <Text style={[styles.currencyHUF, { color: colors.muted }]}>
-                        ≈{formatCurrency(Math.abs(balanceHUF), 'HUF')}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-            <View style={{ height: 4 }} />
-          </View>
-        )}
-
-        {/* ── Predicted transactions ────────────────────────────────────── */}
-        <PredictionPanel variant="expense" title="Expected expenses" items={predictions.expense} colors={colors} />
-        <PredictionPanel variant="income" title="Expected income" items={predictions.income} colors={colors} />
-
-        {/* ── Expense Comparison by Category ──────────────────────────── */}
-        {comparisonData.length > 0 && (
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.heading }]}>Expense comparison by category</Text>
-            <View style={styles.compLegendRow}>
-              <View style={styles.compLegendItem}>
-                <View style={[styles.compLegendDot, { backgroundColor: colors.expense }]} />
-                <Text style={[styles.compLegendText, { color: colors.muted }]}>Current period</Text>
-              </View>
-              <View style={styles.compLegendItem}>
-                <View style={[styles.compLegendDot, { backgroundColor: colors.muted + '88' }]} />
-                <Text style={[styles.compLegendText, { color: colors.muted }]}>Previous period</Text>
-              </View>
-            </View>
-            {(() => {
-              const maxVal = Math.max(...comparisonData.map(d => Math.max(d.current, d.previous)), 1);
-              return comparisonData.map((item, i) => {
-                const curPct = (item.current / maxVal) * 100;
-                const prevPct = (item.previous / maxVal) * 100;
-                const dotColor = item.color || colors.expense;
-                return (
-                  <View
-                    key={item.id ?? `null-cmp-${i}`}
-                    style={[styles.compRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
-                  >
-                    <View style={styles.compIconBox}>
-                      {item.icon ? <Text style={styles.catIcon}>{item.icon}</Text> : <View style={[styles.catDot, { backgroundColor: dotColor }]} />}
-                    </View>
-                    <View style={styles.compBars}>
-                      <Text style={[styles.compCatName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
-                      <View style={styles.compBarGroup}>
-                        <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
-                          <View style={[styles.barFill, { width: `${curPct}%` as any, backgroundColor: colors.expense }]} />
-                        </View>
-                        <Text style={[styles.compBarAmt, { color: colors.text }]}>{formatCurrency(item.current, defaultCurrency)}</Text>
-                      </View>
-                      <View style={styles.compBarGroup}>
-                        <View style={[styles.barTrack, { backgroundColor: colors.border, flex: 1 }]}>
-                          <View style={[styles.barFill, { width: `${prevPct}%` as any, backgroundColor: colors.muted + '88' }]} />
-                        </View>
-                        <Text style={[styles.compBarAmt, { color: colors.muted }]}>{formatCurrency(item.previous, defaultCurrency)}</Text>
-                      </View>
-                    </View>
-                  </View>
-                );
-              });
-            })()}
-          </View>
-        )}
-
+        <PredictionPanel variant="expense" title="Expected expenses" items={predictions.expense} loading={loading} colors={colors} />
+        <PredictionPanel variant="income" title="Expected income" items={predictions.income} loading={loading} colors={colors} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-
-// ─── styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  container: { paddingHorizontal: 16, gap: 16 },
+  container: { paddingHorizontal: 16, paddingTop: 16, gap: 16 },
 
-  // Card 1: Net summary
-  summaryCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingTop: 14, paddingBottom: 4 },
-  summaryCardLabel: { fontSize: 11, fontFamily: 'Nunito_700Bold', textTransform: 'uppercase', letterSpacing: 0.5 },
-  summaryCardTxCount: { fontSize: 13, fontFamily: 'Nunito_500Medium' },
-  summaryCardNet: { fontSize: 42, fontFamily: 'Lora_700Bold', paddingHorizontal: 14, paddingBottom: 14, lineHeight: 52 },
-  summaryCardDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 14, marginBottom: 6 },
-  summaryCardRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 10 },
-  summaryCardIconCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  summaryCardRowLabel: { flex: 1, fontSize: 15, fontFamily: 'Nunito_500Medium' },
-  summaryCardRowAmount: { fontSize: 16, fontFamily: 'Nunito_700Bold' },
-
-  // Card 2: Projected
-  projRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 10 },
-  projPlainBlock: { paddingHorizontal: 14, paddingBottom: 14, gap: 6 },
-  projRowLabel: { fontSize: 13, fontFamily: 'Nunito_500Medium' },
-  projAmountGroup: { flexDirection: 'row', alignItems: 'baseline' },
-  projTotalAmount: { fontSize: 22, fontFamily: 'Nunito_700Bold' },
-  projBarTrack: { height: 10, borderRadius: 5, marginHorizontal: 14, marginBottom: 12, flexDirection: 'row', overflow: 'hidden' },
-  projBarSpent: { height: 10 },
-  projBarRemain: { height: 10 },
-  projLegendRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 4 },
-  projLegendDot: { width: 10, height: 10, borderRadius: 5 },
-  projLegendLabel: { flex: 1, fontSize: 13, fontFamily: 'Nunito_500Medium' },
-  projLegendAmount: { fontSize: 13, fontFamily: 'Nunito_600SemiBold' },
-  projDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 14, marginTop: 12, marginBottom: 10 },
-  projNetRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 14 },
-  projNetLabel: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
-  projNetAmountGroup: { flexDirection: 'row', alignItems: 'baseline' },
-  projNetAmount: { fontSize: 24, fontFamily: 'Lora_700Bold' },
-
-  // Card shell
-  card: { borderRadius: 26, borderWidth: 1, overflow: 'hidden' },
-  cardTitle: {
-    fontSize: 19,
-    fontFamily: 'Lora_700Bold',
-    letterSpacing: -0.4,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 10,
+  card: {
+    borderRadius: 26,
+    borderWidth: 1,
+    padding: 16,
+    gap: 14,
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 3,
   },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
+  cardTitle: { fontSize: 19, fontFamily: 'Lora_700Bold', letterSpacing: -0.4 },
+  cardSubtitle: { fontSize: 13, fontFamily: 'Nunito_700Bold', marginTop: 2 },
 
-  // Donut
-  donutRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
-  donutWrap: { alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  donutCenter: { position: 'absolute', alignItems: 'center', justifyContent: 'center', width: 80, height: 80 },
-  donutTotal: { fontSize: 13, fontFamily: 'Nunito_700Bold', textAlign: 'center' },
-  donutTotalLabel: { fontSize: 11, fontFamily: 'Nunito_500Medium' },
-  donutLegend: { flex: 1, gap: 8 },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  legendDot: { width: 9, height: 9, borderRadius: 5, flexShrink: 0 },
-  legendName: { flex: 1, fontSize: 12, fontFamily: 'Nunito_500Medium' },
-  legendPct: { fontSize: 12, fontFamily: 'Nunito_600SemiBold', width: 32, textAlign: 'right' },
+  track: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  fill: { height: 6, borderRadius: 3 },
+  divider: { height: 1 },
 
-  // Category rows
-  catRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 10 },
-  subCatRow: { paddingLeft: 28 },
-  catIconBox: { width: 36, height: 36, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  catIcon: { fontSize: 18 },
-  catDot: { width: 10, height: 10, borderRadius: 5 },
-  catInfo: { flex: 1, gap: 5 },
-  catTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 },
-  catName: { fontSize: 14, fontFamily: 'Nunito_600SemiBold', flex: 1 },
-  catAmount: { fontSize: 13, fontFamily: 'Nunito_700Bold', flexShrink: 0 },
-  catBarRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  catPct: { fontSize: 11, fontFamily: 'Nunito_600SemiBold', width: 32, textAlign: 'right' },
-  barTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
-  barFill: { height: 8, borderRadius: 4 },
+  // Summary
+  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  statCard: {
+    flexGrow: 1,
+    flexBasis: '45%',
+    minWidth: 150,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 14,
+    gap: 10,
+  },
+  statHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  statIcon: { width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  statLabel: { flexShrink: 1, fontSize: 12, fontFamily: 'Nunito_700Bold' },
+  statAmount: { fontSize: 22, fontFamily: 'Nunito_800ExtraBold', letterSpacing: -0.3 },
+  statFooterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  statFooterLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  statDot: { width: 6, height: 6, borderRadius: 3 },
+  statFooterLabel: { fontSize: 12, fontFamily: 'Nunito_700Bold' },
+  statFooterValue: { flexShrink: 1, fontSize: 12, fontFamily: 'Nunito_800ExtraBold' },
+  statFooterEmpty: { fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
 
-  // Balance by currency
-  currencySubtitle: { fontSize: 12, fontFamily: 'Nunito_500Medium', paddingHorizontal: 14, marginTop: -6, marginBottom: 10 },
-  currencyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10 },
-  currencyCode: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
-  currencyAmountGroup: { alignItems: 'flex-end' },
-  currencyAmount: { fontSize: 16, fontFamily: 'Nunito_700Bold' },
-  currencyHUF: { fontSize: 12, fontFamily: 'Nunito_400Regular', marginTop: 2 },
+  // Expenses by category
+  catTotalAmount: { fontSize: 16, fontFamily: 'Nunito_900Black', letterSpacing: -0.2 },
+  catTotalCount: { fontSize: 12, fontFamily: 'Nunito_700Bold' },
+  catStack: { flexDirection: 'row', gap: 3, height: 20, borderRadius: 10, overflow: 'hidden' },
+  catStackSegment: { flexBasis: 0, minWidth: 4 },
+  catRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  catMain: { flex: 1, minWidth: 0, gap: 6 },
+  catName: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
+  catPct: { width: 38, textAlign: 'right', fontSize: 12, fontFamily: 'Nunito_700Bold' },
+  catAmount: { minWidth: 84, textAlign: 'right', fontSize: 14, fontFamily: 'Nunito_800ExtraBold' },
+  moreBtn: { alignSelf: 'center', borderWidth: 1, borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 7 },
+  moreBtnText: { fontSize: 13, fontFamily: 'Nunito_700Bold' },
+  catOther: { borderTopWidth: 1, paddingTop: 14, gap: 12 },
+  catOtherLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  catOtherHint: { flexShrink: 1, fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
+  catSubRow: { paddingLeft: 12 },
 
-  // Expense comparison
-  compLegendRow: { flexDirection: 'row', gap: 16, paddingHorizontal: 14, paddingBottom: 10 },
-  compLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  compLegendDot: { width: 10, height: 10, borderRadius: 5 },
-  compLegendText: { fontSize: 12, fontFamily: 'Nunito_500Medium' },
-  compRow: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 14, paddingVertical: 10, gap: 10 },
-  compIconBox: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 18 },
+  // Comparison
+  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { fontSize: 12, fontFamily: 'Nunito_700Bold' },
+  compRow: { gap: 8 },
+  compTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  compName: { flex: 1, fontSize: 14, fontFamily: 'Nunito_700Bold' },
+  compBottom: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 42 },
   compBars: { flex: 1, gap: 4 },
-  compCatName: { fontSize: 13, fontFamily: 'Nunito_600SemiBold', marginBottom: 2 },
-  compBarGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  compBarAmt: { fontSize: 11, fontFamily: 'Nunito_600SemiBold', width: 80, textAlign: 'right' },
+  compAmounts: { alignItems: 'flex-end', gap: 2 },
+  compAmountCurrent: { fontSize: 14, fontFamily: 'Nunito_800ExtraBold' },
+  compAmountPrev: { fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
+  badge: { borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 3 },
+  badgeText: { fontSize: 12, fontFamily: 'Nunito_700Bold' },
+  compTotal: { borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16, gap: 4 },
+  compTotalLabel: { fontSize: 13, fontFamily: 'Nunito_700Bold' },
+  compTotalFigures: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  compTotalAmount: { fontSize: 20, fontFamily: 'Nunito_900Black', letterSpacing: -0.3 },
+  compTotalPrev: { fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
 
-  // Predicted transactions
-  predictionEmpty: { fontSize: 13, fontFamily: 'Nunito_500Medium', paddingHorizontal: 14, paddingBottom: 14 },
-  predictionRow: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 14, paddingVertical: 10, gap: 10 },
-  predictionInfo: { flex: 1, gap: 5 },
-  predictionTitle: { fontSize: 14, fontFamily: 'Nunito_600SemiBold', flex: 1 },
-  predictionSubtitle: { fontSize: 12, fontFamily: 'Nunito_500Medium' },
-  predictionAmountCol: { alignItems: 'flex-end', flexShrink: 0 },
-  predictionAmount: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
-  predictionRange: { fontSize: 11, fontFamily: 'Nunito_400Regular', marginTop: 2 },
+  // Predictions
+  predBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
+  predBannerIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  predBannerTitle: { fontSize: 17, fontFamily: 'Lora_700Bold', letterSpacing: -0.3 },
+  predBody: { padding: 16, gap: 14 },
+  predRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  predMain: { flex: 1, minWidth: 0, gap: 2 },
+  predTitle: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
+  predSubtitle: { fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
+  predConfRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  predConfTrack: { flex: 1, height: 4 },
+  predConfLabel: { fontSize: 11, fontFamily: 'Nunito_700Bold' },
+  predAmountCol: { alignItems: 'flex-end', gap: 2 },
+  predAmount: { fontSize: 14, fontFamily: 'Nunito_800ExtraBold' },
+  predRange: { fontSize: 11, fontFamily: 'Nunito_600SemiBold' },
+
+  empty: { alignItems: 'center', paddingVertical: 18, gap: 6 },
+  emptyIcon: { fontSize: 28 },
+  emptyText: { fontSize: 13, fontFamily: 'Nunito_600SemiBold', textAlign: 'center' },
 });

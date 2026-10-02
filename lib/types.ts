@@ -1,5 +1,6 @@
 export type TransactionType = 'income' | 'expense';
 export type Currency = 'HUF' | 'USD' | 'EUR';
+export type AccountType = 'bank' | 'cash' | 'savings' | 'credit_card' | 'investment' | 'bond' | 'crypto' | 'other';
 export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
 
 export type Wallet = {
@@ -7,6 +8,8 @@ export type Wallet = {
   user_id: string;
   name: string;
   currency: Currency;
+  /** Absent on rows fetched before the wallets.type column existed; treat as 'bank'. */
+  type?: AccountType;
   icon: string;
   color: string;
   is_default: boolean;
