@@ -15,6 +15,7 @@ import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
+import AuroraBackground from '@/components/AuroraBackground';
 
 export default function AccountScreen() {
   const colors = useTheme();
@@ -66,6 +67,7 @@ export default function AccountScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       <AppHeader title="Account" showBack />
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
@@ -153,20 +155,20 @@ const styles = StyleSheet.create({
   section: { gap: 8 },
   sectionTitle: {
     fontSize: 13,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     paddingHorizontal: 4,
   },
   card: {
-    borderRadius: 14,
+    borderRadius: 26,
     borderWidth: 1,
     padding: 16,
     gap: 12,
   },
   hint: {
     fontSize: 12,
-    fontFamily: 'Figtree_400Regular',
+    fontFamily: 'Nunito_400Regular',
     marginTop: -4,
   },
   saveButton: {
@@ -178,7 +180,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 14,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_600SemiBold',
   },
   signOutButton: {
     borderRadius: 14,
@@ -188,6 +190,6 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     fontSize: 16,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_600SemiBold',
   },
 });

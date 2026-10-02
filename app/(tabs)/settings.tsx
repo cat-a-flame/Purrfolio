@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import AppHeader from '@/components/AppHeader';
+import AuroraBackground from '@/components/AuroraBackground';
 
 type SettingsItem = {
   label: string;
@@ -58,6 +59,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       <AppHeader title="Settings" />
       <ScrollView contentContainerStyle={styles.container}>
 
@@ -111,7 +113,7 @@ const styles = StyleSheet.create({
   section: { gap: 8 },
   sectionTitle: {
     fontSize: 13,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     paddingHorizontal: 4,

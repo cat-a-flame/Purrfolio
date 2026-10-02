@@ -7,12 +7,14 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
+import AuroraBackground from '@/components/AuroraBackground';
 
 export default function SignupScreen() {
   const colors = useTheme();
@@ -51,6 +53,7 @@ export default function SignupScreen() {
   if (success) {
     return (
       <View style={[styles.center, { backgroundColor: colors.bg }]}>
+        <AuroraBackground />
         <Text style={[styles.successTitle, { color: colors.text }]}>Check your email</Text>
         <Text style={[styles.successBody, { color: colors.muted }]}>
           We've sent a confirmation link to {email}. Once confirmed, you can sign in.
@@ -67,16 +70,18 @@ export default function SignupScreen() {
       style={[styles.flex, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <AuroraBackground />
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Text style={[styles.logo, { color: colors.accent }]}>Purrfolio</Text>
+          <Image source={require('@/assets/images/logo.png')} style={styles.logoImage} />
+          <Text style={[styles.logo, { color: colors.heading }]}>Purrfolio</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>Create your account</Text>
         </View>
 
-        <View style={styles.form}>
+        <View style={[styles.form, styles.card, { backgroundColor: colors.glassStrong, borderColor: colors.glassBorder, shadowColor: colors.shadow }]}>
           {error ? (
             <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>
           ) : null}
@@ -139,15 +144,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  logoImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    marginBottom: 8,
+  },
   logo: {
     fontSize: 36,
-    fontFamily: 'Figtree_700Bold',
+    letterSpacing: -0.7,
+    fontFamily: 'Lora_700Bold',
   },
   subtitle: {
     fontSize: 15,
+    fontFamily: 'Nunito_600SemiBold',
   },
   form: {
     gap: 16,
+  },
+  card: {
+    borderRadius: 26,
+    borderWidth: 1,
+    padding: 24,
+    shadowOffset: { width: 0, height: 24 },
+    shadowOpacity: 0.18,
+    shadowRadius: 32,
+    elevation: 6,
   },
   error: {
     fontSize: 14,
@@ -155,11 +177,12 @@ const styles = StyleSheet.create({
   },
   link: {
     fontSize: 14,
+    fontFamily: 'Nunito_700Bold',
     textAlign: 'center',
   },
   successTitle: {
     fontSize: 22,
-    fontFamily: 'Figtree_700Bold',
+    fontFamily: 'Nunito_700Bold',
     textAlign: 'center',
   },
   successBody: {

@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, RecurrenceFrequency } from '@/lib/types';
 import { frequencyLabel, isoDate } from '@/lib/recurringUtils';
 import { Events } from '@/lib/events';
+import AuroraBackground from '@/components/AuroraBackground';
 
 function formatAmountDisplay(raw: string): string {
   if (!raw) return '';
@@ -178,6 +179,7 @@ export default function AddPaymentScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       {/* Header */}
       <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
@@ -490,7 +492,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1,
   },
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontFamily: 'Figtree_600SemiBold' },
+  headerTitle: { fontSize: 17, fontFamily: 'Nunito_600SemiBold' },
   form: { padding: 16, gap: 16, flexGrow: 1 },
   stickyFooter: {
     paddingHorizontal: 16, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth,
@@ -502,7 +504,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden', padding: 4, gap: 4,
   },
   typeBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  typeBtnText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
+  typeBtnText: { fontSize: 15, fontFamily: 'Nunito_600SemiBold' },
 
   amountSection: { alignItems: 'center' },
   amountDisplay: {
@@ -510,12 +512,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center', paddingVertical: 8, gap: 6,
   },
   amountText: { fontSize: 52, fontFamily: 'Lora_400Regular', minWidth: 60, textAlign: 'center' },
-  amountCurrency: { fontSize: 15, fontFamily: 'Figtree_700Bold', marginBottom: 22 },
+  amountCurrency: { fontSize: 15, fontFamily: 'Nunito_700Bold', marginBottom: 22 },
 
   row: { flexDirection: 'row', gap: 8 },
 
   fieldGroup: { gap: 8 },
-  fieldLabel: { fontSize: 12, fontFamily: 'Figtree_500Medium', marginBottom: 4 },
+  fieldLabel: { fontSize: 12, fontFamily: 'Nunito_500Medium', marginBottom: 4 },
   pickerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth,
@@ -526,7 +528,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 6, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderStyle: 'dashed',
   },
-  moreToggleText: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
+  moreToggleText: { fontSize: 14, fontFamily: 'Nunito_500Medium' },
   clearText: { fontSize: 13, textAlign: 'right' },
 
   modalRow: {

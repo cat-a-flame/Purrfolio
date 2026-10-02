@@ -22,6 +22,7 @@ import { fetchWalletBalanceSums } from '@/lib/fetchWalletBalanceSums';
 import { generateDueDates, isoDate as recurringIsoDate } from '@/lib/recurringUtils';
 import SkeletonBox from '@/components/SkeletonBox';
 import type { Currency, TransactionType, Wallet } from '@/lib/types';
+import AuroraBackground from '@/components/AuroraBackground';
 
 const SCREEN_W = Dimensions.get('window').width;
 
@@ -196,7 +197,7 @@ function PredictionPanel({ variant, title, items, colors }: {
   const tone = isIncome ? colors.income : colors.expense;
   return (
     <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Text style={[styles.cardTitle, { color: colors.muted }]}>{title}</Text>
+      <Text style={[styles.cardTitle, { color: colors.heading }]}>{title}</Text>
       {items.length === 0 ? (
         <Text style={[styles.predictionEmpty, { color: colors.muted }]}>
           No recurring {variant} pattern found yet.
@@ -566,6 +567,7 @@ export default function StatsScreen() {
   if (loading) {
     return (
       <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+        <AuroraBackground />
         <AppHeader title="Statistics" />
         <ScrollView contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}>
           <PeriodPicker value={period} onChange={setPeriod} />
@@ -581,6 +583,7 @@ export default function StatsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       <AppHeader title="Statistics" />
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -635,7 +638,7 @@ export default function StatsScreen() {
 
           return (
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.cardTitle, { color: colors.muted }]}>PROJECTED</Text>
+              <Text style={[styles.cardTitle, { color: colors.heading }]}>Projected</Text>
 
               {hasIncomeProj ? (
                 <>
@@ -722,7 +725,7 @@ export default function StatsScreen() {
         {/* ── Expenses by Category ─────────────────────────────────────── */}
         {displayExpenseByCategory.length > 0 && (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.muted }]}>EXPENSES BY CATEGORY</Text>
+            <Text style={[styles.cardTitle, { color: colors.heading }]}>Expenses by category</Text>
 
             {/* donut + legend side by side */}
             <View style={styles.donutRow}>
@@ -822,7 +825,7 @@ export default function StatsScreen() {
         {/* ── Balance by Currency ──────────────────────────────────────── */}
         {balanceByCurrency.length > 0 && (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.muted }]}>BALANCE BY CURRENCY</Text>
+            <Text style={[styles.cardTitle, { color: colors.heading }]}>Balance by currency</Text>
             <Text style={[styles.currencySubtitle, { color: colors.muted }]}>Current total across all wallets</Text>
             {balanceByCurrency.map(({ currency, balance, balanceHUF }, i) => {
               const amountColor = balance >= 0 ? colors.income : colors.expense;
@@ -850,13 +853,13 @@ export default function StatsScreen() {
         )}
 
         {/* ── Predicted transactions ────────────────────────────────────── */}
-        <PredictionPanel variant="expense" title="EXPECTED EXPENSES" items={predictions.expense} colors={colors} />
-        <PredictionPanel variant="income" title="EXPECTED INCOME" items={predictions.income} colors={colors} />
+        <PredictionPanel variant="expense" title="Expected expenses" items={predictions.expense} colors={colors} />
+        <PredictionPanel variant="income" title="Expected income" items={predictions.income} colors={colors} />
 
         {/* ── Expense Comparison by Category ──────────────────────────── */}
         {comparisonData.length > 0 && (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.muted }]}>EXPENSE COMPARISON BY CATEGORY</Text>
+            <Text style={[styles.cardTitle, { color: colors.heading }]}>Expense comparison by category</Text>
             <View style={styles.compLegendRow}>
               <View style={styles.compLegendItem}>
                 <View style={[styles.compLegendDot, { backgroundColor: colors.expense }]} />
@@ -917,43 +920,42 @@ const styles = StyleSheet.create({
 
   // Card 1: Net summary
   summaryCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingTop: 14, paddingBottom: 4 },
-  summaryCardLabel: { fontSize: 11, fontFamily: 'Figtree_700Bold', textTransform: 'uppercase', letterSpacing: 0.5 },
-  summaryCardTxCount: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  summaryCardLabel: { fontSize: 11, fontFamily: 'Nunito_700Bold', textTransform: 'uppercase', letterSpacing: 0.5 },
+  summaryCardTxCount: { fontSize: 13, fontFamily: 'Nunito_500Medium' },
   summaryCardNet: { fontSize: 42, fontFamily: 'Lora_700Bold', paddingHorizontal: 14, paddingBottom: 14, lineHeight: 52 },
   summaryCardDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 14, marginBottom: 6 },
   summaryCardRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 10 },
   summaryCardIconCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  summaryCardRowLabel: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
-  summaryCardRowAmount: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
+  summaryCardRowLabel: { flex: 1, fontSize: 15, fontFamily: 'Nunito_500Medium' },
+  summaryCardRowAmount: { fontSize: 16, fontFamily: 'Nunito_700Bold' },
 
   // Card 2: Projected
   projRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 10 },
   projPlainBlock: { paddingHorizontal: 14, paddingBottom: 14, gap: 6 },
-  projRowLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  projRowLabel: { fontSize: 13, fontFamily: 'Nunito_500Medium' },
   projAmountGroup: { flexDirection: 'row', alignItems: 'baseline' },
-  projTotalAmount: { fontSize: 22, fontFamily: 'Figtree_700Bold' },
+  projTotalAmount: { fontSize: 22, fontFamily: 'Nunito_700Bold' },
   projBarTrack: { height: 10, borderRadius: 5, marginHorizontal: 14, marginBottom: 12, flexDirection: 'row', overflow: 'hidden' },
   projBarSpent: { height: 10 },
   projBarRemain: { height: 10 },
   projLegendRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 4 },
   projLegendDot: { width: 10, height: 10, borderRadius: 5 },
-  projLegendLabel: { flex: 1, fontSize: 13, fontFamily: 'Figtree_500Medium' },
-  projLegendAmount: { fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
+  projLegendLabel: { flex: 1, fontSize: 13, fontFamily: 'Nunito_500Medium' },
+  projLegendAmount: { fontSize: 13, fontFamily: 'Nunito_600SemiBold' },
   projDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 14, marginTop: 12, marginBottom: 10 },
   projNetRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingBottom: 14 },
-  projNetLabel: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
+  projNetLabel: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
   projNetAmountGroup: { flexDirection: 'row', alignItems: 'baseline' },
   projNetAmount: { fontSize: 24, fontFamily: 'Lora_700Bold' },
 
   // Card shell
-  card: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  card: { borderRadius: 26, borderWidth: 1, overflow: 'hidden' },
   cardTitle: {
-    fontSize: 11,
-    fontFamily: 'Figtree_700Bold',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    paddingHorizontal: 14,
-    paddingTop: 14,
+    fontSize: 19,
+    fontFamily: 'Lora_700Bold',
+    letterSpacing: -0.4,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 10,
   },
 
@@ -961,13 +963,13 @@ const styles = StyleSheet.create({
   donutRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
   donutWrap: { alignItems: 'center', justifyContent: 'center', position: 'relative' },
   donutCenter: { position: 'absolute', alignItems: 'center', justifyContent: 'center', width: 80, height: 80 },
-  donutTotal: { fontSize: 13, fontFamily: 'Figtree_700Bold', textAlign: 'center' },
-  donutTotalLabel: { fontSize: 11, fontFamily: 'Figtree_500Medium' },
+  donutTotal: { fontSize: 13, fontFamily: 'Nunito_700Bold', textAlign: 'center' },
+  donutTotalLabel: { fontSize: 11, fontFamily: 'Nunito_500Medium' },
   donutLegend: { flex: 1, gap: 8 },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   legendDot: { width: 9, height: 9, borderRadius: 5, flexShrink: 0 },
-  legendName: { flex: 1, fontSize: 12, fontFamily: 'Figtree_500Medium' },
-  legendPct: { fontSize: 12, fontFamily: 'Figtree_600SemiBold', width: 32, textAlign: 'right' },
+  legendName: { flex: 1, fontSize: 12, fontFamily: 'Nunito_500Medium' },
+  legendPct: { fontSize: 12, fontFamily: 'Nunito_600SemiBold', width: 32, textAlign: 'right' },
 
   // Category rows
   catRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 10 },
@@ -977,40 +979,40 @@ const styles = StyleSheet.create({
   catDot: { width: 10, height: 10, borderRadius: 5 },
   catInfo: { flex: 1, gap: 5 },
   catTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 },
-  catName: { fontSize: 14, fontFamily: 'Figtree_600SemiBold', flex: 1 },
-  catAmount: { fontSize: 13, fontFamily: 'Figtree_700Bold', flexShrink: 0 },
+  catName: { fontSize: 14, fontFamily: 'Nunito_600SemiBold', flex: 1 },
+  catAmount: { fontSize: 13, fontFamily: 'Nunito_700Bold', flexShrink: 0 },
   catBarRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  catPct: { fontSize: 11, fontFamily: 'Figtree_600SemiBold', width: 32, textAlign: 'right' },
+  catPct: { fontSize: 11, fontFamily: 'Nunito_600SemiBold', width: 32, textAlign: 'right' },
   barTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: 8, borderRadius: 4 },
 
   // Balance by currency
-  currencySubtitle: { fontSize: 12, fontFamily: 'Figtree_500Medium', paddingHorizontal: 14, marginTop: -6, marginBottom: 10 },
+  currencySubtitle: { fontSize: 12, fontFamily: 'Nunito_500Medium', paddingHorizontal: 14, marginTop: -6, marginBottom: 10 },
   currencyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10 },
-  currencyCode: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
+  currencyCode: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
   currencyAmountGroup: { alignItems: 'flex-end' },
-  currencyAmount: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
-  currencyHUF: { fontSize: 12, fontFamily: 'Figtree_400Regular', marginTop: 2 },
+  currencyAmount: { fontSize: 16, fontFamily: 'Nunito_700Bold' },
+  currencyHUF: { fontSize: 12, fontFamily: 'Nunito_400Regular', marginTop: 2 },
 
   // Expense comparison
   compLegendRow: { flexDirection: 'row', gap: 16, paddingHorizontal: 14, paddingBottom: 10 },
   compLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   compLegendDot: { width: 10, height: 10, borderRadius: 5 },
-  compLegendText: { fontSize: 12, fontFamily: 'Figtree_500Medium' },
+  compLegendText: { fontSize: 12, fontFamily: 'Nunito_500Medium' },
   compRow: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 14, paddingVertical: 10, gap: 10 },
   compIconBox: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 18 },
   compBars: { flex: 1, gap: 4 },
-  compCatName: { fontSize: 13, fontFamily: 'Figtree_600SemiBold', marginBottom: 2 },
+  compCatName: { fontSize: 13, fontFamily: 'Nunito_600SemiBold', marginBottom: 2 },
   compBarGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  compBarAmt: { fontSize: 11, fontFamily: 'Figtree_600SemiBold', width: 80, textAlign: 'right' },
+  compBarAmt: { fontSize: 11, fontFamily: 'Nunito_600SemiBold', width: 80, textAlign: 'right' },
 
   // Predicted transactions
-  predictionEmpty: { fontSize: 13, fontFamily: 'Figtree_500Medium', paddingHorizontal: 14, paddingBottom: 14 },
+  predictionEmpty: { fontSize: 13, fontFamily: 'Nunito_500Medium', paddingHorizontal: 14, paddingBottom: 14 },
   predictionRow: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 14, paddingVertical: 10, gap: 10 },
   predictionInfo: { flex: 1, gap: 5 },
-  predictionTitle: { fontSize: 14, fontFamily: 'Figtree_600SemiBold', flex: 1 },
-  predictionSubtitle: { fontSize: 12, fontFamily: 'Figtree_500Medium' },
+  predictionTitle: { fontSize: 14, fontFamily: 'Nunito_600SemiBold', flex: 1 },
+  predictionSubtitle: { fontSize: 12, fontFamily: 'Nunito_500Medium' },
   predictionAmountCol: { alignItems: 'flex-end', flexShrink: 0 },
-  predictionAmount: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
-  predictionRange: { fontSize: 11, fontFamily: 'Figtree_400Regular', marginTop: 2 },
+  predictionAmount: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
+  predictionRange: { fontSize: 11, fontFamily: 'Nunito_400Regular', marginTop: 2 },
 });

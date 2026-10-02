@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme, useDarkMode } from '@/lib/theme';
 
 interface Props {
@@ -78,19 +79,19 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
   return (
     <>
       {/* ── Fixed top bar ────────────────────────────────────────────── */}
-      <View style={[styles.bar, { backgroundColor: colors.bg }]}>
+      <View style={styles.bar}>
         <View style={styles.side}>
-          {showBack ? (
-            <TouchableOpacity onPress={onBack ?? (() => router.back())} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="arrow-back" size={24} color={colors.accent} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={openDrawer} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="menu" size={26} color={colors.text} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={showBack ? (onBack ?? (() => router.back())) : openDrawer}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel={showBack ? 'Back' : 'Open menu'}
+            style={[styles.iconBtn, { backgroundColor: colors.glassStrong, borderColor: colors.border, shadowColor: colors.shadow }]}
+          >
+            <Ionicons name={showBack ? 'arrow-back' : 'menu'} size={20} color={showBack ? colors.accent : colors.text} />
+          </TouchableOpacity>
         </View>
-        <Text style={[styles.barTitle, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.barTitle, { color: colors.heading }]} numberOfLines={1}>{title}</Text>
         <View style={[styles.side, styles.sideRight]}>
           {rightAction ?? null}
         </View>
@@ -106,16 +107,21 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
         <View style={styles.drawerRow}>
           <Animated.View style={[
             styles.drawer,
-            { backgroundColor: colors.surface, borderRightColor: colors.border, transform: [{ translateX: slideAnim }] },
+            { backgroundColor: colors.surface, borderColor: colors.border, transform: [{ translateX: slideAnim }] },
           ]}>
             <View style={[styles.drawerInner, { paddingTop: top || 16 }]}>
               <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
                 {/* ── User info ────────────────────────────────── */}
                 <TouchableOpacity style={styles.userRow} onPress={() => navigate('/settings/account')} activeOpacity={0.7}>
-                  <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
+                  <LinearGradient
+                    colors={colors.gradientAccent}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.avatar}
+                  >
                     <Text style={styles.avatarText}>{initial}</Text>
-                  </View>
+                  </LinearGradient>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
                       {username || 'My Account'}
@@ -136,7 +142,9 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
                     onPress={() => navigate(item.route)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name={item.icon as any} size={20} color={colors.muted} />
+                    <View style={[styles.rowIcon, { backgroundColor: colors.accentLight }]}>
+                      <Ionicons name={item.icon as any} size={18} color={colors.accent} />
+                    </View>
                     <Text style={[styles.rowText, { color: colors.text }]}>{item.label}</Text>
                     <Ionicons name="chevron-forward" size={16} color={colors.muted} />
                   </TouchableOpacity>
@@ -171,14 +179,30 @@ const styles = StyleSheet.create({
     height: 50,
     paddingHorizontal: 16,
   },
-  side: { width: 36 },
+  side: { width: 38 },
   sideRight: { alignItems: 'flex-end' },
-  barTitle: { flex: 1, textAlign: 'center', fontSize: 22, fontFamily: 'Lora_600SemiBold' },
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  barTitle: { flex: 1, textAlign: 'center', fontSize: 24, fontFamily: 'Lora_700Bold', letterSpacing: -0.5 },
 
   drawerRow: { flex: 1, flexDirection: 'row' },
   drawer: {
     width: DRAWER_WIDTH,
-    borderRightWidth: 1,
+    borderWidth: 1,
+    borderLeftWidth: 0,
+    borderTopRightRadius: 26,
+    borderBottomRightRadius: 26,
+    overflow: 'hidden',
     elevation: 24,
     shadowColor: '#000',
     shadowOffset: { width: 4, height: 0 },
@@ -202,15 +226,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 20, fontFamily: 'Figtree_700Bold', color: '#fff' },
-  userName: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
-  userEmail: { fontSize: 13, fontFamily: 'Figtree_400Regular', marginTop: 2 },
+  avatarText: { fontSize: 20, fontFamily: 'Nunito_800ExtraBold', color: '#fff' },
+  userName: { fontSize: 18, fontFamily: 'Lora_700Bold', letterSpacing: -0.3 },
+  userEmail: { fontSize: 13, fontFamily: 'Nunito_400Regular', marginTop: 2 },
 
   sectionLabel: {
     fontSize: 11,
-    fontFamily: 'Figtree_700Bold',
+    fontFamily: 'Nunito_800ExtraBold',
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 1.2,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 6,
@@ -220,9 +244,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 10,
   },
-  rowText: { flex: 1, fontSize: 16, fontFamily: 'Figtree_600SemiBold' },
+  rowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowText: { flex: 1, fontSize: 16, fontFamily: 'Nunito_700Bold' },
 
   darkRow: {
     flexDirection: 'row',

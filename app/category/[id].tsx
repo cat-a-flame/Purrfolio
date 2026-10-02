@@ -17,6 +17,7 @@ import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
 import ConfirmModal from '@/components/ConfirmModal';
 import type { TransactionType } from '@/lib/types';
+import AuroraBackground from '@/components/AuroraBackground';
 
 type CatType = TransactionType | 'both';
 
@@ -172,6 +173,7 @@ export default function CategoryScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -270,7 +272,7 @@ export default function CategoryScreen() {
                   />
                 </View>
                 <TouchableOpacity style={styles.subRemoveBtn} onPress={() => removeSub(s._key)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={{ color: colors.danger, fontSize: 15, fontFamily: 'Figtree_700Bold' }}>✕</Text>
+                  <Text style={{ color: colors.danger, fontSize: 15, fontFamily: 'Nunito_700Bold' }}>✕</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -307,11 +309,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 17, fontFamily: 'Figtree_700Bold' },
+  headerTitle: { fontSize: 17, fontFamily: 'Nunito_700Bold' },
   content: { padding: 16, gap: 14 },
   iconNameRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
   fieldGroup: { gap: 8 },
-  fieldLabel: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  fieldLabel: { fontSize: 13, fontFamily: 'Nunito_500Medium' },
   typeToggle: {
     flexDirection: 'row',
     borderRadius: 12,
@@ -320,7 +322,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   typeBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  typeBtnText: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
+  typeBtnText: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
   colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   colorSwatch: { width: 32, height: 32, borderRadius: 16 },
   colorSwatchSelected: { borderWidth: 3 },
@@ -338,5 +340,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: 'dashed',
   },
-  addSubText: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
+  addSubText: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
 });

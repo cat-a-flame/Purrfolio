@@ -9,7 +9,7 @@ import { loadThemePreference, useDarkMode } from '@/lib/theme';
 import type { Session } from '@supabase/supabase-js';
 import { useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Figtree_700Bold } from '@expo-google-fonts/figtree';
+import { Nunito_400Regular, Nunito_500Medium, Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold, Nunito_900Black } from '@expo-google-fonts/nunito';
 import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
 import * as SplashScreen from 'expo-splash-screen';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -19,7 +19,7 @@ import { isPinEnabled } from '@/lib/security';
 SplashScreen.preventAutoHideAsync();
 
 (Text as any).defaultProps = (Text as any).defaultProps || {};
-(Text as any).defaultProps.style = { fontFamily: 'Figtree_400Regular' };
+(Text as any).defaultProps.style = { fontFamily: 'Nunito_400Regular' };
 
 const MIN_LOADING_MS = 3000;
 
@@ -35,10 +35,12 @@ export default function RootLayout() {
   const segments = useSegments();
 
   const [fontsLoaded] = useFonts({
-    Figtree_400Regular,
-    Figtree_500Medium,
-    Figtree_600SemiBold,
-    Figtree_700Bold,
+    Nunito_400Regular,
+    Nunito_500Medium,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+    Nunito_900Black,
     Lora_400Regular,
     Lora_600SemiBold,
     Lora_700Bold,

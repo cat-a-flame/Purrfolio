@@ -20,6 +20,7 @@ import BottomModal from '@/components/BottomModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import { Events } from '@/lib/events';
 import type { Currency } from '@/lib/types';
+import AuroraBackground from '@/components/AuroraBackground';
 
 const CURRENCIES: Currency[] = ['HUF', 'USD', 'EUR'];
 
@@ -109,6 +110,7 @@ export default function WalletScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -166,7 +168,7 @@ export default function WalletScreen() {
               onPress={() => setCurrencyPickerVisible(true)}
               style={[styles.currencyDropdown, { borderColor: colors.border, backgroundColor: colors.surface }]}
             >
-              <Text style={{ color: colors.text, fontFamily: 'Figtree_600SemiBold', fontSize: 15 }}>{form.currency}</Text>
+              <Text style={{ color: colors.text, fontFamily: 'Nunito_600SemiBold', fontSize: 15 }}>{form.currency}</Text>
               <Ionicons name="chevron-down" size={14} color={colors.muted} />
             </TouchableOpacity>
           </View>
@@ -253,18 +255,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 17, fontFamily: 'Figtree_700Bold' },
+  headerTitle: { fontSize: 17, fontFamily: 'Nunito_700Bold' },
   content: { padding: 16, gap: 14 },
   iconNameRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowLabel: { fontSize: 14 },
-  rowSub: { fontSize: 12, fontFamily: 'Figtree_400Regular' },
+  rowSub: { fontSize: 12, fontFamily: 'Nunito_400Regular' },
   currencyWrapper: {
     gap: 4,
   },
   currencyLabel: {
     fontSize: 13,
-    fontFamily: 'Figtree_500Medium',
+    fontFamily: 'Nunito_500Medium',
     marginBottom: 2,
   },
   currencyDropdown: {

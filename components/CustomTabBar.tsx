@@ -1,4 +1,4 @@
-import { View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 type Route = { key: string; name: string };
 type TabBarProps = {
   state: { routes: Route[]; index: number };
@@ -9,88 +9,37 @@ type TabBarProps = {
 };
 import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/lib/theme';
 import { useRecurring } from '@/lib/recurringContext';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const FAB_R = 28;           // FAB radius (diameter 56)
-const BAR_H = 50;           // visual bar height (excludes safe-area inset)
-const EAR_SVG_H = 26;       // height of the ears SVG canvas
-const EAR_OVERLAP = 16;     // how much the circle overlaps (hides) the ear bases
+// Floating glass pill with a raised gradient add button — mirrors the web
+// BottomNav (PurrfolioWeb/components/layout/BottomNav.module.css).
+const BAR_H = 66;        // pill height
+const BAR_GAP = 10;      // gap between the pill and the safe-area bottom
+const ADD_SIZE = 52;     // add button size
+const ADD_RISE = 26;     // how far the add button pokes above the pill
+const EAR_SVG_H = 22;    // height of the cat-ears SVG canvas
+const EAR_OVERLAP = 12;  // how much the button overlaps (hides) the ear bases
 
 // Screens should add TAB_BAR_HEIGHT + useSafeAreaInsets().bottom as bottom padding
 // so content isn't hidden behind the floating tab bar.
-export const TAB_BAR_HEIGHT = BAR_H + FAB_R; // 84 px
+export const TAB_BAR_HEIGHT = BAR_H + BAR_GAP + 8; // 84 px
 
-// ── Notch tuning knobs ──────────────────────
-const NOTCH_R  = 36; // circle radius — increase for more clearance around FAB
-const NOTCH_Y  = 0; // notch depth: how far the arc dips below the bar top
-const CORNER_R = 12; // radius of the fillet where the arc meets the bar top edge
-const FAB_EXTRA_Y = 13; // extra px to push the FAB down independently of the notch
-// ────────────────────────────────────────────
-
-// Horizontal distance from centre to where the raw circle crosses y=0
-const NOTCH_DX = Math.sqrt(Math.max(0, NOTCH_R * NOTCH_R - NOTCH_Y * NOTCH_Y));
-const NOTCH_MOUTH = NOTCH_DX * 2 + 16; // gap reserved in tab row
-
-// Arc-tangent unit vector at the left entry point of the notch circle.
-// Used to build G1-continuous quadratic bezier fillets at both corners.
-const FILLET_TX = NOTCH_Y / NOTCH_R;   // x component (rightward)
-const FILLET_TY = NOTCH_DX / NOTCH_R;  // y component (downward)
-const FILLET_LY = CORNER_R * FILLET_TY; // y of both fillet endpoints (symmetric)
-
-// Single circular-arc notch with smooth corner fillets.
-// Each fillet is a Q bezier: control at the raw corner, end on the arc tangent.
-function buildPath(w: number, h: number): string {
-  const cx = w / 2;
-  const lx = cx - NOTCH_DX + CORNER_R * FILLET_TX;
-  const rx = cx + NOTCH_DX - CORNER_R * FILLET_TX;
-  return [
-    `M 0 0`,
-    `L ${cx - NOTCH_DX - CORNER_R} 0`,
-    `Q ${cx - NOTCH_DX} 0 ${lx} ${FILLET_LY}`,
-    `A ${NOTCH_R} ${NOTCH_R} 0 1 0 ${rx} ${FILLET_LY}`,
-    `Q ${cx + NOTCH_DX} 0 ${cx + NOTCH_DX + CORNER_R} 0`,
-    `L ${w} 0`,
-    `L ${w} ${h}`,
-    `L 0 ${h}`,
-    `Z`,
-  ].join(' ');
-}
-
-function buildTopEdge(w: number): string {
-  const cx = w / 2;
-  const lx = cx - NOTCH_DX + CORNER_R * FILLET_TX;
-  const rx = cx + NOTCH_DX - CORNER_R * FILLET_TX;
-  return [
-    `M 0 0`,
-    `L ${cx - NOTCH_DX - CORNER_R} 0`,
-    `Q ${cx - NOTCH_DX} 0 ${lx} ${FILLET_LY}`,
-    `A ${NOTCH_R} ${NOTCH_R} 0 1 0 ${rx} ${FILLET_LY}`,
-    `Q ${cx + NOTCH_DX} 0 ${cx + NOTCH_DX + CORNER_R} 0`,
-    `L ${w} 0`,
-  ].join(' ');
-}
-
-const TAB_ICONS: Record<string, { outline: string; filled: string }> = {
-  index:        { outline: 'home-outline',       filled: 'home' },
-  transactions: { outline: 'list-outline',       filled: 'list' },
-  recurring:    { outline: 'refresh-outline',     filled: 'refresh' },
-  stats:        { outline: 'stats-chart-outline',  filled: 'stats-chart' },
+const TAB_META: Record<string, { outline: string; filled: string; label: string }> = {
+  index:        { outline: 'home-outline',        filled: 'home',        label: 'Home' },
+  transactions: { outline: 'list-outline',        filled: 'list',        label: 'Records' },
+  recurring:    { outline: 'calendar-outline',    filled: 'calendar',    label: 'Planned' },
+  stats:        { outline: 'stats-chart-outline', filled: 'stats-chart', label: 'Stats' },
 };
-
 
 export default function CustomTabBar({ state, navigation }: TabBarProps) {
   const colors = useTheme();
   const { hasDueToday } = useRecurring();
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
-
-  const barHeight = BAR_H + bottom;
-  const containerHeight = barHeight + FAB_R;
 
   const visibleRoutes = state.routes.filter((r) => r.name !== 'settings');
   const leftTabs = visibleRoutes.slice(0, 2);
@@ -104,9 +53,8 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
 
   function renderTab(route: (typeof state.routes)[number]) {
     const isFocused = state.routes[state.index].key === route.key;
-    const icons = TAB_ICONS[route.name] ?? { outline: 'ellipse-outline', filled: 'ellipse' };
-    const iconName = isFocused ? icons.filled : icons.outline;
-    const color = isFocused ? colors.accent : '#998aa7';
+    const meta = TAB_META[route.name] ?? { outline: 'ellipse-outline', filled: 'ellipse', label: route.name };
+    const color = isFocused ? colors.accent : colors.muted;
     const showDot = route.name === 'recurring' && hasDueToday;
     return (
       <TouchableOpacity
@@ -115,60 +63,83 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
         onPress={() => handleTabPress(route)}
         activeOpacity={0.7}
         accessibilityRole="button"
+        accessibilityLabel={meta.label}
         accessibilityState={isFocused ? { selected: true } : {}}
       >
-        <View style={styles.iconWrap}>
-          <Ionicons name={iconName as any} size={24} color={color} />
-          {showDot && <View style={styles.notifDot} />}
+        <View style={[styles.iconWrap, isFocused && styles.iconWrapActive]}>
+          <Ionicons name={(isFocused ? meta.filled : meta.outline) as any} size={22} color={color} />
+          {showDot && <View style={[styles.notifDot, { backgroundColor: colors.danger, borderColor: colors.surface }]} />}
         </View>
+        <Text style={[styles.label, { color, fontFamily: isFocused ? 'Nunito_800ExtraBold' : 'Nunito_700Bold' }]}>
+          {meta.label}
+        </Text>
+        {isFocused && (
+          <LinearGradient
+            colors={colors.gradientAccent}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={[styles.indicator, { shadowColor: colors.accent }]}
+          />
+        )}
       </TouchableOpacity>
     );
   }
 
   return (
-    <View style={[styles.container, { height: containerHeight }]} pointerEvents="box-none">
+    <View
+      style={[styles.container, { height: BAR_H + BAR_GAP + bottom + ADD_RISE + EAR_SVG_H }]}
+      pointerEvents="box-none"
+    >
+      <View
+        style={[
+          styles.pill,
+          {
+            bottom: BAR_GAP + bottom,
+            backgroundColor: colors.tabBar,
+            borderColor: colors.glassBorder,
+            shadowColor: colors.shadow,
+          },
+        ]}
+      >
+        <View style={styles.side}>{leftTabs.map(renderTab)}</View>
 
-      {/* SVG bar fills the lower barHeight portion */}
-      <View style={[styles.svgContainer, { height: barHeight }]}>
-        <Svg width={SCREEN_WIDTH} height={barHeight} style={StyleSheet.absoluteFill}>
-          <Path d={buildPath(SCREEN_WIDTH, barHeight)} fill={colors.surface} />
-          <Path
-            d={buildTopEdge(SCREEN_WIDTH)}
-            fill="none"
-            stroke={colors.border2}
-            strokeWidth={1}
-          />
-        </Svg>
+        {/* Spacer the raised add button sits over */}
+        <View style={styles.addSlot} />
 
-        {/* Tab icons — anchored above the safe-area inset so they stay in the visual bar */}
-        <View style={[styles.tabRow, { height: BAR_H, bottom: 22 }]}>
-          <View style={styles.side}>{leftTabs.map(renderTab)}</View>
-          <View style={{ width: NOTCH_MOUTH }} />
-          <View style={styles.side}>{rightTabs.map(renderTab)}</View>
-        </View>
+        <View style={styles.side}>{rightTabs.map(renderTab)}</View>
       </View>
 
-      {/* FAB sits 20 px below bar top, inside the notch */}
-      <View style={[styles.fabWrap, { bottom: barHeight - FAB_R - NOTCH_Y - FAB_EXTRA_Y }]}>
-        {/* Cat ears — rendered above the circle; circle covers the ear bases */}
+      <View
+        style={[styles.addWrap, { bottom: BAR_GAP + bottom + BAR_H + ADD_RISE - ADD_SIZE }]}
+        pointerEvents="box-none"
+      >
+        {/* Cat ears peek out from behind the add button */}
         <Svg
-          width={FAB_R * 2}
+          width={ADD_SIZE}
           height={EAR_SVG_H}
           style={{ marginBottom: -EAR_OVERLAP }}
           pointerEvents="none"
         >
-          <Path d={`M 2 ${EAR_SVG_H} L 9 9 Q 13 1 17 9 L 24 ${EAR_SVG_H} Z`} fill={colors.accent} transform={`rotate(-28, 13, ${EAR_SVG_H})`} />
-          <Path d={`M 32 ${EAR_SVG_H} L 39 9 Q 43 1 47 9 L 54 ${EAR_SVG_H} Z`} fill={colors.accent} transform={`rotate(28, 43, ${EAR_SVG_H})`} />
+          <Path d={`M 2 ${EAR_SVG_H} L 8 8 Q 12 1 16 8 L 22 ${EAR_SVG_H} Z`} fill={colors.gradientAccent[0]} transform={`rotate(-24, 12, ${EAR_SVG_H})`} />
+          <Path d={`M 30 ${EAR_SVG_H} L 36 8 Q 40 1 44 8 L 50 ${EAR_SVG_H} Z`} fill={colors.gradientAccent[1]} transform={`rotate(24, 40, ${EAR_SVG_H})`} />
         </Svg>
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: colors.accent, shadowColor: colors.accent }]}
           onPress={() => router.push('/transaction/add')}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Add record"
+          style={[styles.addShadow, { shadowColor: colors.accent }]}
         >
-          <Ionicons name="add" size={28} color="#fff" />
+          <LinearGradient
+            colors={colors.gradientAccent}
+            start={{ x: 0, y: 0.2 }}
+            end={{ x: 1, y: 0.8 }}
+            style={[styles.addBtn, { borderColor: colors.surface }]}
+          >
+            <Ionicons name="add" size={28} color="#fff" />
+          </LinearGradient>
         </TouchableOpacity>
       </View>
-
     </View>
   );
 }
@@ -180,59 +151,89 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  svgContainer: {
+  pill: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  tabRow: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
+    left: 12,
+    right: 12,
+    height: BAR_H,
+    borderRadius: 24,
+    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 8,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
   },
   side: {
-    flex: 1,
+    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
+    height: '100%',
   },
   tab: {
     flex: 1,
+    height: '100%',
     alignItems: 'center',
-    paddingVertical: 8,
+    justifyContent: 'center',
+    gap: 3,
   },
   iconWrap: {
-    width: 42,
-    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  iconWrapActive: {
+    transform: [{ translateY: -2 }],
+  },
+  label: {
+    fontSize: 11,
+    lineHeight: 13,
+  },
+  indicator: {
+    position: 'absolute',
+    bottom: 6,
+    width: 18,
+    height: 3,
+    borderRadius: 2,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+  },
   notifDot: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#e53935',
+    top: -2,
+    right: -4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
   },
-  fabWrap: {
+  addSlot: {
+    flex: 1,
+  },
+  // Sibling of the pill (not a child) so the part poking above it stays tappable on Android
+  addWrap: {
     position: 'absolute',
     left: 0,
     right: 0,
     alignItems: 'center',
+    zIndex: 2,
+    elevation: 14, // Android stacks siblings by elevation: keep the button above the pill
   },
-  fab: {
-    width: FAB_R * 2,
-    height: FAB_R * 2,
-    borderRadius: FAB_R,
+  addShadow: {
+    borderRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.55,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  addBtn: {
+    width: ADD_SIZE,
+    height: ADD_SIZE,
+    borderRadius: 18,
+    borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 5,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
   },
 });

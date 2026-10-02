@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import type { Label } from '@/lib/types';
+import AuroraBackground from '@/components/AuroraBackground';
 
 export default function LabelsScreen() {
   const colors = useTheme();
@@ -34,6 +35,7 @@ export default function LabelsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
           <View style={styles.backRow}>
@@ -98,7 +100,7 @@ const styles = StyleSheet.create({
   },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   back: { fontSize: 15 },
-  title: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
+  title: { fontSize: 18, fontFamily: 'Nunito_700Bold' },
   searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   searchBox: {
     flexDirection: 'row',
@@ -119,6 +121,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   colorDot: { width: 16, height: 16, borderRadius: 8 },
-  rowName: { fontSize: 15, fontFamily: 'Figtree_500Medium' },
+  rowName: { fontSize: 15, fontFamily: 'Nunito_500Medium' },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
 });

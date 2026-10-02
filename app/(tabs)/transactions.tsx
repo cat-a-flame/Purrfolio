@@ -32,6 +32,7 @@ import SkeletonBox from '@/components/SkeletonBox';
 import Toast from '@/components/Toast';
 import { Events } from '@/lib/events';
 import { useRouter } from 'expo-router';
+import AuroraBackground from '@/components/AuroraBackground';
 
 const PANEL_WIDTH = Math.min(Dimensions.get('window').width * 0.85, Dimensions.get('window').width - 40);
 
@@ -439,6 +440,7 @@ export default function TransactionsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       <AppHeader
         title="Overview"
         rightAction={
@@ -697,7 +699,7 @@ export default function TransactionsScreen() {
         title={bulkView === 'labels' ? 'Set labels' : `Edit ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}`}
         rightAction={bulkView === 'labels' ? (
           <TouchableOpacity onPress={() => setConfirmEditVisible(true)} disabled={bulkSaving}>
-            <Text style={{ color: colors.accent, fontSize: 15, fontFamily: 'Figtree_600SemiBold' }}>Save</Text>
+            <Text style={{ color: colors.accent, fontSize: 15, fontFamily: 'Nunito_600SemiBold' }}>Save</Text>
           </TouchableOpacity>
         ) : undefined}
       >
@@ -960,7 +962,7 @@ export default function TransactionsScreen() {
                               onPress={() => isGroup ? selectParent(cat) : setDraftCategories(prev => toggleItem(prev, cat.id))}
                             >
                               <Text style={{ fontSize: 18, width: 22, textAlign: 'center' }}>{cat.icon ?? '•'}</Text>
-                              <Text style={[styles.optionLabel, { color: allSelected ? colors.accent : someSelected ? colors.accent : colors.text, fontFamily: isGroup ? 'Figtree_600SemiBold' : 'Figtree_500Medium' }]}>{cat.name}</Text>
+                              <Text style={[styles.optionLabel, { color: allSelected ? colors.accent : someSelected ? colors.accent : colors.text, fontFamily: isGroup ? 'Nunito_600SemiBold' : 'Nunito_500Medium' }]}>{cat.name}</Text>
                               {allSelected && <Ionicons name="checkmark" size={18} color={colors.accent} />}
                               {someSelected && !allSelected && <View style={[styles.partialCheck, { borderColor: colors.accent }]} />}
                               {isGroup && (
@@ -1069,10 +1071,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  filterBadgeText: { fontSize: 9, fontFamily: 'Figtree_700Bold' },
+  filterBadgeText: { fontSize: 9, fontFamily: 'Nunito_700Bold' },
 
   resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  resetBtnText: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  resetBtnText: { fontSize: 13, fontFamily: 'Nunito_500Medium' },
 
   summaryBar: {
     flexDirection: 'row',
@@ -1080,8 +1082,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
   },
-  summaryCount: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
-  summaryTotal: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
+  summaryCount: { fontSize: 13, fontFamily: 'Nunito_500Medium' },
+  summaryTotal: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
 
   dayHeader: {
     flexDirection: 'row',
@@ -1093,33 +1095,33 @@ const styles = StyleSheet.create({
   },
   dateHeader: {
     fontSize: 13,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_600SemiBold',
   },
-  dayNet: { fontSize: 13, fontFamily: 'Figtree_700Bold' },
+  dayNet: { fontSize: 13, fontFamily: 'Nunito_700Bold' },
   empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
 
   tabStrip: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12 },
-  tabBtnText: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
+  tabBtnText: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
 
   walletsList: { padding: 16, gap: 16 },
-  archivedSectionLabel: { fontSize: 11, fontFamily: 'Figtree_700Bold', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 },
+  archivedSectionLabel: { fontSize: 11, fontFamily: 'Nunito_700Bold', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 },
   walletNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   defaultBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
-  defaultBadgeText: { fontSize: 11, fontFamily: 'Figtree_600SemiBold' },
+  defaultBadgeText: { fontSize: 11, fontFamily: 'Nunito_600SemiBold' },
   walletCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 18,
     gap: 8,
     paddingHorizontal: 12,
   },
   walletIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 10, },
   walletIconFallback: { width: 28, height: 28, borderRadius: 8 },
   walletInfo: { flex: 1, paddingVertical: 14, gap: 2 },
-  walletName: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
-  walletCurrency: { fontSize: 12, fontFamily: 'Figtree_500Medium' },
-  walletBalance: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
+  walletName: { fontSize: 15, fontFamily: 'Nunito_600SemiBold' },
+  walletCurrency: { fontSize: 12, fontFamily: 'Nunito_500Medium' },
+  walletBalance: { fontSize: 16, fontFamily: 'Nunito_700Bold' },
   skeletonRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1146,7 +1148,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  panelTitle: { fontSize: 17, fontFamily: 'Figtree_700Bold' },
+  panelTitle: { fontSize: 17, fontFamily: 'Nunito_700Bold' },
 
   panelSection: {
     paddingHorizontal: 16,
@@ -1154,7 +1156,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 8,
   },
-  panelSectionLabel: { fontSize: 12, fontFamily: 'Figtree_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.5 },
+  panelSectionLabel: { fontSize: 12, fontFamily: 'Nunito_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   panelRow: {
     flexDirection: 'row',
@@ -1165,7 +1167,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   panelRowIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  panelRowLabel: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
+  panelRowLabel: { flex: 1, fontSize: 15, fontFamily: 'Nunito_500Medium' },
   panelRowValue: { fontSize: 14, maxWidth: 110 },
 
   optionRow: {
@@ -1179,7 +1181,7 @@ const styles = StyleSheet.create({
   optionRowChild: {
     paddingLeft: 32,
   },
-  optionLabel: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
+  optionLabel: { flex: 1, fontSize: 15, fontFamily: 'Nunito_500Medium' },
   labelDot: { width: 12, height: 12, borderRadius: 6, marginHorizontal: 5 },
   partialCheck: { width: 14, height: 14, borderRadius: 3, borderWidth: 2 },
 
@@ -1197,7 +1199,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  resetAllText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
+  resetAllText: { fontSize: 15, fontFamily: 'Nunito_600SemiBold' },
   showResultsBtn: {
     flex: 2,
     borderRadius: 12,
@@ -1205,7 +1207,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  showResultsText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold', color: '#fff' },
+  showResultsText: { fontSize: 15, fontFamily: 'Nunito_600SemiBold', color: '#fff' },
 
   // Selection
   selectAllBar: {
@@ -1226,8 +1228,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  selectAllLabel: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
-  selectedCount: { fontSize: 13, fontFamily: 'Figtree_500Medium' },
+  selectAllLabel: { fontSize: 14, fontFamily: 'Nunito_500Medium' },
+  selectedCount: { fontSize: 13, fontFamily: 'Nunito_500Medium' },
 
   selectionToolbar: {
     position: 'absolute',
@@ -1245,7 +1247,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingVertical: 6,
   },
-  toolbarBtnText: { fontSize: 12, fontFamily: 'Figtree_600SemiBold' },
+  toolbarBtnText: { fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
   toolbarDivider: { width: StyleSheet.hairlineWidth, height: 36 },
 
   bulkMenuList: { paddingVertical: 8 },
@@ -1258,5 +1260,5 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   bulkMenuIcon: { width: 34, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  bulkMenuLabel: { flex: 1, fontSize: 15, fontFamily: 'Figtree_500Medium' },
+  bulkMenuLabel: { flex: 1, fontSize: 15, fontFamily: 'Nunito_500Medium' },
 });

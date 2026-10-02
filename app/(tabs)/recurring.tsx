@@ -21,6 +21,7 @@ import { generateDueDates, nextDueDate, frequencyLabel, isoDate, monthBounds } f
 import { useRecurring } from '@/lib/recurringContext';
 import { Events } from '@/lib/events';
 import Toast from '@/components/Toast';
+import AuroraBackground from '@/components/AuroraBackground';
 
 export default function RecurringScreen() {
   const colors = useTheme();
@@ -227,6 +228,7 @@ export default function RecurringScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       <AppHeader
         title="Planned"
         rightAction={
@@ -524,7 +526,7 @@ const styles = StyleSheet.create({
   container: { paddingHorizontal: 16, gap: 10 },
   tabStrip: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12 },
-  tabBtnText: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
+  tabBtnText: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
   monthNavRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     borderRadius: 12, borderWidth: 1, paddingHorizontal: 4, paddingVertical: 4,
@@ -532,11 +534,11 @@ const styles = StyleSheet.create({
   },
   monthNav: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   monthNavBtn: { padding: 8 },
-  monthLabel: { fontSize: 14, fontFamily: 'Figtree_600SemiBold', flex: 1, textAlign: 'center' },
+  monthLabel: { fontSize: 14, fontFamily: 'Nunito_600SemiBold', flex: 1, textAlign: 'center' },
   emptyText: { fontSize: 14, paddingVertical: 8 },
   dueGroupLabel: {
     fontSize: 11,
-    fontFamily: 'Figtree_700Bold',
+    fontFamily: 'Nunito_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginTop: 8,
@@ -544,7 +546,7 @@ const styles = StyleSheet.create({
   },
   freqLabel: {
     fontSize: 11,
-    fontFamily: 'Figtree_700Bold',
+    fontFamily: 'Nunito_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginTop: 8,
@@ -554,7 +556,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 18,
     paddingHorizontal: 12,
     gap: 10,
     marginBottom: 2,
@@ -569,9 +571,9 @@ const styles = StyleSheet.create({
   },
   dueMeta: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   dueIcon: { fontSize: 20 },
-  dueName: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
+  dueName: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
   dueSub: { fontSize: 12, marginTop: 1 },
-  dueAmount: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
+  dueAmount: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
   swipeAction: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -580,7 +582,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 2,
   },
-  swipeActionText: { fontSize: 11, fontFamily: 'Figtree_600SemiBold', color: '#fff' },
+  swipeActionText: { fontSize: 11, fontFamily: 'Nunito_600SemiBold', color: '#fff' },
 
   paymentGroup: {
     borderRadius: 12, borderWidth: 1, overflow: 'hidden',
@@ -595,7 +597,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   paymentDot: { width: 10, height: 10, borderRadius: 5 },
-  paymentName: { fontSize: 14, fontFamily: 'Figtree_600SemiBold' },
+  paymentName: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
   paymentSub: { fontSize: 12, marginTop: 1 },
-  paymentAmount: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
+  paymentAmount: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
 });

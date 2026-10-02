@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { todayInputDate } from '@/lib/utils';
 import { Events } from '@/lib/events';
+import AuroraBackground from '@/components/AuroraBackground';
 
 function formatAmountDisplay(raw: string): string {
   if (!raw) return '';
@@ -316,6 +317,7 @@ export default function AddTransactionScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       {/* Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
@@ -650,7 +652,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontFamily: 'Figtree_600SemiBold' },
+  headerTitle: { fontSize: 17, fontFamily: 'Nunito_600SemiBold' },
   form: { padding: 16, gap: 14 },
   error: { fontSize: 14, textAlign: 'center' },
   typeToggle: {
@@ -666,7 +668,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
   },
-  typeBtnText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
+  typeBtnText: { fontSize: 15, fontFamily: 'Nunito_600SemiBold' },
 
   /* Amount display */
   amountSection: {
@@ -675,7 +677,7 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 11,
-    fontFamily: 'Figtree_600SemiBold',
+    fontFamily: 'Nunito_600SemiBold',
     letterSpacing: 1.2,
   },
   amountDisplay: {
@@ -692,7 +694,7 @@ const styles = StyleSheet.create({
   },
   currencyLabel: {
     fontSize: 15,
-    fontFamily: 'Figtree_700Bold',
+    fontFamily: 'Nunito_700Bold',
     marginBottom: 10,
   },
 
@@ -709,10 +711,10 @@ const styles = StyleSheet.create({
     padding: 10,
     gap: 2,
   },
-  transferFieldLabel: { fontSize: 11, fontFamily: 'Figtree_500Medium' },
+  transferFieldLabel: { fontSize: 11, fontFamily: 'Nunito_500Medium' },
   transferAmountRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   transferAmountText: { flex: 1, fontSize: 22, fontFamily: 'Lora_400Regular' },
-  transferCurrency: { fontSize: 14, fontFamily: 'Figtree_700Bold' },
+  transferCurrency: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
   arrowCircle: {
     width: 28, height: 28, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
@@ -724,7 +726,7 @@ const styles = StyleSheet.create({
   /* Pickers */
   row: { flexDirection: 'row', gap: 8 },
   fieldGroup: { gap: 8, flexDirection: 'row' },
-  fieldLabel: { fontSize: 12, fontFamily: 'Figtree_500Medium', marginBottom: 4 },
+  fieldLabel: { fontSize: 12, fontFamily: 'Nunito_500Medium', marginBottom: 4 },
   pickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -763,7 +765,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
   },
-  moreToggleText: { fontSize: 15, fontFamily: 'Figtree_500Medium' },
+  moreToggleText: { fontSize: 15, fontFamily: 'Nunito_500Medium' },
 
   /* Bottom block */
   bottomBlock: {

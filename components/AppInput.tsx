@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { TextInput, TextInputProps, StyleSheet, View, Text } from 'react-native';
 import { useTheme } from '@/lib/theme';
 
@@ -6,8 +7,11 @@ interface Props extends TextInputProps {
   error?: string;
 }
 
-export default function AppInput({ label, error, style, ...props }: Props) {
+export default function AppInput({ label, error, style, onFocus, onBlur, ...props }: Props) {
   const colors = useTheme();
+  const [focused, setFocused] = useState(false);
+
+  const borderColor = error ? colors.danger : focused ? colors.accent : colors.border;
 
   return (
     <View style={styles.wrapper}>
@@ -17,12 +21,16 @@ export default function AppInput({ label, error, style, ...props }: Props) {
           styles.input,
           {
             backgroundColor: colors.surface,
-            borderColor: error ? colors.danger : colors.border,
+            borderColor,
             color: colors.text,
+            shadowColor: colors.accent,
           },
+          focused && !error && styles.focused,
           style,
         ]}
         placeholderTextColor={colors.placeholder}
+        onFocus={(e) => { setFocused(true); onFocus?.(e); }}
+        onBlur={(e) => { setFocused(false); onBlur?.(e); }}
         {...props}
       />
       {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
@@ -36,15 +44,24 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontFamily: 'Figtree_500Medium',
+    fontFamily: 'Nunito_700Bold',
     marginBottom: 2,
   },
   input: {
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 15,
-    minHeight: 42,
+    fontFamily: 'Nunito_500Medium',
+    minHeight: 48,
+  },
+  // Soft glow ring, the native stand-in for the web input's focus box-shadow
+  focused: {
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 3,
   },
   error: {
     fontSize: 12,

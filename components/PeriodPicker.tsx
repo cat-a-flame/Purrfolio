@@ -368,7 +368,7 @@ function makeStyles(colors: any) {
     },
     navBtn: { padding: 4 },
     labelBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-    labelText: { fontSize: 15, fontFamily: 'Figtree_600SemiBold', color: colors.text },
+    labelText: { fontSize: 15, fontFamily: 'Nunito_600SemiBold', color: colors.text },
 
     backdrop: {
       flex: 1,
@@ -393,7 +393,7 @@ function makeStyles(colors: any) {
       borderBottomWidth: 2,
       borderBottomColor: 'transparent',
     },
-    tabText: { fontSize: 13, fontFamily: 'Figtree_600SemiBold' },
+    tabText: { fontSize: 13, fontFamily: 'Nunito_600SemiBold' },
 
     panel: { padding: 16, gap: 12 },
     panelNav: {
@@ -402,7 +402,7 @@ function makeStyles(colors: any) {
       justifyContent: 'space-between',
       marginBottom: 4,
     },
-    panelNavLabel: { fontSize: 15, fontFamily: 'Figtree_600SemiBold' },
+    panelNavLabel: { fontSize: 15, fontFamily: 'Nunito_600SemiBold' },
 
     grid: {
       flexDirection: 'row',
@@ -415,7 +415,7 @@ function makeStyles(colors: any) {
       alignItems: 'center',
       borderRadius: 10,
     },
-    cellText: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
+    cellText: { fontSize: 14, fontFamily: 'Nunito_500Medium' },
 
     weekDayHeaders: {
       flexDirection: 'row',
@@ -425,7 +425,7 @@ function makeStyles(colors: any) {
       flex: 1,
       textAlign: 'center',
       fontSize: 12,
-      fontFamily: 'Figtree_600SemiBold',
+      fontFamily: 'Nunito_600SemiBold',
     },
     weekRow: {
       flexDirection: 'row',
@@ -442,7 +442,7 @@ function makeStyles(colors: any) {
 
     customFields: { flexDirection: 'row', gap: 12 },
     customField: { flex: 1, gap: 6 },
-    customLabel: { fontSize: 12, fontFamily: 'Figtree_600SemiBold' },
+    customLabel: { fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
     customDateBtn: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -452,13 +452,13 @@ function makeStyles(colors: any) {
       paddingHorizontal: 10,
       paddingVertical: 10,
     },
-    customDateText: { fontSize: 14, fontFamily: 'Figtree_500Medium' },
+    customDateText: { fontSize: 14, fontFamily: 'Nunito_500Medium' },
     applyBtn: {
       paddingVertical: 12,
       borderRadius: 10,
       alignItems: 'center',
       marginTop: 4,
     },
-    applyBtnText: { color: '#fff', fontFamily: 'Figtree_700Bold', fontSize: 15 },
+    applyBtnText: { color: '#fff', fontFamily: 'Nunito_700Bold', fontSize: 15 },
   });
 }

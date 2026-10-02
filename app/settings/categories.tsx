@@ -7,6 +7,7 @@ import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import type { Category } from '@/lib/types';
 import SkeletonBox from '@/components/SkeletonBox';
+import AuroraBackground from '@/components/AuroraBackground';
 
 type CategoryWithChildren = Category & { children: Category[] };
 
@@ -38,6 +39,7 @@ export default function CategoriesScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <AuroraBackground />
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
           <View style={styles.backRow}>
@@ -127,7 +129,7 @@ const styles = StyleSheet.create({
   },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   back: { fontSize: 15 },
-  title: { fontSize: 18, fontFamily: 'Figtree_700Bold' },
+  title: { fontSize: 18, fontFamily: 'Nunito_700Bold' },
   searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   searchBox: {
     flexDirection: 'row',
@@ -144,7 +146,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 14,
-    borderRadius: 16,
+    borderRadius: 26,
     borderWidth: 1,
   },
   iconTile: {
@@ -156,10 +158,10 @@ const styles = StyleSheet.create({
   },
   iconEmoji: { fontSize: 24 },
   info: { flex: 1, gap: 2 },
-  name: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
-  subLabel: { fontSize: 12, fontFamily: 'Figtree_600SemiBold' },
+  name: { fontSize: 16, fontFamily: 'Nunito_700Bold' },
+  subLabel: { fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, padding: 32 },
   emptyIcon: { fontSize: 32, marginBottom: 4 },
-  emptyTitle: { fontSize: 16, fontFamily: 'Figtree_700Bold' },
+  emptyTitle: { fontSize: 16, fontFamily: 'Nunito_700Bold' },
   emptyHint: { fontSize: 13, textAlign: 'center' },
 });
