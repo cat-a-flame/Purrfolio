@@ -19,7 +19,7 @@ import { useRecurring } from '@/lib/recurringContext';
 // (PurrfolioWeb/components/layout/BottomNav.module.css) — with the app's
 // original round add button straddling its top edge.
 const BAR_H = 66;        // pill height
-const BAR_GAP = 10;      // gap between the pill and the safe-area bottom
+const BAR_GAP = 2;       // gap between the pill and the safe-area bottom
 const FAB_R = 28;        // add button radius (diameter 56)
 const FAB_RISE = 15;     // how far the add button pokes above the pill
 const EAR_SVG_H = 26;    // height of the cat-ears SVG canvas
@@ -56,7 +56,7 @@ function buildPillPath(w: number, h: number): string {
 
 // Screens should add TAB_BAR_HEIGHT + useSafeAreaInsets().bottom as bottom padding
 // so content isn't hidden behind the floating tab bar.
-export const TAB_BAR_HEIGHT = BAR_H + BAR_GAP + 8; // 84 px
+export const TAB_BAR_HEIGHT = BAR_H + BAR_GAP + 8; // 76 px
 
 const TAB_META: Record<string, { outline: string; filled: string; label: string }> = {
   index:        { outline: 'home-outline',        filled: 'home',        label: 'Home' },
