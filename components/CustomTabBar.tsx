@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 type Route = { key: string; name: string };
 type TabBarProps = {
   state: { routes: Route[]; index: number };
@@ -24,6 +24,35 @@ const FAB_R = 28;        // add button radius (diameter 56)
 const FAB_RISE = 15;     // how far the add button pokes above the pill
 const EAR_SVG_H = 26;    // height of the cat-ears SVG canvas
 const EAR_OVERLAP = 16;  // how much the button overlaps (hides) the ear bases
+const PILL_INSET = 12;   // horizontal gap between the pill and the screen edges
+const PILL_R = 24;       // pill corner radius
+
+// ── Notch (the cut-out the add button sits in) ──
+const NOTCH_R = 36;      // notch radius — clearance around the add button
+const NOTCH_CORNER = 12; // radius of the fillet where the notch meets the top edge
+const NOTCH_MOUTH = NOTCH_R * 2 + 16; // width reserved in the tab row
+
+// Pill outline with rounded corners and a semicircular notch at the top centre.
+// Each notch fillet is a Q bezier with its control point at the raw corner.
+function buildPillPath(w: number, h: number): string {
+  const cx = w / 2;
+  const r = PILL_R;
+  return [
+    `M 0 ${r}`,
+    `A ${r} ${r} 0 0 1 ${r} 0`,
+    `L ${cx - NOTCH_R - NOTCH_CORNER} 0`,
+    `Q ${cx - NOTCH_R} 0 ${cx - NOTCH_R} ${NOTCH_CORNER}`,
+    `A ${NOTCH_R} ${NOTCH_R} 0 1 0 ${cx + NOTCH_R} ${NOTCH_CORNER}`,
+    `Q ${cx + NOTCH_R} 0 ${cx + NOTCH_R + NOTCH_CORNER} 0`,
+    `L ${w - r} 0`,
+    `A ${r} ${r} 0 0 1 ${w} ${r}`,
+    `L ${w} ${h - r}`,
+    `A ${r} ${r} 0 0 1 ${w - r} ${h}`,
+    `L ${r} ${h}`,
+    `A ${r} ${r} 0 0 1 0 ${h - r}`,
+    'Z',
+  ].join(' ');
+}
 
 // Screens should add TAB_BAR_HEIGHT + useSafeAreaInsets().bottom as bottom padding
 // so content isn't hidden behind the floating tab bar.
@@ -41,6 +70,8 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
   const { hasDueToday } = useRecurring();
   const { bottom } = useSafeAreaInsets();
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
+  const pillWidth = screenWidth - PILL_INSET * 2;
 
   const visibleRoutes = state.routes.filter((r) => r.name !== 'settings');
   const leftTabs = visibleRoutes.slice(0, 2);
@@ -94,18 +125,22 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
       <View
         style={[
           styles.pill,
-          {
-            bottom: BAR_GAP + bottom,
-            backgroundColor: colors.tabBar,
-            borderColor: colors.glassBorder,
-            shadowColor: colors.shadow,
-          },
+          { bottom: BAR_GAP + bottom, shadowColor: colors.shadow },
         ]}
       >
+        <Svg width={pillWidth} height={BAR_H} style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Path
+            d={buildPillPath(pillWidth, BAR_H)}
+            fill={colors.tabBar}
+            stroke={colors.border}
+            strokeWidth={1}
+          />
+        </Svg>
+
         <View style={styles.side}>{leftTabs.map(renderTab)}</View>
 
-        {/* Spacer the raised add button sits over */}
-        <View style={styles.addSlot} />
+        {/* Spacer under the notch the add button sits in */}
+        <View style={{ width: NOTCH_MOUTH }} />
 
         <View style={styles.side}>{rightTabs.map(renderTab)}</View>
       </View>
@@ -147,21 +182,21 @@ const styles = StyleSheet.create({
   },
   pill: {
     position: 'absolute',
-    left: 12,
-    right: 12,
+    left: PILL_INSET,
+    right: PILL_INSET,
     height: BAR_H,
-    borderRadius: 24,
-    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
+    // The pill is drawn in SVG so the notch can be cut out. iOS casts this
+    // shadow from the drawn shape; Android elevation needs a View background
+    // (which would fill the notch), so there the outline stroke defines the edge.
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
-    elevation: 12,
   },
   side: {
-    flex: 2,
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     height: '100%',
@@ -203,9 +238,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     borderWidth: 2,
   },
-  addSlot: {
-    flex: 1,
-  },
   // Sibling of the pill (not a child) so the part poking above it stays tappable on Android
   addWrap: {
     position: 'absolute',
@@ -213,7 +245,7 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     zIndex: 2,
-    elevation: 14, // Android stacks siblings by elevation: keep the button above the pill
+    elevation: 14, // keep the button stacked above the pill on Android
   },
   fab: {
     width: FAB_R * 2,
