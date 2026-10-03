@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
