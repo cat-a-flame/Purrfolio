@@ -780,23 +780,25 @@ export default function StatsScreen() {
               const change = changeInfo(c.current, c.prev);
               return (
                 <View key={c.name} style={styles.compRow}>
+                  {/* Icon, name and amounts share the top row; the two bars
+                      get the full width underneath. */}
                   <View style={styles.compTop}>
-                    <EmojiTile emoji={c.icon} color={c.color} size={32} />
-                    <Text style={[styles.compName, { color: colors.text }]} numberOfLines={1}>{c.name}</Text>
-                    <ChangeBadge text={change.text} tone={change.tone} colors={colors} />
-                  </View>
-                  <View style={styles.compBottom}>
-                    <View style={styles.compBars}>
-                      <View style={[styles.track, { backgroundColor: colors.border2 }]}>
-                        <View style={[styles.fill, { width: `${(c.current / maxValue) * 100}%`, backgroundColor: colors.accent }]} />
-                      </View>
-                      <View style={[styles.track, { backgroundColor: colors.border2 }]}>
-                        <View style={[styles.fill, { width: `${(c.prev / maxValue) * 100}%`, backgroundColor: colors.accentBorder }]} />
-                      </View>
+                    <EmojiTile emoji={c.icon} color={c.color} size={34} />
+                    <View style={styles.compMain}>
+                      <Text style={[styles.compName, { color: colors.text }]} numberOfLines={1}>{c.name}</Text>
+                      <Text style={[styles.compAmountPrev, { color: colors.muted }]} numberOfLines={1}>was {formatHUF(c.prev)}</Text>
                     </View>
                     <View style={styles.compAmounts}>
                       <Text style={[styles.compAmountCurrent, { color: colors.text }]}>{formatHUF(c.current)}</Text>
-                      <Text style={[styles.compAmountPrev, { color: colors.muted }]}>was {formatHUF(c.prev)}</Text>
+                      <ChangeBadge text={change.text} tone={change.tone} colors={colors} />
+                    </View>
+                  </View>
+                  <View style={styles.compBars}>
+                    <View style={[styles.track, { backgroundColor: colors.border2 }]}>
+                      <View style={[styles.fill, { width: `${(c.current / maxValue) * 100}%`, backgroundColor: colors.accent }]} />
+                    </View>
+                    <View style={[styles.track, { backgroundColor: colors.border2 }]}>
+                      <View style={[styles.fill, { width: `${(c.prev / maxValue) * 100}%`, backgroundColor: colors.accentBorder }]} />
                     </View>
                   </View>
                 </View>
@@ -908,10 +910,10 @@ const styles = StyleSheet.create({
   legendText: { fontSize: 12, fontFamily: 'Nunito_700Bold' },
   compRow: { gap: 8 },
   compTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  compName: { flex: 1, fontSize: 14, fontFamily: 'Nunito_700Bold' },
-  compBottom: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 42 },
-  compBars: { flex: 1, gap: 4 },
-  compAmounts: { alignItems: 'flex-end', gap: 2 },
+  compMain: { flex: 1, minWidth: 0, gap: 2 },
+  compName: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
+  compBars: { gap: 4 },
+  compAmounts: { alignItems: 'flex-end', gap: 4 },
   compAmountCurrent: { fontSize: 14, fontFamily: 'Nunito_800ExtraBold' },
   compAmountPrev: { fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
   badge: { borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 3 },
