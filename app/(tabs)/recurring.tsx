@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import {
   View,
   Text,
@@ -460,23 +461,36 @@ function SwipeableDueCard({
       friction={2}
       overshootRight={false}
       overshootLeft={false}
-      renderRightActions={() => (
-        <View style={[styles.swipeAction, { backgroundColor: colors.income, marginLeft: 6 }]}>
+      renderRightActions={(_, translation) => (
+        <SwipeAction translation={translation} style={{ backgroundColor: colors.income, marginLeft: 6 }}>
           <Ionicons name="checkmark-circle-outline" size={26} color="#fff" />
           <Text style={styles.swipeActionText}>Add</Text>
-        </View>
+        </SwipeAction>
       )}
-      renderLeftActions={() => (
-        <View style={[styles.swipeAction, { backgroundColor: colors.border, marginRight: 6 }]}>
+      renderLeftActions={(_, translation) => (
+        <SwipeAction translation={translation} style={{ backgroundColor: colors.border, marginRight: 6 }}>
           <Ionicons name="close-circle-outline" size={26} color={colors.muted} />
           <Text style={[styles.swipeActionText, { color: colors.muted }]}>Skip</Text>
-        </View>
+        </SwipeAction>
       )}
       onSwipeableOpen={handleOpen}
     >
       <DueCard payment={payment} dueDate={dueDate} today={today} onPress={onPress} colors={colors} />
     </ReanimatedSwipeable>
   );
+}
+
+// Swipe actions sit behind the card; hide them while it's at rest so their
+// colours don't peek out around the card's rounded corners.
+function SwipeAction({
+  translation, style, children,
+}: {
+  translation: SharedValue<number>;
+  style: object;
+  children: React.ReactNode;
+}) {
+  const visible = useAnimatedStyle(() => ({ opacity: Math.abs(translation.value) > 0.5 ? 1 : 0 }));
+  return <Animated.View style={[styles.swipeAction, style, visible]}>{children}</Animated.View>;
 }
 
 // ─── PaymentRow ──────────────────────────────────────────────────────────────
@@ -577,7 +591,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
     paddingHorizontal: 20,
-    borderRadius: 10,
+    borderRadius: 18,
     marginBottom: 2,
   },
   swipeActionText: { fontSize: 11, fontFamily: 'Nunito_600SemiBold', color: '#fff' },
