@@ -15,14 +15,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/lib/theme';
 import { useRecurring } from '@/lib/recurringContext';
 
-// Floating glass pill with a raised gradient add button — mirrors the web
-// BottomNav (PurrfolioWeb/components/layout/BottomNav.module.css).
+// Floating glass pill — mirrors the web BottomNav
+// (PurrfolioWeb/components/layout/BottomNav.module.css) — with the app's
+// original round add button straddling its top edge.
 const BAR_H = 66;        // pill height
 const BAR_GAP = 10;      // gap between the pill and the safe-area bottom
-const ADD_SIZE = 52;     // add button size
-const ADD_RISE = 26;     // how far the add button pokes above the pill
-const EAR_SVG_H = 22;    // height of the cat-ears SVG canvas
-const EAR_OVERLAP = 12;  // how much the button overlaps (hides) the ear bases
+const FAB_R = 28;        // add button radius (diameter 56)
+const FAB_RISE = 15;     // how far the add button pokes above the pill
+const EAR_SVG_H = 26;    // height of the cat-ears SVG canvas
+const EAR_OVERLAP = 16;  // how much the button overlaps (hides) the ear bases
 
 // Screens should add TAB_BAR_HEIGHT + useSafeAreaInsets().bottom as bottom padding
 // so content isn't hidden behind the floating tab bar.
@@ -87,7 +88,7 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
 
   return (
     <View
-      style={[styles.container, { height: BAR_H + BAR_GAP + bottom + ADD_RISE + EAR_SVG_H }]}
+      style={[styles.container, { height: BAR_H + BAR_GAP + bottom + FAB_RISE + EAR_SVG_H - EAR_OVERLAP }]}
       pointerEvents="box-none"
     >
       <View
@@ -110,34 +111,27 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
       </View>
 
       <View
-        style={[styles.addWrap, { bottom: BAR_GAP + bottom + BAR_H + ADD_RISE - ADD_SIZE }]}
+        style={[styles.addWrap, { bottom: BAR_GAP + bottom + BAR_H + FAB_RISE - FAB_R * 2 }]}
         pointerEvents="box-none"
       >
         {/* Cat ears peek out from behind the add button */}
         <Svg
-          width={ADD_SIZE}
+          width={FAB_R * 2}
           height={EAR_SVG_H}
           style={{ marginBottom: -EAR_OVERLAP }}
           pointerEvents="none"
         >
-          <Path d={`M 2 ${EAR_SVG_H} L 8 8 Q 12 1 16 8 L 22 ${EAR_SVG_H} Z`} fill={colors.gradientAccent[0]} transform={`rotate(-24, 12, ${EAR_SVG_H})`} />
-          <Path d={`M 30 ${EAR_SVG_H} L 36 8 Q 40 1 44 8 L 50 ${EAR_SVG_H} Z`} fill={colors.gradientAccent[1]} transform={`rotate(24, 40, ${EAR_SVG_H})`} />
+          <Path d={`M 2 ${EAR_SVG_H} L 9 9 Q 13 1 17 9 L 24 ${EAR_SVG_H} Z`} fill={colors.accent} transform={`rotate(-28, 13, ${EAR_SVG_H})`} />
+          <Path d={`M 32 ${EAR_SVG_H} L 39 9 Q 43 1 47 9 L 54 ${EAR_SVG_H} Z`} fill={colors.accent} transform={`rotate(28, 43, ${EAR_SVG_H})`} />
         </Svg>
         <TouchableOpacity
           onPress={() => router.push('/transaction/add')}
           activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel="Add record"
-          style={[styles.addShadow, { shadowColor: colors.accent }]}
+          style={[styles.fab, { backgroundColor: colors.accent, shadowColor: colors.accent }]}
         >
-          <LinearGradient
-            colors={colors.gradientAccent}
-            start={{ x: 0, y: 0.2 }}
-            end={{ x: 1, y: 0.8 }}
-            style={[styles.addBtn, { borderColor: colors.surface }]}
-          >
-            <Ionicons name="add" size={28} color="#fff" />
-          </LinearGradient>
+          <Ionicons name="add" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
     </View>
@@ -221,19 +215,15 @@ const styles = StyleSheet.create({
     zIndex: 2,
     elevation: 14, // Android stacks siblings by elevation: keep the button above the pill
   },
-  addShadow: {
-    borderRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.55,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  addBtn: {
-    width: ADD_SIZE,
-    height: ADD_SIZE,
-    borderRadius: 18,
-    borderWidth: 3,
+  fab: {
+    width: FAB_R * 2,
+    height: FAB_R * 2,
+    borderRadius: FAB_R,
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 5,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
   },
 });
