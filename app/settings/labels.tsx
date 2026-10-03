@@ -119,6 +119,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   colorDot: { width: 16, height: 16, borderRadius: 8 },
-  rowName: { fontSize: 15, fontFamily: 'Nunito_500Medium' },
+  rowName: { fontSize: 15, fontFamily: 'Nunito_700Bold' },
   empty: { textAlign: 'center', marginTop: 32, fontFamily: 'Nunito_400Regular', fontSize: 15 },
 });

@@ -583,9 +583,9 @@ const styles = StyleSheet.create({
   },
   dueMeta: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   dueIcon: { fontFamily: 'Nunito_400Regular', fontSize: 20 },
-  dueName: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
+  dueName: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
   dueSub: { fontFamily: 'Nunito_400Regular', fontSize: 12, marginTop: 1 },
-  dueAmount: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
+  dueAmount: { fontSize: 14, fontFamily: 'Nunito_800ExtraBold' },
   swipeAction: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   paymentDot: { width: 10, height: 10, borderRadius: 5 },
-  paymentName: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
+  paymentName: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
   paymentSub: { fontFamily: 'Nunito_400Regular', fontSize: 12, marginTop: 1 },
-  paymentAmount: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
+  paymentAmount: { fontSize: 14, fontFamily: 'Nunito_800ExtraBold' },
 });

@@ -1117,9 +1117,9 @@ const styles = StyleSheet.create({
   walletIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 10, },
   walletIconFallback: { width: 28, height: 28, borderRadius: 8 },
   walletInfo: { flex: 1, paddingVertical: 14, gap: 2 },
-  walletName: { fontSize: 15, fontFamily: 'Nunito_600SemiBold' },
+  walletName: { fontSize: 15, fontFamily: 'Nunito_700Bold' },
   walletCurrency: { fontSize: 12, fontFamily: 'Nunito_500Medium' },
-  walletBalance: { fontSize: 16, fontFamily: 'Nunito_700Bold' },
+  walletBalance: { fontSize: 16, fontFamily: 'Nunito_800ExtraBold' },
   skeletonRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

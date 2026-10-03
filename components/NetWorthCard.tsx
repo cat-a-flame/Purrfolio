@@ -149,6 +149,6 @@ const styles = StyleSheet.create({
   groupTitle: { fontSize: 15, fontFamily: 'Nunito_800ExtraBold', flexShrink: 1 },
   groupTotal: { fontSize: 15, fontFamily: 'Nunito_900Black', letterSpacing: -0.2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  name: { flex: 1, fontSize: 15, fontFamily: 'Nunito_600SemiBold' },
+  name: { flex: 1, fontSize: 15, fontFamily: 'Nunito_700Bold' },
   amount: { fontSize: 15, fontFamily: 'Nunito_800ExtraBold' },
 });
