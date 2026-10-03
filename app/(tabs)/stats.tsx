@@ -259,22 +259,26 @@ function PredictionPanel({ variant, title, items, loading, colors }: {
         ) : (
           items.map(item => (
             <View key={item.key} style={styles.predRow}>
-              <EmojiTile emoji={item.icon} color={item.color} />
-              <View style={styles.predMain}>
-                <Text style={[styles.predTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
-                <Text style={[styles.predSubtitle, { color: colors.muted }]} numberOfLines={1}>{item.subtitle}</Text>
-                <View style={styles.predConfRow}>
-                  <View style={[styles.track, styles.predConfTrack, { backgroundColor: colors.border2 }]}>
-                    <View style={[styles.fill, { width: `${item.confidencePct}%`, backgroundColor: tone }]} />
-                  </View>
-                  <Text style={[styles.predConfLabel, { color: colors.muted }]}>{item.confidencePct}% sure</Text>
+              {/* Icon, name and "seen" text share the top row with the amount;
+                  the confidence bar gets the full width underneath. */}
+              <View style={styles.predTop}>
+                <EmojiTile emoji={item.icon} color={item.color} size={34} />
+                <View style={styles.predMain}>
+                  <Text style={[styles.predTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+                  <Text style={[styles.predSubtitle, { color: colors.muted }]} numberOfLines={1}>{item.subtitle}</Text>
+                </View>
+                <View style={styles.predAmountCol}>
+                  <Text style={[styles.predAmount, { color: tone }]}>{sign}{formatHUF(item.predictedAmount)}</Text>
+                  <Text style={[styles.predRange, { color: colors.muted }]}>
+                    {item.isStable ? 'stable' : `${formatNumber(Math.round(item.rangeLow))} – ${formatNumber(Math.round(item.rangeHigh))}`}
+                  </Text>
                 </View>
               </View>
-              <View style={styles.predAmountCol}>
-                <Text style={[styles.predAmount, { color: tone }]}>{sign}{formatHUF(item.predictedAmount)}</Text>
-                <Text style={[styles.predRange, { color: colors.muted }]}>
-                  {item.isStable ? 'stable' : `${formatNumber(Math.round(item.rangeLow))} – ${formatNumber(Math.round(item.rangeHigh))}`}
-                </Text>
+              <View style={styles.predConfRow}>
+                <View style={[styles.track, styles.predConfTrack, { backgroundColor: colors.border2 }]}>
+                  <View style={[styles.fill, { width: `${item.confidencePct}%`, backgroundColor: tone }]} />
+                </View>
+                <Text style={[styles.predConfLabel, { color: colors.muted }]}>{item.confidencePct}% sure</Text>
               </View>
             </View>
           ))
@@ -922,12 +926,13 @@ const styles = StyleSheet.create({
   predBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
   predBannerIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   predBannerTitle: { fontSize: 17, fontFamily: 'Lora_700Bold', letterSpacing: -0.3 },
-  predBody: { padding: 16, gap: 14 },
-  predRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  predBody: { padding: 16, gap: 18 },
+  predRow: { gap: 8 },
+  predTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   predMain: { flex: 1, minWidth: 0, gap: 2 },
   predTitle: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
   predSubtitle: { fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
-  predConfRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  predConfRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   predConfTrack: { flex: 1, height: 4 },
   predConfLabel: { fontSize: 11, fontFamily: 'Nunito_700Bold' },
   predAmountCol: { alignItems: 'flex-end', gap: 2 },
