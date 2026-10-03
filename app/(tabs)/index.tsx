@@ -264,20 +264,15 @@ export default function DashboardScreen() {
               end={{ x: 1, y: 1 }}
               style={styles.cashFlow}
             >
-              {/* Soft light orbs (pink top-right, cyan bottom-left) */}
+              {/* Soft pink light orb, top-right */}
               <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
                 <Defs>
                   <RadialGradient id="orbPink" cx="100%" cy="0%" r="75%">
                     <Stop offset="0" stopColor="#ff6eaa" stopOpacity={0.85} />
                     <Stop offset="1" stopColor="#ff6eaa" stopOpacity={0} />
                   </RadialGradient>
-                  <RadialGradient id="orbCyan" cx="0%" cy="100%" r="65%">
-                    <Stop offset="0" stopColor="#28c8e6" stopOpacity={0.55} />
-                    <Stop offset="1" stopColor="#28c8e6" stopOpacity={0} />
-                  </RadialGradient>
                 </Defs>
                 <Rect width="100%" height="100%" fill="url(#orbPink)" />
-                <Rect width="100%" height="100%" fill="url(#orbCyan)" />
               </Svg>
 
               {/* Title pill */}
