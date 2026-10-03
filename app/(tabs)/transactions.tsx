@@ -27,7 +27,7 @@ import TransactionRow from '@/components/TransactionsTransactionRow';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { Ionicons } from '@expo/vector-icons';
 import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
-import { groupByDate, formatDayHeader, formatCurrency } from '@/lib/utils';
+import { groupByDate, formatDayHeader, formatCurrency, ACCOUNT_TYPE_LABELS } from '@/lib/utils';
 import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
 import { fetchWalletBalanceSums } from '@/lib/fetchWalletBalanceSums';
 import SkeletonBox from '@/components/SkeletonBox';
@@ -509,7 +509,9 @@ export default function TransactionsScreen() {
                       <View style={styles.walletNameRow}>
                         <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
                       </View>
-                      <Text style={[styles.walletCurrency, { color: colors.muted }]}>{w.currency}</Text>
+                      <Text style={[styles.walletCurrency, { color: colors.muted }]}>
+                        {ACCOUNT_TYPE_LABELS[w.type ?? 'bank'] ?? ACCOUNT_TYPE_LABELS.other} · {w.currency}
+                      </Text>
                     </View>
                     {w.is_archived ? (
                       <View style={[styles.defaultBadge, { backgroundColor: colors.muted + '22', marginRight: 16 }]}>

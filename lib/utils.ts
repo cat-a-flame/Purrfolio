@@ -1,4 +1,17 @@
-import type { Currency } from './types';
+import type { AccountType, Currency } from './types';
+
+// Same list and labels as PurrfolioWeb (lib/utils.ts)
+export const ACCOUNT_TYPES: AccountType[] = ['bank', 'cash', 'savings', 'credit_card', 'investment', 'bond', 'crypto', 'other'];
+export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
+  bank: 'Bank',
+  cash: 'Cash',
+  savings: 'Savings',
+  credit_card: 'Credit card',
+  investment: 'Investment',
+  bond: 'Bond',
+  crypto: 'Crypto',
+  other: 'Other',
+};
 
 function withThousands(n: number, sep: string, decimals = 0): string {
   const fixed = Math.abs(n).toFixed(decimals);

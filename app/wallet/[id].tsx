@@ -19,12 +19,14 @@ import AppButton from '@/components/AppButton';
 import BottomModal from '@/components/BottomModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import { Events } from '@/lib/events';
-import type { Currency } from '@/lib/types';
+import type { AccountType, Currency } from '@/lib/types';
+import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from '@/lib/utils';
 
 const CURRENCIES: Currency[] = ['HUF', 'USD', 'EUR'];
 
 type WalletForm = {
   name: string;
+  type: AccountType;
   currency: Currency;
   icon: string;
   is_default: boolean;
@@ -41,6 +43,7 @@ export default function WalletScreen() {
 
   const [form, setForm] = useState<WalletForm>({
     name: '',
+    type: 'bank',
     currency: 'HUF',
     icon: '💰',
     is_default: false,
@@ -49,6 +52,7 @@ export default function WalletScreen() {
   });
   const [saving, setSaving] = useState(false);
   const [currencyPickerVisible, setCurrencyPickerVisible] = useState(false);
+  const [typePickerVisible, setTypePickerVisible] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
 
@@ -58,6 +62,8 @@ export default function WalletScreen() {
       if (!data) return;
       setForm({
         name: data.name,
+        // Rows created before account types existed have none; treat as bank
+        type: data.type ?? 'bank',
         currency: data.currency,
         icon: data.icon ?? '💰',
         is_default: data.is_default,
@@ -79,6 +85,7 @@ export default function WalletScreen() {
 
     const payload = {
       name: form.name.trim(),
+      type: form.type,
       currency: form.currency,
       icon: form.icon,
       is_default: form.is_default,
@@ -152,6 +159,17 @@ export default function WalletScreen() {
             </View>
           </View>
 
+          <View style={styles.currencyWrapper}>
+            <Text style={[styles.currencyLabel, { color: colors.muted }]}>Type</Text>
+            <TouchableOpacity
+              onPress={() => setTypePickerVisible(true)}
+              style={[styles.currencyDropdown, { borderColor: colors.border, backgroundColor: colors.surface }]}
+            >
+              <Text style={{ color: colors.text, fontFamily: 'Nunito_600SemiBold', fontSize: 15 }}>{ACCOUNT_TYPE_LABELS[form.type]}</Text>
+              <Ionicons name="chevron-down" size={14} color={colors.muted} />
+            </TouchableOpacity>
+          </View>
+
           <AppInput
             label="Starting balance"
             value={form.starting_balance}
@@ -208,6 +226,19 @@ export default function WalletScreen() {
           </AppButton>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <BottomModal visible={typePickerVisible} onClose={() => setTypePickerVisible(false)} title="Type">
+        {ACCOUNT_TYPES.map((t) => (
+          <TouchableOpacity
+            key={t}
+            style={[styles.currencyRow, { borderBottomColor: colors.border }, form.type === t && { backgroundColor: colors.accent + '11' }]}
+            onPress={() => { setField('type', t); setTypePickerVisible(false); }}
+          >
+            <Text style={[styles.currencyRowText, { color: form.type === t ? colors.accent : colors.text }]}>{ACCOUNT_TYPE_LABELS[t]}</Text>
+            {form.type === t && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+          </TouchableOpacity>
+        ))}
+      </BottomModal>
 
       <BottomModal visible={currencyPickerVisible} onClose={() => setCurrencyPickerVisible(false)} title="Currency">
         {CURRENCIES.map((c) => (
