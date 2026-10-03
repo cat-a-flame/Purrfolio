@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1,
   },
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontFamily: 'Nunito_600SemiBold' },
+  headerTitle: { fontSize: 17, fontFamily: 'Lora_700Bold' },
   form: { padding: 16, gap: 16, flexGrow: 1 },
   stickyFooter: {
     paddingHorizontal: 16, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth,

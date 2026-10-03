@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontFamily: 'Nunito_600SemiBold',
+    fontFamily: 'Lora_700Bold',
     textAlign: 'center',
   },
   subtitle: {

@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 17, fontFamily: 'Nunito_700Bold' },
+  headerTitle: { fontSize: 17, fontFamily: 'Lora_700Bold' },
   content: { padding: 16, gap: 14 },
   fieldGroup: { gap: 8 },
   fieldLabel: { fontSize: 13, fontFamily: 'Nunito_500Medium' },

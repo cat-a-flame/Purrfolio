@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   back: { fontFamily: 'Nunito_400Regular', fontSize: 15 },
-  title: { fontSize: 18, fontFamily: 'Nunito_700Bold' },
+  title: { fontSize: 18, fontFamily: 'Lora_700Bold' },
   searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   searchBox: {
     flexDirection: 'row',
@@ -160,6 +160,6 @@ const styles = StyleSheet.create({
   subLabel: { fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, padding: 32 },
   emptyIcon: { fontFamily: 'Nunito_400Regular', fontSize: 32, marginBottom: 4 },
-  emptyTitle: { fontSize: 16, fontFamily: 'Nunito_700Bold' },
+  emptyTitle: { fontSize: 16, fontFamily: 'Lora_700Bold' },
   emptyHint: { fontFamily: 'Nunito_400Regular', fontSize: 13, textAlign: 'center' },
 });

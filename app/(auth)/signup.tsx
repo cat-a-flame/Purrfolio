@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: 22,
-    fontFamily: 'Nunito_700Bold',
+    fontFamily: 'Lora_700Bold',
     textAlign: 'center',
   },
   successBody: {

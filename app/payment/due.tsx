@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1,
   },
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontFamily: 'Nunito_600SemiBold' },
+  headerTitle: { fontSize: 17, fontFamily: 'Lora_700Bold' },
   content: { padding: 16, gap: 12 },
   amountCard: {
     borderWidth: 1, borderRadius: 12, padding: 14,

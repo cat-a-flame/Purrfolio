@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontFamily: 'Nunito_600SemiBold' },
+  headerTitle: { fontSize: 17, fontFamily: 'Lora_700Bold' },
   form: { padding: 16, gap: 14 },
   error: { fontFamily: 'Nunito_400Regular', fontSize: 14, textAlign: 'center' },
   typeToggle: {

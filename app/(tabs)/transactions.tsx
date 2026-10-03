@@ -1146,7 +1146,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  panelTitle: { fontSize: 17, fontFamily: 'Nunito_700Bold' },
+  panelTitle: { fontSize: 17, fontFamily: 'Lora_700Bold' },
 
   panelSection: {
     paddingHorizontal: 16,

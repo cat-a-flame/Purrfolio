@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   back: { fontFamily: 'Nunito_400Regular', fontSize: 15 },
-  title: { fontSize: 18, fontFamily: 'Nunito_700Bold' },
+  title: { fontSize: 18, fontFamily: 'Lora_700Bold' },
   searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   searchBox: {
     flexDirection: 'row',
