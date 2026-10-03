@@ -12,7 +12,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useTheme } from '@/lib/theme';
+import { tabBarHiddenProgress } from '@/lib/tabBarVisibility';
 import { useRecurring } from '@/lib/recurringContext';
 
 // Floating glass pill — mirrors the web BottomNav
@@ -117,9 +119,15 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
     );
   }
 
+  const containerHeight = BAR_H + BAR_GAP + bottom + FAB_RISE + EAR_SVG_H - EAR_OVERLAP;
+  // Slide fully off-screen when hidden (extra room so the shadow goes too)
+  const slideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: tabBarHiddenProgress.value * (containerHeight + 24) }],
+  }));
+
   return (
-    <View
-      style={[styles.container, { height: BAR_H + BAR_GAP + bottom + FAB_RISE + EAR_SVG_H - EAR_OVERLAP }]}
+    <Animated.View
+      style={[styles.container, { height: containerHeight }, slideStyle]}
       pointerEvents="box-none"
     >
       <View
@@ -169,7 +177,7 @@ export default function CustomTabBar({ state, navigation }: TabBarProps) {
           <Ionicons name="add" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

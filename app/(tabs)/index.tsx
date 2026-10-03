@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
+import { useHideTabBarOnScroll } from '@/lib/tabBarVisibility';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -66,6 +67,7 @@ function defaultPeriod(): PeriodValue {
 
 export default function DashboardScreen() {
   const colors = useTheme();
+  const hideTabBarOnScroll = useHideTabBarOnScroll();
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
   const { refreshDueToday } = useRecurring();
@@ -223,6 +225,7 @@ export default function DashboardScreen() {
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <AppHeader title="Dashboard" />
       <FlatList
+        {...hideTabBarOnScroll}
         style={{ paddingTop: 16 }}
         data={flat}
         keyExtractor={(item) =>

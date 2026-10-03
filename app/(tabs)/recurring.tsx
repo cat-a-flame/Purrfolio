@@ -12,6 +12,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
+import { useHideTabBarOnScroll } from '@/lib/tabBarVisibility';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -225,6 +226,7 @@ export default function RecurringScreen() {
   }
 
   const [activeTab, setActiveTab] = useState<'due' | 'recurring'>('due');
+  const hideTabBarOnScroll = useHideTabBarOnScroll(activeTab);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -264,6 +266,7 @@ export default function RecurringScreen() {
       {/* ── Upcoming tab ───────────────────────────────────────────────────── */}
       {activeTab === 'due' && (
         <ScrollView
+          {...hideTabBarOnScroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16, paddingTop: 16 }]}
         >
@@ -352,6 +355,7 @@ export default function RecurringScreen() {
       {/* ── Recurring tab ─────────────────────────────────────────────── */}
       {activeTab === 'recurring' && (
         <ScrollView
+          {...hideTabBarOnScroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16, paddingTop: 16 }]}
         >

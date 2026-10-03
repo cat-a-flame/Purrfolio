@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
+import { useHideTabBarOnScroll } from '@/lib/tabBarVisibility';
 import { supabase } from '@/lib/supabase';
 import { useTheme, type Colors } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -291,6 +292,7 @@ function PredictionPanel({ variant, title, items, loading, colors }: {
 // ─── screen ─────────────────────────────────────────────────────────────────
 export default function StatsScreen() {
   const colors = useTheme();
+  const hideTabBarOnScroll = useHideTabBarOnScroll();
   const { bottom } = useSafeAreaInsets();
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
   const [periodTxs, setPeriodTxs] = useState<Transaction[]>([]);
@@ -824,6 +826,7 @@ export default function StatsScreen() {
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <AppHeader title="Statistics" />
       <ScrollView
+        {...hideTabBarOnScroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
       >

@@ -18,6 +18,7 @@ import BottomModal from '@/components/BottomModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
+import { useHideTabBarOnScroll } from '@/lib/tabBarVisibility';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -79,6 +80,7 @@ export default function TransactionsScreen() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const [activeTab, setActiveTab] = useState<'transactions' | 'wallets'>('transactions');
+  const hideTabBarOnScroll = useHideTabBarOnScroll(activeTab);
   const [walletBalances, setWalletBalances] = useState<Map<string, number>>(new Map());
   const [dailyRates, setDailyRates] = useState<DailyRates>({});
 
@@ -476,6 +478,7 @@ export default function TransactionsScreen() {
       {activeTab === 'wallets' && (
         <>
           <ScrollView
+            {...hideTabBarOnScroll}
             contentContainerStyle={[styles.walletsList, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           >
@@ -536,6 +539,7 @@ export default function TransactionsScreen() {
 
       {/* Transactions tab */}
       {activeTab === 'transactions' && <FlatList
+        {...hideTabBarOnScroll}
         data={flat}
         style={{ paddingTop: 16 }}
         keyExtractor={(item) => item.kind === 'header' ? `h-${item.date}` : item.tx.id}
