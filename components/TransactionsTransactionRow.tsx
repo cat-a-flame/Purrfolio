@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   },
   category: {
     fontSize: 15,
-    fontFamily: 'Nunito_600SemiBold',
+    fontFamily: 'Nunito_700Bold',
   },
   categoryRow: {
     flexDirection: 'row',
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   },
   amount: {
     fontSize: 15,
-    fontFamily: 'Nunito_700Bold',
+    fontFamily: 'Nunito_800ExtraBold',
   },
   walletLabelRow: {
     display: 'flex',
