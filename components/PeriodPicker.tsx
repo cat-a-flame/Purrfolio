@@ -438,7 +438,7 @@ function makeStyles(colors: any) {
       paddingVertical: 6,
       borderRadius: 16,
     },
-    weekDayText: { fontSize: 13 },
+    weekDayText: { fontFamily: 'Nunito_400Regular', fontSize: 13 },
 
     customFields: { flexDirection: 'row', gap: 12 },
     customField: { flex: 1, gap: 6 },

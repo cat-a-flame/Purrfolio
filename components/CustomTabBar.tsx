@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     transform: [{ translateY: -2 }],
   },
   label: {
-    fontSize: 11,
+    fontFamily: 'Nunito_400Regular', fontSize: 11,
     lineHeight: 13,
   },
   indicator: {

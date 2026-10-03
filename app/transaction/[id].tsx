@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   headerBtnRight: { width: 40, alignItems: 'flex-end', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontFamily: 'Nunito_600SemiBold' },
   form: { padding: 16, gap: 14 },
-  error: { fontSize: 14, textAlign: 'center' },
+  error: { fontFamily: 'Nunito_400Regular', fontSize: 14, textAlign: 'center' },
   transferBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  pickerBtnText: { fontSize: 14, flex: 1 },
+  pickerBtnText: { fontFamily: 'Nunito_400Regular', fontSize: 14, flex: 1 },
   moreToggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 10,
   },
-  modalRowIcon: { fontSize: 20, width: 28, textAlign: 'center' },
-  modalRowText: { flex: 1, fontSize: 15 },
+  modalRowIcon: { fontFamily: 'Nunito_400Regular', fontSize: 20, width: 28, textAlign: 'center' },
+  modalRowText: { flex: 1, fontFamily: 'Nunito_400Regular', fontSize: 15 },
   labelDot: { width: 12, height: 12, borderRadius: 6 },
 });

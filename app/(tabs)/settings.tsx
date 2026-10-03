@@ -128,6 +128,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  rowLabel: { fontSize: 16 },
+  rowLabel: { fontFamily: 'Nunito_400Regular', fontSize: 16 },
   divider: { height: 1, marginHorizontal: 16 },
 });

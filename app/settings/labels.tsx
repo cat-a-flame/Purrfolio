@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  back: { fontSize: 15 },
+  back: { fontFamily: 'Nunito_400Regular', fontSize: 15 },
   title: { fontSize: 18, fontFamily: 'Nunito_700Bold' },
   searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   searchBox: {
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
   },
-  searchInput: { flex: 1, fontSize: 15, padding: 0 },
+  searchInput: { flex: 1, fontFamily: 'Nunito_400Regular', fontSize: 15, padding: 0 },
   list: { padding: 16 },
   row: {
     flexDirection: 'row',
@@ -120,5 +120,5 @@ const styles = StyleSheet.create({
   },
   colorDot: { width: 16, height: 16, borderRadius: 8 },
   rowName: { fontSize: 15, fontFamily: 'Nunito_500Medium' },
-  empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
+  empty: { textAlign: 'center', marginTop: 32, fontFamily: 'Nunito_400Regular', fontSize: 15 },
 });

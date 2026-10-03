@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 14 },
   iconNameRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rowLabel: { fontSize: 14 },
+  rowLabel: { fontFamily: 'Nunito_400Regular', fontSize: 14 },
   rowSub: { fontSize: 12, fontFamily: 'Nunito_400Regular' },
   currencyWrapper: {
     gap: 4,
@@ -285,5 +285,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  currencyRowText: { fontSize: 15 },
+  currencyRowText: { fontFamily: 'Nunito_400Regular', fontSize: 15 },
 });

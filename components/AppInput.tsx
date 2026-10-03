@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   error: {
-    fontSize: 12,
+    fontFamily: 'Nunito_400Regular', fontSize: 12,
     marginTop: 2,
   },
 });

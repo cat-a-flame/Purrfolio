@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  icon: { fontSize: 20 },
+  icon: { fontFamily: 'Nunito_400Regular', fontSize: 20 },
   iconFallback: { fontSize: 16, fontFamily: 'Nunito_600SemiBold' },
   info: {
     flex: 1,
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   sub: {
-    fontSize: 13,
+    fontFamily: 'Nunito_400Regular', fontSize: 13,
   },
   labels: {
     flexDirection: 'row',

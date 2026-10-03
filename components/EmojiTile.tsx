@@ -13,7 +13,7 @@ function tint(hex: string | null | undefined, alpha: number): string {
 export default function EmojiTile({ emoji, color, size = 38 }: { emoji: string; color: string | null | undefined; size?: number }) {
   return (
     <View style={[styles.box, { width: size, height: size, backgroundColor: tint(color, 0.133) }]}>
-      <Text style={{ fontSize: Math.round(size * 0.47) }}>{emoji}</Text>
+      <Text style={{ fontFamily: 'Nunito_400Regular', fontSize: Math.round(size * 0.47) }}>{emoji}</Text>
     </View>
   );
 }

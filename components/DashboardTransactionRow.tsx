@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  icon: { fontSize: 20 },
+  icon: { fontFamily: 'Nunito_400Regular', fontSize: 20 },
   iconFallback: { fontSize: 16, fontFamily: 'Nunito_600SemiBold' },
   info: {
     flex: 1,
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   sub: {
-    fontSize: 13,
+    fontFamily: 'Nunito_400Regular', fontSize: 13,
   },
   labelChip: {
     display: 'flex',
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   labelText: {
-    fontSize: 13,
+    fontFamily: 'Nunito_400Regular', fontSize: 13,
   },
   amount: {
     fontSize: 15,

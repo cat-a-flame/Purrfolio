@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   colorSwatchSelected: { borderWidth: 3 },
   subsList: { gap: 8 },
   subRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, padding: 8 },
-  subEmojiInput: { textAlign: 'center', fontSize: 16 },
+  subEmojiInput: { textAlign: 'center', fontFamily: 'Nunito_400Regular', fontSize: 16 },
   subRemoveBtn: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   addSubBtn: {
     flexDirection: 'row',

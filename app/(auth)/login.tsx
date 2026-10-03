@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   error: {
-    fontSize: 14,
+    fontFamily: 'Nunito_400Regular', fontSize: 14,
     textAlign: 'center',
   },
   link: {
@@ -163,5 +163,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     minHeight: 48,
   },
-  passwordInput: { flex: 1, fontSize: 15, padding: 0 },
+  passwordInput: { flex: 1, fontFamily: 'Nunito_400Regular', fontSize: 15, padding: 0 },
 });

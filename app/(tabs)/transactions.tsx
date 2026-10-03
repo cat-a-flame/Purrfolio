@@ -494,7 +494,7 @@ export default function TransactionsScreen() {
                   >
                     <View style={[styles.walletIcon, { backgroundColor: '#fcf1ff' }]}>
                       {w.icon
-                        ? <Text style={{ fontSize: 22 }}>{w.icon}</Text>
+                        ? <Text style={{ fontFamily: 'Nunito_400Regular', fontSize: 22 }}>{w.icon}</Text>
                         : <View style={[styles.walletIconFallback, { backgroundColor: colors.border }]} />}
                     </View>
                     <View style={styles.walletInfo}>
@@ -902,7 +902,7 @@ export default function TransactionsScreen() {
                           style={[styles.optionRow, { borderBottomColor: colors.border }, sel && { backgroundColor: colors.accent + '11' }]}
                           onPress={() => setDraftWallets(prev => toggleItem(prev, w.id))}
                         >
-                          <Text style={{ fontSize: 18, width: 22, textAlign: 'center' }}>{w.icon ?? '💰'}</Text>
+                          <Text style={{ fontFamily: 'Nunito_400Regular', fontSize: 18, width: 22, textAlign: 'center' }}>{w.icon ?? '💰'}</Text>
                           <Text style={[styles.optionLabel, { color: sel ? colors.accent : colors.text }]}>{w.name}</Text>
                           {sel && <Ionicons name="checkmark" size={18} color={colors.accent} />}
                         </TouchableOpacity>
@@ -959,7 +959,7 @@ export default function TransactionsScreen() {
                               style={[styles.optionRow, { borderBottomColor: colors.border }, allSelected && { backgroundColor: colors.accent + '11' }]}
                               onPress={() => isGroup ? selectParent(cat) : setDraftCategories(prev => toggleItem(prev, cat.id))}
                             >
-                              <Text style={{ fontSize: 18, width: 22, textAlign: 'center' }}>{cat.icon ?? '•'}</Text>
+                              <Text style={{ fontFamily: 'Nunito_400Regular', fontSize: 18, width: 22, textAlign: 'center' }}>{cat.icon ?? '•'}</Text>
                               <Text style={[styles.optionLabel, { color: allSelected ? colors.accent : someSelected ? colors.accent : colors.text, fontFamily: isGroup ? 'Nunito_600SemiBold' : 'Nunito_500Medium' }]}>{cat.name}</Text>
                               {allSelected && <Ionicons name="checkmark" size={18} color={colors.accent} />}
                               {someSelected && !allSelected && <View style={[styles.partialCheck, { borderColor: colors.accent }]} />}
@@ -977,7 +977,7 @@ export default function TransactionsScreen() {
                                   style={[styles.optionRow, styles.optionRowChild, { borderBottomColor: colors.border }, kidSel && { backgroundColor: colors.accent + '11' }]}
                                   onPress={() => setDraftCategories(prev => toggleItem(prev, kid.id))}
                                 >
-                                  <Text style={{ fontSize: 16, width: 22, textAlign: 'center' }}>{kid.icon ?? '•'}</Text>
+                                  <Text style={{ fontFamily: 'Nunito_400Regular', fontSize: 16, width: 22, textAlign: 'center' }}>{kid.icon ?? '•'}</Text>
                                   <Text style={[styles.optionLabel, { color: kidSel ? colors.accent : colors.text }]}>{kid.name}</Text>
                                   {kidSel && <Ionicons name="checkmark" size={18} color={colors.accent} />}
                                 </TouchableOpacity>
@@ -1050,7 +1050,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
   },
-  searchInput: { flex: 1, fontSize: 15, padding: 0 },
+  searchInput: { flex: 1, fontFamily: 'Nunito_400Regular', fontSize: 15, padding: 0 },
 
   filterBtn: {
     width: 44,
@@ -1096,7 +1096,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_600SemiBold',
   },
   dayNet: { fontSize: 13, fontFamily: 'Nunito_700Bold' },
-  empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
+  empty: { textAlign: 'center', marginTop: 32, fontFamily: 'Nunito_400Regular', fontSize: 15 },
 
   tabStrip: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12 },
@@ -1166,7 +1166,7 @@ const styles = StyleSheet.create({
   },
   panelRowIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   panelRowLabel: { flex: 1, fontSize: 15, fontFamily: 'Nunito_500Medium' },
-  panelRowValue: { fontSize: 14, maxWidth: 110 },
+  panelRowValue: { fontFamily: 'Nunito_400Regular', fontSize: 14, maxWidth: 110 },
 
   optionRow: {
     flexDirection: 'row',

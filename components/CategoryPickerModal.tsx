@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontFamily: 'Nunito_400Regular', fontSize: 15,
     padding: 0,
   },
   clipper: {
@@ -248,10 +248,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 10,
   },
-  rowIcon: { fontSize: 20, width: 28, textAlign: 'center' },
-  rowText: { flex: 1, fontSize: 15 },
-  parentLabel: { fontSize: 11, marginBottom: 1 },
-  emptyText: { textAlign: 'center', marginTop: 32, fontSize: 14 },
+  rowIcon: { fontFamily: 'Nunito_400Regular', fontSize: 20, width: 28, textAlign: 'center' },
+  rowText: { flex: 1, fontFamily: 'Nunito_400Regular', fontSize: 15 },
+  parentLabel: { fontFamily: 'Nunito_400Regular', fontSize: 11, marginBottom: 1 },
+  emptyText: { textAlign: 'center', marginTop: 32, fontFamily: 'Nunito_400Regular', fontSize: 14 },
   subHeader: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -9,10 +9,10 @@ export default function ThemedText({ variant = 'body', style, ...props }: Props)
   const colors = useTheme();
 
   const variantStyle = {
-    body: { color: colors.text, fontSize: 15 },
+    body: { color: colors.text, fontFamily: 'Nunito_400Regular', fontSize: 15 },
     heading: { color: colors.text, fontSize: 20, fontFamily: 'Nunito_700Bold' },
-    caption: { color: colors.muted, fontSize: 12 },
-    muted: { color: colors.muted, fontSize: 14 },
+    caption: { color: colors.muted, fontFamily: 'Nunito_400Regular', fontSize: 12 },
+    muted: { color: colors.muted, fontFamily: 'Nunito_400Regular', fontSize: 14 },
     label: { color: colors.muted, fontSize: 13, fontFamily: 'Nunito_500Medium' },
   }[variant];
 

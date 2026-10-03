@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   dayDate: { fontSize: 13, fontFamily: 'Nunito_600SemiBold' },
   dayNet: { fontSize: 13, fontFamily: 'Nunito_700Bold' },
 
-  empty: { textAlign: 'center', marginTop: 32, fontSize: 15 },
+  empty: { textAlign: 'center', marginTop: 32, fontFamily: 'Nunito_400Regular', fontSize: 15 },
   skeletonRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

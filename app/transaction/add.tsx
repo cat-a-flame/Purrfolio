@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
   headerBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontFamily: 'Nunito_600SemiBold' },
   form: { padding: 16, gap: 14 },
-  error: { fontSize: 14, textAlign: 'center' },
+  error: { fontFamily: 'Nunito_400Regular', fontSize: 14, textAlign: 'center' },
   typeToggle: {
     flexDirection: 'row',
     borderRadius: 12,
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignSelf: 'center',
   },
-  sameHint: { fontSize: 12, textAlign: 'center', paddingVertical: 4 },
+  sameHint: { fontFamily: 'Nunito_400Regular', fontSize: 12, textAlign: 'center', paddingVertical: 4 },
 
   /* Pickers */
   row: { flexDirection: 'row', gap: 8 },
@@ -733,7 +733,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  pickerBtnText: { fontSize: 14, flex: 1 },
+  pickerBtnText: { fontFamily: 'Nunito_400Regular', fontSize: 14, flex: 1 },
   pickerBtn2: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
     gap: 4,
     alignSelf: 'center',
   },
-  pickerBtnInlineText: { fontSize: 14 },
+  pickerBtnInlineText: { fontFamily: 'Nunito_400Regular', fontSize: 14 },
   rowFieldGroup: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 10,
   },
-  modalRowIcon: { fontSize: 20, width: 28, textAlign: 'center' },
-  modalRowText: { flex: 1, fontSize: 15 },
+  modalRowIcon: { fontFamily: 'Nunito_400Regular', fontSize: 20, width: 28, textAlign: 'center' },
+  modalRowText: { flex: 1, fontFamily: 'Nunito_400Regular', fontSize: 15 },
   labelDot: { width: 12, height: 12, borderRadius: 6 },
 });

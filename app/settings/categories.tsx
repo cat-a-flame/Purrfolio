@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  back: { fontSize: 15 },
+  back: { fontFamily: 'Nunito_400Regular', fontSize: 15 },
   title: { fontSize: 18, fontFamily: 'Nunito_700Bold' },
   searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   searchBox: {
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
   },
-  searchInput: { flex: 1, fontSize: 15, padding: 0 },
+  searchInput: { flex: 1, fontFamily: 'Nunito_400Regular', fontSize: 15, padding: 0 },
   list: { padding: 16 },
   card: {
     flexDirection: 'row',
@@ -154,12 +154,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconEmoji: { fontSize: 24 },
+  iconEmoji: { fontFamily: 'Nunito_400Regular', fontSize: 24 },
   info: { flex: 1, gap: 2 },
   name: { fontSize: 16, fontFamily: 'Nunito_700Bold' },
   subLabel: { fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, padding: 32 },
-  emptyIcon: { fontSize: 32, marginBottom: 4 },
+  emptyIcon: { fontFamily: 'Nunito_400Regular', fontSize: 32, marginBottom: 4 },
   emptyTitle: { fontSize: 16, fontFamily: 'Nunito_700Bold' },
-  emptyHint: { fontSize: 13, textAlign: 'center' },
+  emptyHint: { fontFamily: 'Nunito_400Regular', fontSize: 13, textAlign: 'center' },
 });

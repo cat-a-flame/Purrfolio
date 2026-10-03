@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
   monthNav: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   monthNavBtn: { padding: 8 },
   monthLabel: { fontSize: 14, fontFamily: 'Nunito_600SemiBold', flex: 1, textAlign: 'center' },
-  emptyText: { fontSize: 14, paddingVertical: 8 },
+  emptyText: { fontFamily: 'Nunito_400Regular', fontSize: 14, paddingVertical: 8 },
   dueGroupLabel: {
     fontSize: 11,
     fontFamily: 'Nunito_700Bold',
@@ -568,9 +568,9 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   dueMeta: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dueIcon: { fontSize: 20 },
+  dueIcon: { fontFamily: 'Nunito_400Regular', fontSize: 20 },
   dueName: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
-  dueSub: { fontSize: 12, marginTop: 1 },
+  dueSub: { fontFamily: 'Nunito_400Regular', fontSize: 12, marginTop: 1 },
   dueAmount: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
   swipeAction: {
     justifyContent: 'center',
@@ -596,6 +596,6 @@ const styles = StyleSheet.create({
   },
   paymentDot: { width: 10, height: 10, borderRadius: 5 },
   paymentName: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
-  paymentSub: { fontSize: 12, marginTop: 1 },
+  paymentSub: { fontFamily: 'Nunito_400Regular', fontSize: 12, marginTop: 1 },
   paymentAmount: { fontSize: 14, fontFamily: 'Nunito_700Bold' },
 });

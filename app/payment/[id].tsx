@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
   stickyFooter: {
     paddingHorizontal: 16, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth,
   },
-  error: { fontSize: 14, textAlign: 'center' },
+  error: { fontFamily: 'Nunito_400Regular', fontSize: 14, textAlign: 'center' },
 
   typeToggle: {
     flexDirection: 'row', borderRadius: 12, borderWidth: 1,
@@ -657,14 +657,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth,
   },
-  pickerBtnText: { fontSize: 14, flex: 1 },
+  pickerBtnText: { fontFamily: 'Nunito_400Regular', fontSize: 14, flex: 1 },
 
   moreToggle: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 6, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderStyle: 'dashed',
   },
   moreToggleText: { fontSize: 14, fontFamily: 'Nunito_500Medium' },
-  clearText: { fontSize: 13, textAlign: 'right' },
+  clearText: { fontFamily: 'Nunito_400Regular', fontSize: 13, textAlign: 'right' },
 
   dotMenu: {
     position: 'absolute',
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12, paddingHorizontal: 4,
     borderBottomWidth: StyleSheet.hairlineWidth, gap: 10,
   },
-  modalRowIcon: { fontSize: 20, width: 28, textAlign: 'center' },
-  modalRowText: { flex: 1, fontSize: 15 },
+  modalRowIcon: { fontFamily: 'Nunito_400Regular', fontSize: 20, width: 28, textAlign: 'center' },
+  modalRowText: { flex: 1, fontFamily: 'Nunito_400Regular', fontSize: 15 },
   labelDot: { width: 12, height: 12, borderRadius: 6 },
 });

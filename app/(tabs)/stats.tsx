@@ -935,6 +935,6 @@ const styles = StyleSheet.create({
   predRange: { fontSize: 11, fontFamily: 'Nunito_600SemiBold' },
 
   empty: { alignItems: 'center', paddingVertical: 18, gap: 6 },
-  emptyIcon: { fontSize: 28 },
+  emptyIcon: { fontFamily: 'Nunito_400Regular', fontSize: 28 },
   emptyText: { fontSize: 13, fontFamily: 'Nunito_600SemiBold', textAlign: 'center' },
 });

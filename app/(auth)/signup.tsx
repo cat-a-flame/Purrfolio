@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   error: {
-    fontSize: 14,
+    fontFamily: 'Nunito_400Regular', fontSize: 14,
     textAlign: 'center',
   },
   link: {
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   successBody: {
-    fontSize: 15,
+    fontFamily: 'Nunito_400Regular', fontSize: 15,
     textAlign: 'center',
     lineHeight: 22,
   },

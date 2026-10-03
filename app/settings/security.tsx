@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  rowLabel: { fontSize: 16 },
-  rowHint: { fontSize: 12, marginTop: 2 },
+  rowLabel: { fontFamily: 'Nunito_400Regular', fontSize: 16 },
+  rowHint: { fontFamily: 'Nunito_400Regular', fontSize: 12, marginTop: 2 },
   divider: { height: 1, marginHorizontal: 16 },
 });
