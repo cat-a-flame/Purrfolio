@@ -661,7 +661,7 @@ export default function StatsScreen() {
     const visible = showAllCategories ? main : main.slice(0, VISIBLE_CATEGORIES);
     const hiddenCount = main.length - VISIBLE_CATEGORIES;
     return (
-      <Card colors={colors}>
+      <Card colors={colors} style={styles.listCard}>
         <View style={styles.cardHeader}>
           <View style={{ flexShrink: 1 }}>
             <Text style={[styles.cardTitle, { color: colors.heading }]}>Expenses by category</Text>
@@ -752,7 +752,7 @@ export default function StatsScreen() {
     const maxValue = Math.max(1, ...comparisonData.flatMap(c => [c.current, c.prev]));
     const total = changeInfo(expense, prevExpense);
     return (
-      <Card colors={colors}>
+      <Card colors={colors} style={styles.listCard}>
         <View>
           <Text style={[styles.cardTitle, { color: colors.heading }]}>Expense comparison by category</Text>
           <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{period.label} vs {prevLabel}</Text>
@@ -856,6 +856,8 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 3,
   },
+  // Cards whose rows are direct children: roomier spacing between items
+  listCard: { gap: 20 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
   cardTitle: { fontSize: 19, fontFamily: 'Lora_700Bold', letterSpacing: -0.4 },
   cardSubtitle: { fontSize: 13, fontFamily: 'Nunito_700Bold', marginTop: 2 },
@@ -928,7 +930,7 @@ const styles = StyleSheet.create({
   predBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
   predBannerIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   predBannerTitle: { fontSize: 17, fontFamily: 'Lora_700Bold', letterSpacing: -0.3 },
-  predBody: { padding: 16, gap: 18 },
+  predBody: { padding: 16, gap: 24 },
   predRow: { gap: 8 },
   predTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   predMain: { flex: 1, minWidth: 0, gap: 2 },
