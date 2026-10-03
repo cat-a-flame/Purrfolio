@@ -21,7 +21,6 @@ import { generateDueDates, nextDueDate, frequencyLabel, isoDate, monthBounds } f
 import { useRecurring } from '@/lib/recurringContext';
 import { Events } from '@/lib/events';
 import Toast from '@/components/Toast';
-import AuroraBackground from '@/components/AuroraBackground';
 
 export default function RecurringScreen() {
   const colors = useTheme();
@@ -228,7 +227,6 @@ export default function RecurringScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       <AppHeader
         title="Planned"
         rightAction={

@@ -13,7 +13,6 @@ import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
 import { supabase } from '@/lib/supabase';
 import { useTheme, type Colors } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
-import AuroraBackground from '@/components/AuroraBackground';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import NetWorthCard, { type WalletSummary } from '@/components/NetWorthCard';
 import EmojiTile from '@/components/EmojiTile';
@@ -817,7 +816,6 @@ export default function StatsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       <AppHeader title="Statistics" />
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

@@ -21,7 +21,6 @@ import CategoryPickerModal from '@/components/CategoryPickerModal';
 import NumPad from '@/components/NumPad';
 import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
-import AuroraBackground from '@/components/AuroraBackground';
 
 function formatAmountDisplay(raw: string): string {
   if (!raw) return '';
@@ -252,7 +251,6 @@ export default function EditTransactionScreen() {
   if (fetching) {
     return (
       <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-        <AuroraBackground />
         <ActivityIndicator style={{ flex: 1 }} color={colors.accent} />
       </SafeAreaView>
     );
@@ -260,7 +258,6 @@ export default function EditTransactionScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       {/* Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>

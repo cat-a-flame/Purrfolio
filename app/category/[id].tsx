@@ -17,7 +17,6 @@ import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
 import ConfirmModal from '@/components/ConfirmModal';
 import type { TransactionType } from '@/lib/types';
-import AuroraBackground from '@/components/AuroraBackground';
 
 type CatType = TransactionType | 'both';
 
@@ -173,7 +172,6 @@ export default function CategoryScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>

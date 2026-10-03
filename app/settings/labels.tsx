@@ -13,7 +13,6 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import type { Label } from '@/lib/types';
-import AuroraBackground from '@/components/AuroraBackground';
 
 export default function LabelsScreen() {
   const colors = useTheme();
@@ -35,7 +34,6 @@ export default function LabelsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
           <View style={styles.backRow}>

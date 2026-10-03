@@ -14,7 +14,6 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
-import AuroraBackground from '@/components/AuroraBackground';
 
 export default function SignupScreen() {
   const colors = useTheme();
@@ -53,7 +52,6 @@ export default function SignupScreen() {
   if (success) {
     return (
       <View style={[styles.center, { backgroundColor: colors.bg }]}>
-        <AuroraBackground />
         <Text style={[styles.successTitle, { color: colors.text }]}>Check your email</Text>
         <Text style={[styles.successBody, { color: colors.muted }]}>
           We've sent a confirmation link to {email}. Once confirmed, you can sign in.
@@ -70,7 +68,6 @@ export default function SignupScreen() {
       style={[styles.flex, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <AuroraBackground />
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"

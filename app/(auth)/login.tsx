@@ -16,7 +16,6 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
-import AuroraBackground from '@/components/AuroraBackground';
 
 export default function LoginScreen() {
   const colors = useTheme();
@@ -48,7 +47,6 @@ export default function LoginScreen() {
       style={[styles.flex, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <AuroraBackground />
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"

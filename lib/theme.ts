@@ -4,9 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Palette mirrors the PurrfolioWeb design tokens (app/globals.css) so the
 // app and the web share one look: violet → fuchsia → pink accents on a soft
-// lavender canvas, with an aurora backdrop and glassy cards.
+// neutral canvas with glassy cards.
 export const lightColors = {
-  bg: '#f5f2ff',
+  bg: '#f6f6f8',
   bg2: '#f5f1fe',
   surface: '#ffffff',
   surface2: '#f5f1fe',
@@ -39,11 +39,10 @@ export const lightColors = {
   shadow: '#3c1e6e',
   gradientAccent: ['#7433e6', '#b62ad9', '#ec3f7a'] as const,
   gradientCashflow: ['#2c1370', '#5a22c8', '#9b2bc9'] as const,
-  aurora: ['rgba(139,92,246,0.36)', 'rgba(236,72,153,0.24)', 'rgba(34,211,238,0.20)', 'rgba(251,146,60,0.14)'] as const,
 };
 
 export const darkColors: Colors = {
-  bg: '#0a0614',
+  bg: '#0c0b10',
   bg2: '#1d1633',
   surface: '#140e24',
   surface2: '#1d1633',
@@ -76,7 +75,6 @@ export const darkColors: Colors = {
   shadow: '#000000',
   gradientAccent: ['#7c4dff', '#c026d3', '#f43f75'],
   gradientCashflow: ['#2c1370', '#5a22c8', '#9b2bc9'],
-  aurora: ['rgba(124,77,255,0.42)', 'rgba(219,39,119,0.28)', 'rgba(6,182,212,0.22)', 'rgba(249,115,22,0.10)'],
 };
 
 // Shared shape scale (matches the web --radius-* tokens)

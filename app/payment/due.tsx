@@ -9,7 +9,6 @@ import type { RecurringPayment, Currency } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { isoDate } from '@/lib/recurringUtils';
 import { Events } from '@/lib/events';
-import AuroraBackground from '@/components/AuroraBackground';
 
 export default function DuePaymentScreen() {
   const colors = useTheme();
@@ -108,7 +107,6 @@ export default function DuePaymentScreen() {
   if (fetching || !payment) {
     return (
       <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-        <AuroraBackground />
         <ActivityIndicator style={{ flex: 1 }} color={colors.accent} />
       </SafeAreaView>
     );
@@ -118,7 +116,6 @@ export default function DuePaymentScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />

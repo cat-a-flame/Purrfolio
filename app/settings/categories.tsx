@@ -7,7 +7,6 @@ import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import type { Category } from '@/lib/types';
 import SkeletonBox from '@/components/SkeletonBox';
-import AuroraBackground from '@/components/AuroraBackground';
 
 type CategoryWithChildren = Category & { children: Category[] };
 
@@ -39,7 +38,6 @@ export default function CategoriesScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
           <View style={styles.backRow}>

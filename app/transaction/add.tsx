@@ -21,7 +21,6 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { todayInputDate } from '@/lib/utils';
 import { Events } from '@/lib/events';
-import AuroraBackground from '@/components/AuroraBackground';
 
 function formatAmountDisplay(raw: string): string {
   if (!raw) return '';
@@ -317,7 +316,6 @@ export default function AddTransactionScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       {/* Header */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>

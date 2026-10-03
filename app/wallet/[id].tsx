@@ -20,7 +20,6 @@ import BottomModal from '@/components/BottomModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import { Events } from '@/lib/events';
 import type { Currency } from '@/lib/types';
-import AuroraBackground from '@/components/AuroraBackground';
 
 const CURRENCIES: Currency[] = ['HUF', 'USD', 'EUR'];
 
@@ -110,7 +109,6 @@ export default function WalletScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>

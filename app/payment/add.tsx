@@ -23,7 +23,6 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, RecurrenceFrequency } from '@/lib/types';
 import { frequencyLabel, isoDate } from '@/lib/recurringUtils';
 import { Events } from '@/lib/events';
-import AuroraBackground from '@/components/AuroraBackground';
 
 function formatAmountDisplay(raw: string): string {
   if (!raw) return '';
@@ -179,7 +178,6 @@ export default function AddPaymentScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       {/* Header */}
       <View style={[styles.headerBar, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>

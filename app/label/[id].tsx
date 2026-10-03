@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
 import ConfirmModal from '@/components/ConfirmModal';
-import AuroraBackground from '@/components/AuroraBackground';
 
 const LABEL_COLORS = [
   '#6C63FF', '#FF6B6B', '#43BCCD', '#F9A826', '#5CB85C',
@@ -77,7 +76,6 @@ export default function LabelScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="arrow-back" size={24} color={colors.accent} />

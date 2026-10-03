@@ -23,7 +23,6 @@ import { useRouter } from 'expo-router';
 import { useRecurring } from '@/lib/recurringContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
-import AuroraBackground from '@/components/AuroraBackground';
 
 function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -222,7 +221,6 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       <AppHeader title="Dashboard" />
       <FlatList
         style={{ paddingTop: 16 }}

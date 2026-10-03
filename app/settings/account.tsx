@@ -15,7 +15,6 @@ import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
-import AuroraBackground from '@/components/AuroraBackground';
 
 export default function AccountScreen() {
   const colors = useTheme();
@@ -67,7 +66,6 @@ export default function AccountScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       <AppHeader title="Account" showBack />
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 

@@ -32,7 +32,6 @@ import SkeletonBox from '@/components/SkeletonBox';
 import Toast from '@/components/Toast';
 import { Events } from '@/lib/events';
 import { useRouter } from 'expo-router';
-import AuroraBackground from '@/components/AuroraBackground';
 
 const PANEL_WIDTH = Math.min(Dimensions.get('window').width * 0.85, Dimensions.get('window').width - 40);
 
@@ -440,7 +439,6 @@ export default function TransactionsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AuroraBackground />
       <AppHeader
         title="Overview"
         rightAction={
