@@ -27,9 +27,8 @@ import TransactionRow from '@/components/TransactionsTransactionRow';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { Ionicons } from '@expo/vector-icons';
 import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
-import { groupByDate, formatDayHeader, formatCurrency, ACCOUNT_TYPE_LABELS } from '@/lib/utils';
+import { groupByDate, formatDayHeader, formatCurrency } from '@/lib/utils';
 import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
-import { fetchWalletBalanceSums } from '@/lib/fetchWalletBalanceSums';
 import SkeletonBox from '@/components/SkeletonBox';
 import Toast from '@/components/Toast';
 import { Events } from '@/lib/events';
@@ -80,13 +79,11 @@ export default function TransactionsScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
-  const [activeTab, setActiveTab] = useState<'transactions' | 'wallets'>('transactions');
-  const hideTabBarOnScroll = useHideTabBarOnScroll(activeTab);
+  const hideTabBarOnScroll = useHideTabBarOnScroll();
   // Keep the selection toolbar sitting on top of the tab bar as it slides
   const toolbarOffset = useAnimatedStyle(() => ({
     bottom: (1 - tabBarHiddenProgress.value) * TAB_BAR_HEIGHT + bottom,
   }));
-  const [walletBalances, setWalletBalances] = useState<Map<string, number>>(new Map());
   const [dailyRates, setDailyRates] = useState<DailyRates>({});
 
   const [loading, setLoading] = useState(true);
@@ -173,7 +170,7 @@ export default function TransactionsScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: w }, { data: t }, { data: c }, { data: l }, allTxSums] = await Promise.all([
+    const [{ data: w }, { data: t }, { data: c }, { data: l }] = await Promise.all([
       supabase.from('wallets').select('*').eq('user_id', user.id).order('is_default', { ascending: false }),
       supabase
         .from('transactions')
@@ -186,7 +183,6 @@ export default function TransactionsScreen() {
         .limit(10000),
       supabase.from('categories').select('*').eq('user_id', user.id).order('name'),
       supabase.from('labels').select('*').eq('user_id', user.id).order('name'),
-      fetchWalletBalanceSums(user.id),
     ]);
 
     const walletList = w ?? [];
@@ -194,12 +190,6 @@ export default function TransactionsScreen() {
     setCategories(c ?? []);
     setLabels(l ?? []);
 
-    const balMap = new Map<string, number>();
-    for (const wl of walletList) {
-      const sums = allTxSums.get(wl.id) ?? { income: 0, expense: 0 };
-      balMap.set(wl.id, (wl.starting_balance ?? 0) + sums.income - sums.expense);
-    }
-    setWalletBalances(balMap);
     setTransactions((t ?? []).map((tx: any) => ({
       ...tx,
       labels: (tx.labels ?? []).map((l: any) => l.label).filter(Boolean),
@@ -446,107 +436,9 @@ export default function TransactionsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
-      <AppHeader
-        title="Overview"
-        rightAction={
-          activeTab === 'wallets' ? (
-            <TouchableOpacity
-              onPress={() => router.push('/wallet/new')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add-circle-outline" size={26} color={colors.accent} />
-            </TouchableOpacity>
-          ) : undefined
-        }
-      />
+      <AppHeader title="Records" />
 
-      {/* Tab switcher */}
-      <View style={[styles.tabStrip, { borderBottomColor: colors.border }]}>
-        {(['transactions', 'wallets'] as const).map((tab) => {
-          const active = activeTab === tab;
-          return (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tabBtn, active && { borderBottomColor: colors.accent, borderBottomWidth: 2 }]}
-              onPress={() => setActiveTab(tab)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.tabBtnText, { color: active ? colors.accent : colors.muted }]}>
-                {tab === 'transactions' ? 'Transactions' : 'Accounts'}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* Wallets tab */}
-      {activeTab === 'wallets' && (
-        <>
-          <ScrollView
-            {...hideTabBarOnScroll}
-            contentContainerStyle={[styles.walletsList, { paddingBottom: 0 }]}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          >
-            {(() => {
-              const active = wallets.filter((w) => !w.is_archived);
-              const archived = wallets.filter((w) => w.is_archived);
-              const renderWallet = (w: typeof wallets[0]) => {
-                const balance = walletBalances.get(w.id) ?? 0;
-                const balColor = w.is_archived ? colors.muted : (balance >= 0 ? colors.income : colors.expense);
-                return (
-                  <TouchableOpacity
-                    key={w.id}
-                    activeOpacity={0.7}
-                    onPress={() => router.push(`/wallet/${w.id}` as any)}
-                    style={[styles.walletCard, { backgroundColor: colors.surface }, w.is_archived && { opacity: 0.6 }]}
-                  >
-                    <View style={[styles.walletIcon, { backgroundColor: '#fcf1ff' }]}>
-                      {w.icon
-                        ? <Text style={{ fontFamily: 'Nunito_400Regular', fontSize: 22 }}>{w.icon}</Text>
-                        : <View style={[styles.walletIconFallback, { backgroundColor: colors.border }]} />}
-                    </View>
-                    <View style={styles.walletInfo}>
-                      <View style={styles.walletNameRow}>
-                        <Text style={[styles.walletName, { color: colors.text }]}>{w.name}</Text>
-                      </View>
-                      <Text style={[styles.walletCurrency, { color: colors.muted }]}>
-                        {ACCOUNT_TYPE_LABELS[w.type ?? 'bank'] ?? ACCOUNT_TYPE_LABELS.other} · {w.currency}
-                      </Text>
-                    </View>
-                    {w.is_archived ? (
-                      <View style={[styles.defaultBadge, { backgroundColor: colors.muted + '22', marginRight: 16 }]}>
-                        <Text style={[styles.defaultBadgeText, { color: colors.muted }]}>Archived</Text>
-                      </View>
-                    ) : w.is_default ? (
-                      <View style={[styles.defaultBadge, { backgroundColor: colors.accent + '22', marginRight: 16 }]}>
-                        <Text style={[styles.defaultBadgeText, { color: colors.accent }]}>Default</Text>
-                      </View>
-                    ) : null}
-                    <Text style={[styles.walletBalance, { color: balColor }]}>
-                      {balance >= 0 ? '+' : '−'}{formatCurrency(Math.abs(balance), w.currency as any)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              };
-              return (
-                <>
-                  {active.map(renderWallet)}
-                  {archived.length > 0 && (
-                    <>
-                      <Text style={[styles.archivedSectionLabel, { color: colors.muted }]}>Archived</Text>
-                      {archived.map(renderWallet)}
-                    </>
-                  )}
-                </>
-              );
-            })()}
-            <TabBarSpacer extra={0} />
-          </ScrollView>
-        </>
-      )}
-
-      {/* Transactions tab */}
-      {activeTab === 'transactions' && <FlatList
+      <FlatList
         {...hideTabBarOnScroll}
         data={flat}
         style={{ paddingTop: 16 }}
@@ -657,7 +549,7 @@ export default function TransactionsScreen() {
           )
         }
         ListFooterComponent={<TabBarSpacer />}
-      />}
+      />
 
       {/* Selection toolbar */}
       {selectionMode && (
@@ -1110,28 +1002,7 @@ const styles = StyleSheet.create({
   dayNet: { fontSize: 13, fontFamily: 'Nunito_700Bold' },
   empty: { textAlign: 'center', marginTop: 32, fontFamily: 'Nunito_400Regular', fontSize: 15 },
 
-  tabStrip: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
-  tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 12 },
-  tabBtnText: { fontSize: 14, fontFamily: 'Nunito_600SemiBold' },
 
-  walletsList: { padding: 16, gap: 16 },
-  archivedSectionLabel: { fontSize: 11, fontFamily: 'Nunito_700Bold', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 },
-  walletNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  defaultBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
-  defaultBadgeText: { fontSize: 11, fontFamily: 'Nunito_600SemiBold' },
-  walletCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 18,
-    gap: 8,
-    paddingHorizontal: 12,
-  },
-  walletIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 10, },
-  walletIconFallback: { width: 28, height: 28, borderRadius: 8 },
-  walletInfo: { flex: 1, paddingVertical: 14, gap: 2 },
-  walletName: { fontSize: 15, fontFamily: 'Nunito_700Bold' },
-  walletCurrency: { fontSize: 12, fontFamily: 'Nunito_500Medium' },
-  walletBalance: { fontSize: 16, fontFamily: 'Nunito_800ExtraBold' },
   skeletonRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

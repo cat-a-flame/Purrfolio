@@ -13,7 +13,7 @@ export default function TabsLayout() {
       tabBar={(props) => <CustomTabBar {...props} />}
     >
       <Tabs.Screen name="index" options={{ title: 'Dashboard' }} />
-      <Tabs.Screen name="transactions" options={{ title: 'Transactions' }} />
+      <Tabs.Screen name="transactions" options={{ title: 'Records' }} />
       <Tabs.Screen name="recurring" options={{ title: 'Recurring' }} />
       <Tabs.Screen name="stats" options={{ title: 'Statistics' }} />
       <Tabs.Screen name="settings" options={{ href: null }} />
