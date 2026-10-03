@@ -17,8 +17,9 @@ import CategoryPickerModal from '@/components/CategoryPickerModal';
 import BottomModal from '@/components/BottomModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
-import { useHideTabBarOnScroll } from '@/lib/tabBarVisibility';
+import { TAB_BAR_HEIGHT, TabBarSpacer } from '@/components/CustomTabBar';
+import { tabBarHiddenProgress, useHideTabBarOnScroll } from '@/lib/tabBarVisibility';
+import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -81,6 +82,10 @@ export default function TransactionsScreen() {
 
   const [activeTab, setActiveTab] = useState<'transactions' | 'wallets'>('transactions');
   const hideTabBarOnScroll = useHideTabBarOnScroll(activeTab);
+  // Keep the selection toolbar sitting on top of the tab bar as it slides
+  const toolbarOffset = useAnimatedStyle(() => ({
+    bottom: (1 - tabBarHiddenProgress.value) * TAB_BAR_HEIGHT + bottom,
+  }));
   const [walletBalances, setWalletBalances] = useState<Map<string, number>>(new Map());
   const [dailyRates, setDailyRates] = useState<DailyRates>({});
 
@@ -479,7 +484,7 @@ export default function TransactionsScreen() {
         <>
           <ScrollView
             {...hideTabBarOnScroll}
-            contentContainerStyle={[styles.walletsList, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
+            contentContainerStyle={[styles.walletsList, { paddingBottom: 0 }]}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           >
             {(() => {
@@ -533,6 +538,7 @@ export default function TransactionsScreen() {
                 </>
               );
             })()}
+            <TabBarSpacer extra={0} />
           </ScrollView>
         </>
       )}
@@ -648,12 +654,12 @@ export default function TransactionsScreen() {
             <Text style={[styles.empty, { color: colors.muted }]}>No transactions found.</Text>
           )
         }
-        ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
+        ListFooterComponent={<TabBarSpacer />}
       />}
 
       {/* Selection toolbar */}
       {selectionMode && (
-        <View style={[styles.selectionToolbar, { backgroundColor: colors.surface, borderTopColor: colors.border, bottom: TAB_BAR_HEIGHT + bottom }]}>
+        <Reanimated.View style={[styles.selectionToolbar, { backgroundColor: colors.surface, borderTopColor: colors.border }, toolbarOffset]}>
           <TouchableOpacity onPress={exitSelectionMode} style={styles.toolbarBtn} activeOpacity={0.7}>
             <Ionicons name="close" size={22} color={colors.muted} />
             <Text style={[styles.toolbarBtnText, { color: colors.muted }]}>Cancel</Text>
@@ -676,7 +682,7 @@ export default function TransactionsScreen() {
             <Ionicons name="trash-outline" size={22} color={colors.expense} />
             <Text style={[styles.toolbarBtnText, { color: colors.expense }]}>Delete</Text>
           </TouchableOpacity>
-        </View>
+        </Reanimated.View>
       )}
 
       <Toast

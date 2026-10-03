@@ -56,9 +56,19 @@ function buildPillPath(w: number, h: number): string {
   ].join(' ');
 }
 
-// Screens should add TAB_BAR_HEIGHT + useSafeAreaInsets().bottom as bottom padding
-// so content isn't hidden behind the floating tab bar.
+// Space the floating tab bar takes up above the safe-area bottom.
 export const TAB_BAR_HEIGHT = BAR_H + BAR_GAP + 8; // 76 px
+
+// Put at the end of a tab screen's scroll content so nothing is hidden behind
+// the tab bar. It shrinks as the bar slides away on scroll, so there's no
+// empty gap at the bottom while the bar is hidden.
+export function TabBarSpacer({ extra = 16 }: { extra?: number }) {
+  const { bottom } = useSafeAreaInsets();
+  const style = useAnimatedStyle(() => ({
+    height: (1 - tabBarHiddenProgress.value) * TAB_BAR_HEIGHT + bottom + extra,
+  }));
+  return <Animated.View style={style} />;
+}
 
 const TAB_META: Record<string, { outline: string; filled: string; label: string }> = {
   index:        { outline: 'home-outline',        filled: 'home',        label: 'Home' },

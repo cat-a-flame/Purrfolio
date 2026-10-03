@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
+import { TabBarSpacer } from '@/components/CustomTabBar';
 import { useHideTabBarOnScroll } from '@/lib/tabBarVisibility';
 import { supabase } from '@/lib/supabase';
 import { useTheme, type Colors } from '@/lib/theme';
@@ -828,7 +828,7 @@ export default function StatsScreen() {
       <ScrollView
         {...hideTabBarOnScroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16 }]}
+        contentContainerStyle={styles.container}
       >
         <NetWorthCard summaries={walletSummaries} rates={todayRates} loading={loading && wallets.length === 0} />
 
@@ -840,6 +840,8 @@ export default function StatsScreen() {
 
         <PredictionPanel variant="expense" title="Expected expenses" items={predictions.expense} loading={loading} colors={colors} />
         <PredictionPanel variant="income" title="Expected income" items={predictions.income} loading={loading} colors={colors} />
+        {/* container gap supplies the extra 16px */}
+        <TabBarSpacer extra={0} />
       </ScrollView>
     </SafeAreaView>
   );

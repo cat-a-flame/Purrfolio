@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
+import { TAB_BAR_HEIGHT, TabBarSpacer } from '@/components/CustomTabBar';
 import { useHideTabBarOnScroll } from '@/lib/tabBarVisibility';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -268,7 +268,7 @@ export default function RecurringScreen() {
         <ScrollView
           {...hideTabBarOnScroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16, paddingTop: 16 }]}
+          contentContainerStyle={[styles.container, { paddingTop: 16 }]}
         >
           {/* Month navigator */}
           <View style={[styles.monthNavRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
@@ -349,6 +349,7 @@ export default function RecurringScreen() {
               })}
             </>
           )}
+          <TabBarSpacer extra={6} />
         </ScrollView>
       )}
 
@@ -357,7 +358,7 @@ export default function RecurringScreen() {
         <ScrollView
           {...hideTabBarOnScroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          contentContainerStyle={[styles.container, { paddingBottom: TAB_BAR_HEIGHT + bottom + 16, paddingTop: 16 }]}
+          contentContainerStyle={[styles.container, { paddingTop: 16 }]}
         >
           {payments.length === 0 && (
             <Text style={[styles.emptyText, { color: colors.muted, textAlign: 'center', marginTop: 24 }]}>
@@ -381,6 +382,7 @@ export default function RecurringScreen() {
               </View>
             ))
           }
+          <TabBarSpacer extra={6} />
         </ScrollView>
       )}
 

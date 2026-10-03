@@ -7,7 +7,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TAB_BAR_HEIGHT } from '@/components/CustomTabBar';
+import { TAB_BAR_HEIGHT, TabBarSpacer } from '@/components/CustomTabBar';
 import { useHideTabBarOnScroll } from '@/lib/tabBarVisibility';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -375,7 +375,7 @@ export default function DashboardScreen() {
             <Text style={[styles.empty, { color: colors.muted }]}>No transactions in this period.</Text>
           )
         }
-        ListFooterComponent={<View style={{ height: TAB_BAR_HEIGHT + bottom + 16 }} />}
+        ListFooterComponent={<TabBarSpacer />}
       />
 
       <Toast

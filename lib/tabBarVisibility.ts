@@ -45,8 +45,12 @@ export function useHideTabBarOnScroll(resetKey?: unknown) {
       setTabBarHidden(false);
       return;
     }
-    // Ignore the iOS bounce past the end, which would read as scrolling up.
-    if (y >= maxY) return;
+    // At the end, ignore movement: the iOS bounce back, or the offset being
+    // clamped as the bottom spacer shrinks, would read as scrolling up.
+    if (y >= maxY) {
+      lastY.current = y;
+      return;
+    }
 
     const dy = y - lastY.current;
     if (Math.abs(dy) < MIN_DELTA) return;
