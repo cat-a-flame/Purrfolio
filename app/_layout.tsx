@@ -15,6 +15,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { UnlockScreen } from '@/components/UnlockScreen';
 import { isPinEnabled } from '@/lib/security';
+import { needsMfaCode } from '@/lib/mfa';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,7 +31,12 @@ export default function RootLayout() {
   const [minTimeReady, setMinTimeReady] = useState(false);
   const [pinRequired, setPinRequired] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
-  const loading = !authReady || !minTimeReady;
+  // Whether the current session still has to enter a 2FA code, tagged with
+  // the access token it was worked out for so a stale answer is never used.
+  const [mfaCheck, setMfaCheck] = useState<{ token: string; pending: boolean } | null>(null);
+  const mfaKnown = !session || mfaCheck?.token === session.access_token;
+  const mfaPending = !!session && mfaKnown && !!mfaCheck?.pending;
+  const loading = !authReady || !minTimeReady || (!!session && !mfaCheck);
   const router = useRouter();
   const segments = useSegments();
 
@@ -78,14 +84,31 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!authReady || !minTimeReady || (pinRequired && !unlocked)) return;
+    if (!session) return;
+    const token = session.access_token;
+    let cancelled = false;
+    // On failure, don't block the app: the database still refuses data to an
+    // unverified session.
+    needsMfaCode()
+      .catch(() => false)
+      .then(pending => {
+        if (!cancelled) setMfaCheck({ token, pending });
+      });
+    return () => { cancelled = true; };
+  }, [session?.access_token]);
+
+  useEffect(() => {
+    if (!authReady || !minTimeReady || !mfaKnown || (pinRequired && !unlocked)) return;
     const inAuth = segments[0] === '(auth)';
+    const onMfa = inAuth && (segments as string[])[1] === 'mfa';
     if (!session && !inAuth) {
       router.replace('/(auth)/login');
-    } else if (session && inAuth) {
+    } else if (session && mfaPending && !onMfa) {
+      router.replace('/(auth)/mfa');
+    } else if (session && !mfaPending && inAuth) {
       router.replace('/(tabs)');
     }
-  }, [session, authReady, minTimeReady, pinRequired, unlocked, segments]);
+  }, [session, authReady, minTimeReady, mfaKnown, mfaPending, pinRequired, unlocked, segments]);
 
   let content;
   if (!fontsLoaded || loading) {
@@ -112,6 +135,7 @@ export default function RootLayout() {
           <Stack.Screen name="settings/accounts" options={{ headerShown: false }} />
           <Stack.Screen name="settings/security" options={{ headerShown: false }} />
           <Stack.Screen name="settings/account" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/two-factor" options={{ headerShown: false }} />
         </Stack>
       </SafeAreaProvider>
     );

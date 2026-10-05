@@ -8,7 +8,8 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import { PinPad } from '@/components/PinPad';
@@ -44,10 +45,18 @@ export default function SecurityScreen() {
   const [pin, setPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [error, setError] = useState(false);
+  const [mfaEnabled, setMfaEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     load();
   }, []);
+
+  // Refreshed on focus so it's up to date after returning from the 2FA screen.
+  useFocusEffect(useCallback(() => {
+    supabase.auth.mfa.listFactors().then(({ data }) => {
+      setMfaEnabled(data ? data.totp.length > 0 : null);
+    });
+  }, []));
 
   async function load() {
     const [pe, fpe, sup] = await Promise.all([
@@ -208,6 +217,29 @@ export default function SecurityScreen() {
       <View style={styles.container}>
 
         <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.muted }]}>SIGN-IN</Text>
+          <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => router.push('/settings/two-factor')}
+              activeOpacity={0.7}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.rowLabel, { color: colors.text }]}>Two-factor authentication</Text>
+                <Text style={[styles.rowHint, { color: colors.muted }]}>
+                  Code from an authenticator app
+                </Text>
+              </View>
+              {mfaEnabled !== null && (
+                <Text style={[styles.rowValue, { color: mfaEnabled ? colors.income : colors.muted }]}>
+                  {mfaEnabled ? 'On' : 'Off'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.muted }]}>APP LOCK</Text>
           <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.row}>
@@ -291,5 +323,6 @@ const styles = StyleSheet.create({
   },
   rowLabel: { fontFamily: 'Nunito_400Regular', fontSize: 16 },
   rowHint: { fontFamily: 'Nunito_400Regular', fontSize: 12, marginTop: 2 },
+  rowValue: { fontFamily: 'Nunito_700Bold', fontSize: 15 },
   divider: { height: 1, marginHorizontal: 16 },
 });

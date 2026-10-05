@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
+import { needsMfaCode } from '@/lib/mfa';
 import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
 import AppButton from '@/components/AppButton';
@@ -35,12 +36,15 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
     const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
     if (err) {
+      setLoading(false);
       setError(err.message);
-    } else {
-      router.replace('/(tabs)');
+      return;
     }
+    // With 2FA on, the password only gets an aal1 session; the code comes next.
+    const mfa = await needsMfaCode();
+    setLoading(false);
+    router.replace(mfa ? '/(auth)/mfa' : '/(tabs)');
   }
 
   return (
