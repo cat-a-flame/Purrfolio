@@ -73,6 +73,7 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
     { label: 'Categories', route: '/settings/categories', icon: 'grid-outline'         },
     { label: 'Labels',     route: '/settings/labels',     icon: 'pricetag-outline'     },
     { label: 'Security',   route: '/settings/security',   icon: 'lock-closed-outline'  },
+    { label: 'Export',     route: '/settings/export',     icon: 'download-outline'     },
   ];
 
   const initial = (username || email || '?').charAt(0).toUpperCase();

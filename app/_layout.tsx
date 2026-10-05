@@ -136,6 +136,7 @@ export default function RootLayout() {
           <Stack.Screen name="settings/security" options={{ headerShown: false }} />
           <Stack.Screen name="settings/account" options={{ headerShown: false }} />
           <Stack.Screen name="settings/two-factor" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/export" options={{ headerShown: false }} />
         </Stack>
       </SafeAreaProvider>
     );
