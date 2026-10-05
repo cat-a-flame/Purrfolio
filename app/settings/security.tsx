@@ -219,23 +219,22 @@ export default function SecurityScreen() {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.muted }]}>SIGN-IN</Text>
           <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <TouchableOpacity
-              style={styles.row}
-              onPress={() => router.push('/settings/two-factor')}
-              activeOpacity={0.7}
-            >
-              <View style={{ flex: 1 }}>
+            <View style={styles.row}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
                 <Text style={[styles.rowLabel, { color: colors.text }]}>Two-factor authentication</Text>
                 <Text style={[styles.rowHint, { color: colors.muted }]}>
-                  Code from an authenticator app
+                  Ask for a code from an authenticator app when signing in
                 </Text>
               </View>
-              {mfaEnabled !== null && (
-                <Text style={[styles.rowValue, { color: mfaEnabled ? colors.income : colors.muted }]}>
-                  {mfaEnabled ? 'On' : 'Off'}
-                </Text>
-              )}
-            </TouchableOpacity>
+              {/* Setting up / turning off needs a code, so both happen on the 2FA screen. */}
+              <Switch
+                value={!!mfaEnabled}
+                onValueChange={() => router.push('/settings/two-factor')}
+                disabled={mfaEnabled === null}
+                trackColor={{ true: colors.accent }}
+                thumbColor="#fff"
+              />
+            </View>
           </View>
         </View>
 
@@ -323,6 +322,5 @@ const styles = StyleSheet.create({
   },
   rowLabel: { fontFamily: 'Nunito_400Regular', fontSize: 16 },
   rowHint: { fontFamily: 'Nunito_400Regular', fontSize: 12, marginTop: 2 },
-  rowValue: { fontFamily: 'Nunito_700Bold', fontSize: 15 },
   divider: { height: 1, marginHorizontal: 16 },
 });

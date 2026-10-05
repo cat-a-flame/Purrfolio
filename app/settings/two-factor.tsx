@@ -44,8 +44,11 @@ export default function TwoFactorScreen() {
 
   useEffect(() => {
     supabase.auth.mfa.listFactors().then(({ data }) => {
-      setFactorId(data?.totp[0]?.id ?? null);
+      const id = data?.totp[0]?.id ?? null;
+      setFactorId(id);
       setLoaded(true);
+      // Opened from the switch while off: go straight to setup.
+      if (data && !id) startSetup();
     });
   }, []);
 
@@ -66,6 +69,7 @@ export default function TwoFactorScreen() {
     setStarting(false);
     if (enrollError || !data) {
       Alert.alert('Error', enrollError?.message ?? 'Could not start 2FA setup.');
+      router.back();
       return;
     }
     pendingFactor.current = data.id;
@@ -140,7 +144,7 @@ export default function TwoFactorScreen() {
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
       <AppHeader title="Two-factor authentication" showBack />
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        {!loaded ? (
+        {!loaded || starting ? (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 32 }} />
         ) : enrollment ? (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -181,10 +185,8 @@ export default function TwoFactorScreen() {
           </View>
         ) : enabled ? (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.status, { color: colors.income }]}>On</Text>
             <Text style={[styles.body, { color: colors.text }]}>
-              You’re asked for a code from your authenticator app each time you sign in.
-              To turn this off, enter a current code.
+              To turn off two-factor authentication, enter a current code from your authenticator app.
             </Text>
             <AppInput
               value={code}
@@ -202,16 +204,9 @@ export default function TwoFactorScreen() {
             </AppButton>
           </View>
         ) : (
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.status, { color: colors.muted }]}>Off</Text>
-            <Text style={[styles.body, { color: colors.text }]}>
-              Add a second step to signing in: a 6-digit code from an authenticator app such as
-              Google Authenticator, Microsoft Authenticator, 1Password or Authy.
-            </Text>
-            <AppButton onPress={startSetup} loading={starting} fullWidth>
-              Set up
-            </AppButton>
-          </View>
+          <Text style={[styles.body, { color: colors.muted, textAlign: 'center' }]}>
+            Couldn’t load your two-factor settings. Check your connection and try again.
+          </Text>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -227,7 +222,6 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 14,
   },
-  status: { fontSize: 13, fontFamily: 'Nunito_800ExtraBold', letterSpacing: 0.5, textTransform: 'uppercase' },
   body: { fontSize: 15, lineHeight: 21, fontFamily: 'Nunito_400Regular' },
   step: { fontSize: 15, fontFamily: 'Nunito_700Bold' },
   hint: { fontSize: 13, fontFamily: 'Nunito_400Regular' },
