@@ -9,9 +9,11 @@ import {
   Alert,
 } from 'react-native';
 import ConfirmModal from '@/components/ConfirmModal';
+import DeleteAccountModal from '@/components/DeleteAccountModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { disablePin } from '@/lib/security';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import AppInput from '@/components/AppInput';
@@ -26,6 +28,9 @@ export default function AccountScreen() {
   const [savingUsername, setSavingUsername] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+  const [deleteVisible, setDeleteVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -63,6 +68,29 @@ export default function AccountScreen() {
       await supabase.auth.signOut();
       router.replace('/(auth)/login');
     });
+  }
+
+  function openDelete() {
+    setDeleteError('');
+    setDeleteVisible(true);
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    setDeleteError('');
+    const { error } = await supabase.rpc('delete_my_account');
+    if (error) {
+      setDeleting(false);
+      setDeleteError(error.message);
+      return;
+    }
+    // The app lock PIN belongs to the deleted account, so don't leave it gating the next login.
+    await disablePin();
+    // The user no longer exists server-side, so only clear the local session.
+    await supabase.auth.signOut({ scope: 'local' });
+    setDeleting(false);
+    setDeleteVisible(false);
+    router.replace('/(auth)/login');
   }
 
   return (
@@ -133,6 +161,16 @@ export default function AccountScreen() {
           >
             <Text style={[styles.signOutText, { color: colors.danger }]}>Sign out</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.signOutButton, { backgroundColor: colors.dangerLight, borderColor: colors.dangerLight }]}
+            onPress={openDelete}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.signOutText, { color: colors.danger }]}>Delete account</Text>
+          </TouchableOpacity>
+          <Text style={[styles.hint, styles.dangerHint, { color: colors.muted }]}>
+            Permanently deletes your account and all of its data. This cannot be undone.
+          </Text>
         </View>
 
       </ScrollView>
@@ -143,6 +181,13 @@ export default function AccountScreen() {
         confirmLabel="Sign out"
         onConfirm={() => { confirmAction?.(); setConfirmAction(null); }}
         onCancel={() => setConfirmAction(null)}
+      />
+      <DeleteAccountModal
+        visible={deleteVisible}
+        loading={deleting}
+        error={deleteError}
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setDeleteVisible(false)}
       />
     </SafeAreaView>
   );
@@ -169,6 +214,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Nunito_400Regular',
     marginTop: -4,
+  },
+  dangerHint: {
+    marginTop: 0,
+    paddingHorizontal: 4,
   },
   saveButton: {
     alignSelf: 'flex-end',

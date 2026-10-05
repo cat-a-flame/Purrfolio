@@ -49,6 +49,12 @@ export default function SettingsScreen() {
       ],
     },
     {
+      title: 'Data',
+      items: [
+        { label: 'Export data', route: '/settings/export' },
+      ],
+    },
+    {
       title: 'Account',
       items: [
         { label: 'Sign out', onPress: handleSignOut, danger: true },
