@@ -21,8 +21,8 @@ import ConfirmModal from '@/components/ConfirmModal';
 import { Events } from '@/lib/events';
 import type { AccountType, Currency } from '@/lib/types';
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from '@/lib/utils';
-
-const CURRENCIES: Currency[] = ['HUF', 'USD', 'EUR'];
+import { CURRENCIES } from '@/lib/baseCurrency';
+import { useBaseCurrency } from '@/lib/baseCurrencyContext';
 
 type WalletForm = {
   name: string;
@@ -40,11 +40,12 @@ export default function WalletScreen() {
   const { bottom } = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const isNew = id === 'new';
+  const baseCurrency = useBaseCurrency();
 
   const [form, setForm] = useState<WalletForm>({
     name: '',
     type: 'bank',
-    currency: 'HUF',
+    currency: baseCurrency,
     icon: '💰',
     is_default: false,
     is_archived: false,

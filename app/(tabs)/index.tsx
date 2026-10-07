@@ -17,7 +17,8 @@ import SkeletonBox from '@/components/SkeletonBox';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import type { Transaction, Currency } from '@/lib/types';
 import { formatCurrency, formatDayHeader, groupByDate } from '@/lib/utils';
-import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toBase, type DailyRates } from '@/lib/exchange';
+import { useBaseCurrency } from '@/lib/baseCurrencyContext';
 import { Events } from '@/lib/events';
 import Toast from '@/components/Toast';
 import { useRouter } from 'expo-router';
@@ -66,6 +67,7 @@ function defaultPeriod(): PeriodValue {
 }
 
 export default function DashboardScreen() {
+  const baseCurrency = useBaseCurrency();
   const colors = useTheme();
   const hideTabBarOnScroll = useHideTabBarOnScroll();
   const router = useRouter();
@@ -133,9 +135,9 @@ export default function DashboardScreen() {
       // Show content immediately; exchange rates load in the background
       setLoading(false);
 
-      let periodRates = await getExchangeRatesForPeriod(period.from, period.to);
+      let periodRates = await getExchangeRatesForPeriod(period.from, period.to, baseCurrency);
       if (Object.keys(periodRates).length === 0) {
-        const current = await getExchangeRates();
+        const current = await getExchangeRates(baseCurrency);
         if (Object.keys(current).length > 0) {
           periodRates = { [period.from]: current };
         }
@@ -146,7 +148,7 @@ export default function DashboardScreen() {
     } finally {
       setLoading(false);
     }
-  }, [period.from, period.to]);
+  }, [period.from, period.to, baseCurrency]);
 
   useEffect(() => { load(); refreshDueToday(); }, [load, refreshDueToday]);
 
@@ -168,7 +170,7 @@ export default function DashboardScreen() {
     });
   }, [refreshDueToday]);
 
-  // Cash flow — exclude transfers; convert each transaction to HUF using its day's rate
+  // Cash flow — exclude transfers; convert each transaction to the base currency using its day's rate
   const nonTransferTxs = useMemo(
     () => periodTxs.filter(tx => !tx.transfer_group_id),
     [periodTxs],
@@ -176,16 +178,16 @@ export default function DashboardScreen() {
   const income = useMemo(
     () => nonTransferTxs.filter(t => t.type === 'income').reduce((s, t) => {
       const rates = getRatesForDate(t.date, dailyRates);
-      return s + toHUF(t.amount, (t.wallet as any)?.currency, rates);
+      return s + toBase(t.amount, (t.wallet as any)?.currency, rates, baseCurrency);
     }, 0),
-    [nonTransferTxs, dailyRates],
+    [nonTransferTxs, dailyRates, baseCurrency],
   );
   const expense = useMemo(
     () => nonTransferTxs.filter(t => t.type === 'expense').reduce((s, t) => {
       const rates = getRatesForDate(t.date, dailyRates);
-      return s + toHUF(t.amount, (t.wallet as any)?.currency, rates);
+      return s + toBase(t.amount, (t.wallet as any)?.currency, rates, baseCurrency);
     }, 0),
-    [nonTransferTxs, dailyRates],
+    [nonTransferTxs, dailyRates, baseCurrency],
   );
   const net = income - expense;
 
@@ -212,14 +214,14 @@ export default function DashboardScreen() {
       for (const t of g.items) {
         if (t.transfer_group_id) continue;
         const cur = (t.wallet as any)?.currency;
-        const huf = toHUF(t.amount, cur, rates);
-        dayNet += t.type === 'income' ? huf : -huf;
+        const converted = toBase(t.amount, cur, rates, baseCurrency);
+        dayNet += t.type === 'income' ? converted : -converted;
       }
       items.push({ kind: 'dayHeader', date: g.date, dayNet });
       for (const tx of g.items) items.push({ kind: 'tx', tx });
     }
     return items;
-  }, [groups, dailyRates]);
+  }, [groups, dailyRates, baseCurrency]);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -242,7 +244,7 @@ export default function DashboardScreen() {
                   {formatDayHeader(item.date)}
                 </Text>
                 <Text style={[styles.dayNet, { color: positive ? colors.income : colors.expense }]}>
-                  {positive ? '+' : '−'}{formatCurrency(Math.abs(item.dayNet), 'HUF')}
+                  {positive ? '+' : '−'}{formatCurrency(Math.abs(item.dayNet), baseCurrency)}
                 </Text>
               </View>
             );
@@ -291,7 +293,7 @@ export default function DashboardScreen() {
                   {loading
                     ? <SkeletonBox style={{ height: 38, width: 170, borderRadius: 8, backgroundColor: '#ffffff30' }} />
                     : <Text style={styles.cashFlowNet} numberOfLines={1} adjustsFontSizeToFit>
-                      {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), 'HUF')}
+                      {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), baseCurrency)}
                     </Text>
                   }
                 </View>
@@ -313,7 +315,7 @@ export default function DashboardScreen() {
                   <Text style={styles.cashFlowLabel}>Income</Text>
                   {loading
                     ? <SkeletonBox style={{ height: 13, width: 90, borderRadius: 4, backgroundColor: '#ffffff30' }} />
-                    : <Text style={styles.cashFlowValue}>+{formatCurrency(income, 'HUF')}</Text>
+                    : <Text style={styles.cashFlowValue}>+{formatCurrency(income, baseCurrency)}</Text>
                   }
                 </View>
                 <View style={styles.barTrack}>
@@ -332,7 +334,7 @@ export default function DashboardScreen() {
                   <Text style={styles.cashFlowLabel}>Expenses</Text>
                   {loading
                     ? <SkeletonBox style={{ height: 13, width: 90, borderRadius: 4, backgroundColor: '#ffffff30' }} />
-                    : <Text style={styles.cashFlowValue}>−{formatCurrency(expense, 'HUF')}</Text>
+                    : <Text style={styles.cashFlowValue}>−{formatCurrency(expense, baseCurrency)}</Text>
                   }
                 </View>
                 <View style={styles.barTrack}>

@@ -16,6 +16,7 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { UnlockScreen } from '@/components/UnlockScreen';
 import { isPinEnabled } from '@/lib/security';
 import { needsMfaCode } from '@/lib/mfa';
+import { BaseCurrencyContext, useBaseCurrencyResolver } from '@/lib/baseCurrencyContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -36,7 +37,9 @@ export default function RootLayout() {
   const [mfaCheck, setMfaCheck] = useState<{ token: string; pending: boolean } | null>(null);
   const mfaKnown = !session || mfaCheck?.token === session.access_token;
   const mfaPending = !!session && mfaKnown && !!mfaCheck?.pending;
-  const loading = !authReady || !minTimeReady || (!!session && !mfaCheck);
+  // The base currency is only worked out once the session is fully signed in (no 2FA code pending).
+  const baseCurrency = useBaseCurrencyResolver(session, !!session && mfaKnown && !mfaPending);
+  const loading = !authReady || !minTimeReady || (!!session && !mfaCheck) || baseCurrency.status === 'checking';
   const router = useRouter();
   const segments = useSegments();
 
@@ -101,14 +104,17 @@ export default function RootLayout() {
     if (!authReady || !minTimeReady || !mfaKnown || (pinRequired && !unlocked)) return;
     const inAuth = segments[0] === '(auth)';
     const onMfa = inAuth && (segments as string[])[1] === 'mfa';
+    const onOnboarding = (segments as string[])[0] === 'onboarding';
     if (!session && !inAuth) {
       router.replace('/(auth)/login');
     } else if (session && mfaPending && !onMfa) {
       router.replace('/(auth)/mfa');
-    } else if (session && !mfaPending && inAuth) {
+    } else if (session && !mfaPending && baseCurrency.status === 'onboarding' && !onOnboarding) {
+      router.replace('/onboarding');
+    } else if (session && !mfaPending && baseCurrency.status === 'ready' && (inAuth || onOnboarding)) {
       router.replace('/(tabs)');
     }
-  }, [session, authReady, minTimeReady, mfaKnown, mfaPending, pinRequired, unlocked, segments]);
+  }, [session, authReady, minTimeReady, mfaKnown, mfaPending, baseCurrency.status, pinRequired, unlocked, segments]);
 
   let content;
   if (!fontsLoaded || loading) {
@@ -118,26 +124,29 @@ export default function RootLayout() {
   } else {
     content = (
       <SafeAreaProvider>
-        <StatusBar style={isDark ? 'light' : 'dark'} />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="transaction/add" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="transaction/[id]" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="wallet/[id]" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="category/[id]" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="payment/add" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="payment/[id]" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="payment/due" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="label/[id]" options={{ presentation: 'modal', headerShown: false }} />
-          <Stack.Screen name="settings/categories" options={{ headerShown: false }} />
-          <Stack.Screen name="settings/labels" options={{ headerShown: false }} />
-          <Stack.Screen name="settings/accounts" options={{ headerShown: false }} />
-          <Stack.Screen name="settings/security" options={{ headerShown: false }} />
-          <Stack.Screen name="settings/account" options={{ headerShown: false }} />
-          <Stack.Screen name="settings/two-factor" options={{ headerShown: false }} />
-          <Stack.Screen name="settings/export" options={{ headerShown: false }} />
-        </Stack>
+        <BaseCurrencyContext.Provider value={baseCurrency}>
+          <StatusBar style={isDark ? 'light' : 'dark'} />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="transaction/add" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="transaction/[id]" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="wallet/[id]" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="category/[id]" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="payment/add" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="payment/[id]" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="payment/due" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="label/[id]" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="settings/categories" options={{ headerShown: false }} />
+            <Stack.Screen name="settings/labels" options={{ headerShown: false }} />
+            <Stack.Screen name="settings/accounts" options={{ headerShown: false }} />
+            <Stack.Screen name="settings/security" options={{ headerShown: false }} />
+            <Stack.Screen name="settings/account" options={{ headerShown: false }} />
+            <Stack.Screen name="settings/two-factor" options={{ headerShown: false }} />
+            <Stack.Screen name="settings/export" options={{ headerShown: false }} />
+          </Stack>
+        </BaseCurrencyContext.Provider>
       </SafeAreaProvider>
     );
   }

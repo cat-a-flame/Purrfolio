@@ -18,13 +18,14 @@ import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import NetWorthCard, { type WalletSummary } from '@/components/NetWorthCard';
 import EmojiTile from '@/components/EmojiTile';
 import SkeletonBox from '@/components/SkeletonBox';
-import { formatHUF, formatNumber } from '@/lib/utils';
-import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, txToHUF, type DailyRates, type Rates } from '@/lib/exchange';
+import { formatNumber } from '@/lib/utils';
+import { useBaseCurrency, useFormatBase } from '@/lib/baseCurrencyContext';
+import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toBase, txToBase, type DailyRates, type Rates } from '@/lib/exchange';
 import { fetchWalletBalanceSums } from '@/lib/fetchWalletBalanceSums';
 import { generateDueDates, isoDate as recurringIsoDate } from '@/lib/recurringUtils';
 import { useCountUp } from '@/lib/useCountUp';
 import { Events } from '@/lib/events';
-import type { RecurringPayment, Transaction, TransactionType, Wallet } from '@/lib/types';
+import type { Currency, RecurringPayment, Transaction, TransactionType, Wallet } from '@/lib/types';
 
 // The sections, numbers and prediction logic mirror PurrfolioWeb's
 // app/statistics/page.tsx so both apps tell the same story.
@@ -36,8 +37,8 @@ const PALETTE = [
   '#a78bfa', '#fb7185', '#0ea5e9', '#d946ef', '#22c55e',
 ];
 
-// Categories under this amount (HUF) in the period are folded into "Other"
-const OTHER_THRESHOLD_HUF = 5_000;
+// Categories under this amount in the period are folded into "Other"
+const OTHER_THRESHOLD: Record<Currency, number> = { HUF: 5_000, EUR: 15, USD: 15 };
 const OTHER_COLOR = '#94a3b8';
 // Category rows shown before "Show N more categories"
 const VISIBLE_CATEGORIES = 8;
@@ -159,10 +160,10 @@ async function fetchTxs(userId: string, from: string, to: string): Promise<Trans
   return (data ?? []) as unknown as Transaction[];
 }
 
-async function fetchDailyRates(from: string, to: string): Promise<DailyRates> {
-  const rates = await getExchangeRatesForPeriod(from, to);
+async function fetchDailyRates(from: string, to: string, base: Currency): Promise<DailyRates> {
+  const rates = await getExchangeRatesForPeriod(from, to, base);
   if (Object.keys(rates).length > 0) return rates;
-  const current = await getExchangeRates();
+  const current = await getExchangeRates(base);
   return Object.keys(current).length > 0 ? { [from]: current } : {};
 }
 
@@ -241,6 +242,7 @@ function PredictionPanel({ variant, title, items, loading, colors }: {
   loading: boolean;
   colors: Colors;
 }) {
+  const formatBase = useFormatBase();
   const isIncome = variant === 'income';
   const sign = isIncome ? '+' : '−';
   const tone = isIncome ? colors.income : colors.expense;
@@ -269,7 +271,7 @@ function PredictionPanel({ variant, title, items, loading, colors }: {
                   <Text style={[styles.predSubtitle, { color: colors.muted }]} numberOfLines={1}>{item.subtitle}</Text>
                 </View>
                 <View style={styles.predAmountCol}>
-                  <Text style={[styles.predAmount, { color: tone }]}>{sign}{formatHUF(item.predictedAmount)}</Text>
+                  <Text style={[styles.predAmount, { color: tone }]}>{sign}{formatBase(item.predictedAmount)}</Text>
                   <Text style={[styles.predRange, { color: colors.muted }]}>
                     {item.isStable ? 'stable' : `${formatNumber(Math.round(item.rangeLow))} – ${formatNumber(Math.round(item.rangeHigh))}`}
                   </Text>
@@ -292,6 +294,9 @@ function PredictionPanel({ variant, title, items, loading, colors }: {
 // ─── screen ─────────────────────────────────────────────────────────────────
 export default function StatsScreen() {
   const colors = useTheme();
+  const baseCurrency = useBaseCurrency();
+  const formatBase = useFormatBase();
+  const otherThreshold = OTHER_THRESHOLD[baseCurrency];
   const hideTabBarOnScroll = useHideTabBarOnScroll();
   const { bottom } = useSafeAreaInsets();
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
@@ -346,12 +351,12 @@ export default function StatsScreen() {
       const walletList = (walletRows ?? []) as Wallet[];
       let rates: DailyRates = {};
       let today: Rates = {};
-      if (walletList.some(w => w.currency !== 'HUF')) {
+      if (walletList.some(w => w.currency !== baseCurrency)) {
         const [r1, r2, r3, t] = await Promise.all([
-          fetchDailyRates(period.from, period.to),
-          fetchDailyRates(prev.from, prev.to),
-          fetchDailyRates(histFrom, histTo),
-          getExchangeRates(),
+          fetchDailyRates(period.from, period.to, baseCurrency),
+          fetchDailyRates(prev.from, prev.to, baseCurrency),
+          fetchDailyRates(histFrom, histTo, baseCurrency),
+          getExchangeRates(baseCurrency),
         ]);
         rates = { ...r1, ...r2, ...r3 };
         today = t;
@@ -386,9 +391,9 @@ export default function StatsScreen() {
     setRefreshing(false);
   }, [load]);
 
-  const huf = useCallback(
-    (t: Transaction) => txToHUF(t.amount, t.wallet?.currency, t.exchange_rate_to_huf, getRatesForDate(t.date, dailyRates)),
-    [dailyRates],
+  const inBase = useCallback(
+    (t: Transaction) => txToBase(t.amount, t.wallet?.currency, t.exchange_rate_to_huf, getRatesForDate(t.date, dailyRates), baseCurrency),
+    [dailyRates, baseCurrency],
   );
 
   // ── Net worth ──────────────────────────────────────────────────────────
@@ -404,9 +409,9 @@ export default function StatsScreen() {
     }), [wallets, walletSums]);
 
   // ── Summary numbers ────────────────────────────────────────────────────
-  const income = useMemo(() => periodTxs.filter(t => t.type === 'income').reduce((s, t) => s + huf(t), 0), [periodTxs, huf]);
-  const expense = useMemo(() => periodTxs.filter(t => t.type === 'expense').reduce((s, t) => s + huf(t), 0), [periodTxs, huf]);
-  const prevExpense = useMemo(() => prevTxs.filter(t => t.type === 'expense').reduce((s, t) => s + huf(t), 0), [prevTxs, huf]);
+  const income = useMemo(() => periodTxs.filter(t => t.type === 'income').reduce((s, t) => s + inBase(t), 0), [periodTxs, inBase]);
+  const expense = useMemo(() => periodTxs.filter(t => t.type === 'expense').reduce((s, t) => s + inBase(t), 0), [periodTxs, inBase]);
+  const prevExpense = useMemo(() => prevTxs.filter(t => t.type === 'expense').reduce((s, t) => s + inBase(t), 0), [prevTxs, inBase]);
 
   const txCount = periodTxs.length;
   const incomeCount = periodTxs.filter(t => t.type === 'income').length;
@@ -427,7 +432,7 @@ export default function StatsScreen() {
     for (const p of recurringPayments) {
       for (const date of generateDueDates(p, from, to)) {
         if (actionedKeys.has(`${p.id}|${recurringIsoDate(date)}`)) continue;
-        const amount = toHUF(p.amount, p.wallet?.currency, todayRates);
+        const amount = toBase(p.amount, p.wallet?.currency, todayRates, baseCurrency);
         if (p.type === 'income') plannedIncome += amount;
         if (p.type === 'expense') plannedExpense += amount;
       }
@@ -442,7 +447,7 @@ export default function StatsScreen() {
       if (t.type !== 'expense') continue;
       const name = t.category?.name ?? 'Uncategorised';
       const prev = map.get(name) ?? { amount: 0, icon: t.category?.icon ?? '📁', color: t.category?.color ?? OTHER_COLOR };
-      map.set(name, { ...prev, amount: prev.amount + huf(t) });
+      map.set(name, { ...prev, amount: prev.amount + inBase(t) });
     }
     const total = Array.from(map.values()).reduce((s, v) => s + v.amount, 0);
     const rows = Array.from(map.entries())
@@ -454,8 +459,8 @@ export default function StatsScreen() {
         color: v.color !== OTHER_COLOR ? v.color : PALETTE[i % PALETTE.length],
         share: total > 0 ? v.amount / total : 0,
       }));
-    const main = rows.filter(r => r.amount >= OTHER_THRESHOLD_HUF);
-    const small = rows.filter(r => r.amount < OTHER_THRESHOLD_HUF);
+    const main = rows.filter(r => r.amount >= otherThreshold);
+    const small = rows.filter(r => r.amount < otherThreshold);
     const otherAmount = small.reduce((s, r) => s + r.amount, 0);
     return {
       total,
@@ -465,7 +470,7 @@ export default function StatsScreen() {
       other: small.length > 0 ? { amount: otherAmount, share: total > 0 ? otherAmount / total : 0 } : null,
       maxAmount: Math.max(1, ...main.map(r => r.amount)),
     };
-  }, [periodTxs, huf]);
+  }, [periodTxs, inBase]);
 
   // ── Period comparison ──────────────────────────────────────────────────
   const comparisonData = useMemo(() => {
@@ -474,7 +479,7 @@ export default function StatsScreen() {
       if (t.type !== 'expense') return;
       const name = t.category?.name ?? 'Uncategorised';
       const entry = catMap.get(name) ?? { current: 0, prev: 0, icon: t.category?.icon ?? '📁', color: t.category?.color ?? OTHER_COLOR };
-      entry[key] += huf(t);
+      entry[key] += inBase(t);
       catMap.set(name, entry);
     };
     periodTxs.forEach(t => add(t, 'current'));
@@ -483,7 +488,7 @@ export default function StatsScreen() {
       .sort((a, b) => (b[1].current + b[1].prev) - (a[1].current + a[1].prev))
       .slice(0, 10)
       .map(([name, v]) => ({ name, icon: v.icon, color: v.color, current: Math.round(v.current), prev: Math.round(v.prev) }));
-  }, [periodTxs, prevTxs, huf]);
+  }, [periodTxs, prevTxs, inBase]);
 
   // ── Predicted transactions ─────────────────────────────────────────────
   // Learns a per-category (and, where one payer dominates, per-payer) pattern
@@ -502,7 +507,7 @@ export default function StatsScreen() {
       color: string;
       type: TransactionType;
       totalCount: number;
-      buckets: Map<number, number>; // bucket index -> HUF sum
+      buckets: Map<number, number>; // bucket index -> base currency sum
       payerCounts: Map<string, number>;
     };
     const map = new Map<string, Group>();
@@ -521,7 +526,7 @@ export default function StatsScreen() {
       const txDate = new Date(t.date + 'T00:00:00');
       const bucketIdx = txDate.getFullYear() * 12 + txDate.getMonth() - histStartMonth;
       if (bucketIdx < 0 || bucketIdx >= HISTORY_MONTHS) continue;
-      g.buckets.set(bucketIdx, (g.buckets.get(bucketIdx) ?? 0) + huf(t));
+      g.buckets.set(bucketIdx, (g.buckets.get(bucketIdx) ?? 0) + inBase(t));
       g.totalCount += 1;
       if (t.payer) g.payerCounts.set(t.payer, (g.payerCounts.get(t.payer) ?? 0) + 1);
       map.set(key, g);
@@ -577,7 +582,7 @@ export default function StatsScreen() {
       income: items.filter(i => i.type === 'income').sort(byReliability).slice(0, MAX_PREDICTIONS_PER_TYPE),
       expense: items.filter(i => i.type === 'expense').sort(byReliability).slice(0, MAX_PREDICTIONS_PER_TYPE),
     };
-  }, [historyTxs, historyRange, period, huf]);
+  }, [historyTxs, historyRange, period, inBase]);
 
   const prevLabel = period.tab === 'months' ? 'previous month' : period.tab === 'years' ? 'previous year' : period.tab === 'weeks' ? 'previous week' : 'previous period';
   const prevName = prevPeriodName(period, prevLabel);
@@ -614,10 +619,10 @@ export default function StatsScreen() {
           iconBg={colors.incomeLight}
           iconFg={colors.income}
           label="Income"
-          amount={formatHUF(animatedIncome)}
+          amount={formatBase(animatedIncome)}
           amountColor={colors.income}
           footer={hasPlanned && plannedIncome > 0
-            ? { label: 'Projected', value: formatHUF(projIncome), color: colors.income, pct: progressPct(income, projIncome) }
+            ? { label: 'Projected', value: formatBase(projIncome), color: colors.income, pct: progressPct(income, projIncome) }
             : 'No pending income'}
         />
         <StatCard
@@ -626,10 +631,10 @@ export default function StatsScreen() {
           iconBg={colors.expenseLight}
           iconFg={colors.expense}
           label="Expenses"
-          amount={formatHUF(animatedExpense)}
+          amount={formatBase(animatedExpense)}
           amountColor={colors.expense}
           footer={hasPlanned
-            ? { label: 'Projected', value: formatHUF(projExpense), color: colors.expense, pct: progressPct(expense, projExpense) }
+            ? { label: 'Projected', value: formatBase(projExpense), color: colors.expense, pct: progressPct(expense, projExpense) }
             : 'No pending expenses'}
         />
         <StatCard
@@ -638,10 +643,10 @@ export default function StatsScreen() {
           iconBg={colors.accentLight}
           iconFg={colors.accent}
           label="Net"
-          amount={`${net >= 0 ? '+' : ''}${formatHUF(animatedNet)}`}
+          amount={`${net >= 0 ? '+' : ''}${formatBase(animatedNet)}`}
           amountColor={colors.text}
           footer={hasPlanned
-            ? { label: 'Projected', value: `${projNet >= 0 ? '+' : ''}${formatHUF(projNet)}`, color: colors.accent, pct: progressPct(net, projNet) }
+            ? { label: 'Projected', value: `${projNet >= 0 ? '+' : ''}${formatBase(projNet)}`, color: colors.accent, pct: progressPct(net, projNet) }
             : 'No projection'}
         />
         <StatCard
@@ -671,7 +676,7 @@ export default function StatsScreen() {
           </View>
           {!loading && categoryCount > 0 && (
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[styles.catTotalAmount, { color: colors.text }]}>{formatHUF(Math.round(total))}</Text>
+              <Text style={[styles.catTotalAmount, { color: colors.text }]}>{formatBase(Math.round(total))}</Text>
               <Text style={[styles.catTotalCount, { color: colors.muted }]}>
                 {categoryCount} {categoryCount === 1 ? 'category' : 'categories'}
               </Text>
@@ -705,7 +710,7 @@ export default function StatsScreen() {
                   </View>
                 </View>
                 <Text style={[styles.catPct, { color: colors.muted }]}>{formatShare(r.share)}</Text>
-                <Text style={[styles.catAmount, { color: colors.text }]}>{formatHUF(Math.round(r.amount))}</Text>
+                <Text style={[styles.catAmount, { color: colors.text }]}>{formatBase(Math.round(r.amount))}</Text>
               </View>
             ))}
 
@@ -727,19 +732,19 @@ export default function StatsScreen() {
                   <View style={[styles.catMain, styles.catOtherLabel]}>
                     <Text style={[styles.catName, { color: colors.text }]}>Other</Text>
                     <Text style={[styles.catOtherHint, { color: colors.muted }]} numberOfLines={1}>
-                      {small.length} under {formatHUF(OTHER_THRESHOLD_HUF)}
+                      {small.length} under {formatBase(otherThreshold)}
                     </Text>
                     <Ionicons name={otherExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={colors.muted} />
                   </View>
                   <Text style={[styles.catPct, { color: colors.muted }]}>{formatShare(other.share)}</Text>
-                  <Text style={[styles.catAmount, { color: colors.text }]}>{formatHUF(Math.round(other.amount))}</Text>
+                  <Text style={[styles.catAmount, { color: colors.text }]}>{formatBase(Math.round(other.amount))}</Text>
                 </Pressable>
                 {otherExpanded && small.map(r => (
                   <View key={r.name} style={[styles.catRow, styles.catSubRow]}>
                     <EmojiTile emoji={r.icon} color={r.color} size={32} />
                     <Text style={[styles.catName, styles.catMain, { color: colors.text }]} numberOfLines={1}>{r.name}</Text>
                     <Text style={[styles.catPct, { color: colors.muted }]}>{formatShare(r.share)}</Text>
-                    <Text style={[styles.catAmount, { color: colors.text }]}>{formatHUF(Math.round(r.amount))}</Text>
+                    <Text style={[styles.catAmount, { color: colors.text }]}>{formatBase(Math.round(r.amount))}</Text>
                   </View>
                 ))}
               </View>
@@ -788,10 +793,10 @@ export default function StatsScreen() {
                     <EmojiTile emoji={c.icon} color={c.color} size={34} />
                     <View style={styles.compMain}>
                       <Text style={[styles.compName, { color: colors.text }]} numberOfLines={1}>{c.name}</Text>
-                      <Text style={[styles.compAmountPrev, { color: colors.muted }]} numberOfLines={1}>was {formatHUF(c.prev)}</Text>
+                      <Text style={[styles.compAmountPrev, { color: colors.muted }]} numberOfLines={1}>was {formatBase(c.prev)}</Text>
                     </View>
                     <View style={styles.compAmounts}>
-                      <Text style={[styles.compAmountCurrent, { color: colors.text }]}>{formatHUF(c.current)}</Text>
+                      <Text style={[styles.compAmountCurrent, { color: colors.text }]}>{formatBase(c.current)}</Text>
                       <ChangeBadge text={change.text} tone={change.tone} colors={colors} />
                     </View>
                   </View>
@@ -809,11 +814,11 @@ export default function StatsScreen() {
             <View style={[styles.compTotal, { backgroundColor: colors.surface2 }]}>
               <Text style={[styles.compTotalLabel, { color: colors.muted }]}>Total spent</Text>
               <View style={styles.compTotalFigures}>
-                <Text style={[styles.compTotalAmount, { color: colors.text }]}>{formatHUF(Math.round(expense))}</Text>
+                <Text style={[styles.compTotalAmount, { color: colors.text }]}>{formatBase(Math.round(expense))}</Text>
                 <ChangeBadge text={total.text} tone={total.tone} colors={colors} />
               </View>
               <Text style={[styles.compTotalPrev, { color: colors.muted }]}>
-                vs {formatHUF(Math.round(prevExpense))} in {prevName}
+                vs {formatBase(Math.round(prevExpense))} in {prevName}
               </Text>
             </View>
           </>

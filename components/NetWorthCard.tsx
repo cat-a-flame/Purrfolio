@@ -1,13 +1,14 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { useDarkMode, useTheme } from '@/lib/theme';
-import { toHUF, type Rates } from '@/lib/exchange';
-import { formatCurrency, formatHUF } from '@/lib/utils';
+import { toBase, type Rates } from '@/lib/exchange';
+import { useBaseCurrency, useFormatBase } from '@/lib/baseCurrencyContext';
+import { formatCurrency } from '@/lib/utils';
 import type { AccountType, Wallet } from '@/lib/types';
 import EmojiTile from '@/components/EmojiTile';
 import SkeletonBox from '@/components/SkeletonBox';
 
 // Port of PurrfolioWeb/components/dashboard/AccountsOverview.tsx: net worth in
-// HUF, a proportion bar, and the accounts grouped by account type.
+// the base currency, a proportion bar, and the accounts grouped by account type.
 
 type GroupKey = 'cash' | 'bonds' | 'investments' | 'other';
 
@@ -34,12 +35,14 @@ function groupFor(wallet: Wallet): GroupKey {
 
 interface Props {
   summaries: WalletSummary[];
-  /** Current exchange rates, HUF per 1 unit of each currency. */
+  /** Current exchange rates, base currency per 1 unit of each foreign currency. */
   rates: Rates;
   loading: boolean;
 }
 
 export default function NetWorthCard({ summaries, rates, loading }: Props) {
+  const baseCurrency = useBaseCurrency();
+  const formatBase = useFormatBase();
   const colors = useTheme();
   const { isDark } = useDarkMode();
   const groupColors = isDark ? GROUP_COLORS_DARK : GROUP_COLORS_LIGHT;
@@ -69,14 +72,14 @@ export default function NetWorthCard({ summaries, rates, loading }: Props) {
 
   const groups = GROUPS.map(g => {
     const items = summaries.filter(s => groupFor(s.wallet) === g.key);
-    const totalHUF = items.reduce((sum, s) => sum + toHUF(s.balance, s.wallet.currency, rates), 0);
-    const approximate = items.some(s => s.wallet.currency !== 'HUF');
-    return { ...g, items, totalHUF, approximate };
+    const total = items.reduce((sum, s) => sum + toBase(s.balance, s.wallet.currency, rates, baseCurrency), 0);
+    const approximate = items.some(s => s.wallet.currency !== baseCurrency);
+    return { ...g, items, total, approximate };
   }).filter(g => g.items.length > 0);
 
-  const netWorth = groups.reduce((sum, g) => sum + g.totalHUF, 0);
+  const netWorth = groups.reduce((sum, g) => sum + g.total, 0);
   const netApproximate = groups.some(g => g.approximate);
-  const barTotal = groups.reduce((sum, g) => sum + Math.max(0, g.totalHUF), 0);
+  const barTotal = groups.reduce((sum, g) => sum + Math.max(0, g.total), 0);
 
   const money = (text: string, approximate: boolean) => `${approximate ? '≈ ' : ''}${text}`;
 
@@ -85,14 +88,14 @@ export default function NetWorthCard({ summaries, rates, loading }: Props) {
       <View style={styles.header}>
         <Text style={[styles.headerLabel, { color: colors.muted }]}>Net worth</Text>
         <Text style={[styles.headerValue, { color: colors.text }]} numberOfLines={1}>
-          {money(formatHUF(netWorth), netApproximate)}
+          {money(formatBase(netWorth), netApproximate)}
         </Text>
       </View>
 
       {barTotal > 0 && (
         <View style={styles.bar} accessibilityLabel="Share of net worth by account group">
-          {groups.filter(g => g.totalHUF > 0).map(g => (
-            <View key={g.key} style={[styles.segment, { flexGrow: g.totalHUF / barTotal, backgroundColor: groupColors[g.key] }]} />
+          {groups.filter(g => g.total > 0).map(g => (
+            <View key={g.key} style={[styles.segment, { flexGrow: g.total / barTotal, backgroundColor: groupColors[g.key] }]} />
           ))}
         </View>
       )}
@@ -104,7 +107,7 @@ export default function NetWorthCard({ summaries, rates, loading }: Props) {
               <View style={[styles.dot, { backgroundColor: groupColors[g.key] }]} />
               <Text style={[styles.groupTitle, { color: colors.text }]} numberOfLines={1}>{g.label}</Text>
             </View>
-            <Text style={[styles.groupTotal, { color: colors.text }]}>{money(formatHUF(g.totalHUF), g.approximate)}</Text>
+            <Text style={[styles.groupTotal, { color: colors.text }]}>{money(formatBase(g.total), g.approximate)}</Text>
           </View>
           {g.items.map(({ wallet, balance }) => (
             <View key={wallet.id} style={styles.row}>

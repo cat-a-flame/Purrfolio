@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/lib/theme';
+import { useBaseCurrency } from '@/lib/baseCurrencyContext';
 import type { Transaction } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -16,9 +17,10 @@ interface Props {
 
 function TransactionsTransactionRow({ transaction: tx, onPress, onLongPress, onIconPress, selected = false, selectionMode = false }: Props) {
   const colors = useTheme();
+  const baseCurrency = useBaseCurrency();
   const isTransfer = !!tx.transfer_group_id;
   const isIncome = tx.type === 'income';
-  const currency = tx.wallet?.currency ?? 'HUF';
+  const currency = tx.wallet?.currency ?? baseCurrency;
 
   const amountColor = isTransfer ? colors.muted : isIncome ? colors.income : colors.expense;
   const amountPrefix = isIncome ? '+' : '−';
