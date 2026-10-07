@@ -16,6 +16,8 @@ import {
 import CategoryPickerModal from '@/components/CategoryPickerModal';
 import BottomModal from '@/components/BottomModal';
 import ConfirmModal from '@/components/ConfirmModal';
+import DatePickerModal from '@/components/DatePickerModal';
+import AppInput from '@/components/AppInput';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT, TabBarSpacer } from '@/components/CustomTabBar';
 import { tabBarHiddenProgress, useHideTabBarOnScroll } from '@/lib/tabBarVisibility';
@@ -26,8 +28,8 @@ import AppHeader from '@/components/AppHeader';
 import TransactionRow from '@/components/TransactionsTransactionRow';
 import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { Ionicons } from '@expo/vector-icons';
-import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
-import { groupByDate, formatDayHeader, formatCurrency } from '@/lib/utils';
+import type { Transaction, Wallet, Category, Label, TransactionType, Currency } from '@/lib/types';
+import { groupByDate, formatDayHeader, formatCurrency, todayInputDate } from '@/lib/utils';
 import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toBase, type DailyRates } from '@/lib/exchange';
 import { useBaseCurrency } from '@/lib/baseCurrencyContext';
 import SkeletonBox from '@/components/SkeletonBox';
@@ -49,7 +51,11 @@ function defaultPeriod(): PeriodValue {
   };
 }
 
-type PanelView = 'main' | 'type' | 'account' | 'category' | 'label';
+type PanelView = 'main' | 'type' | 'account' | 'category' | 'label' | 'currency';
+
+const CURRENCY_ORDER: Currency[] = ['HUF', 'EUR', 'USD'];
+
+type BulkView = 'menu' | 'category' | 'labels' | 'date' | 'note' | 'payee';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 export default function TransactionsScreen() {
@@ -67,6 +73,7 @@ export default function TransactionsScreen() {
   const [walletFilters, setWalletFilters] = useState<string[]>([]);
   const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
   const [labelFilters, setLabelFilters] = useState<string[]>([]);
+  const [currencyFilters, setCurrencyFilters] = useState<Currency[]>([]);
   const [period, setPeriod] = useState<PeriodValue>(defaultPeriod);
 
   // Draft filters (edited inside the panel before applying)
@@ -74,6 +81,7 @@ export default function TransactionsScreen() {
   const [draftWallets, setDraftWallets] = useState<string[]>([]);
   const [draftCategories, setDraftCategories] = useState<string[]>([]);
   const [draftLabels, setDraftLabels] = useState<string[]>([]);
+  const [draftCurrencies, setDraftCurrencies] = useState<Currency[]>([]);
 
   const [filterPanelVisible, setFilterPanelVisible] = useState(false);
   const [panelView, setPanelView] = useState<PanelView>('main');
@@ -114,7 +122,9 @@ export default function TransactionsScreen() {
   }
 
   const [bulkEditVisible, setBulkEditVisible] = useState(false);
-  const [bulkView, setBulkView] = useState<'menu' | 'category' | 'labels'>('menu');
+  const [bulkView, setBulkView] = useState<BulkView>('menu');
+  const [bulkText, setBulkText] = useState('');
+  const [pendingPatch, setPendingPatch] = useState<Record<string, string | null> | null>(null);
   const [bulkLabelIds, setBulkLabelIds] = useState<string[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
   const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(null);
@@ -124,6 +134,20 @@ export default function TransactionsScreen() {
   function openBulkEdit() {
     setBulkView('menu');
     setBulkEditVisible(true);
+  }
+
+  // Date, note and payee: one patch applied to every selected transaction
+  async function applyBulkPatch() {
+    if (!pendingPatch) return;
+    setBulkSaving(true);
+    const ids = Array.from(selectedIds);
+    await supabase.from('transactions').update(pendingPatch).in('id', ids);
+    setBulkSaving(false);
+    setConfirmEditVisible(false);
+    setBulkEditVisible(false);
+    setPendingPatch(null);
+    exitSelectionMode();
+    load(true);
   }
 
   async function applyBulkCategory() {
@@ -238,6 +262,7 @@ export default function TransactionsScreen() {
     setDraftWallets([...walletFilters]);
     setDraftCategories([...categoryFilters]);
     setDraftLabels([...labelFilters]);
+    setDraftCurrencies([...currencyFilters]);
     setPanelView('main');
     panelAnim.setValue(PANEL_WIDTH);
     fadeAnim.setValue(0);
@@ -263,6 +288,7 @@ export default function TransactionsScreen() {
       setWalletFilters(draftWallets);
       setCategoryFilters(draftCategories);
       setLabelFilters(draftLabels);
+      setCurrencyFilters(draftCurrencies);
     }
   }
 
@@ -271,6 +297,7 @@ export default function TransactionsScreen() {
     setDraftWallets([]);
     setDraftCategories([]);
     setDraftLabels([]);
+    setDraftCurrencies([]);
   }
 
   function resetFilters() {
@@ -279,6 +306,7 @@ export default function TransactionsScreen() {
     setWalletFilters([]);
     setCategoryFilters([]);
     setLabelFilters([]);
+    setCurrencyFilters([]);
     setPeriod(defaultPeriod());
   }
 
@@ -291,7 +319,8 @@ export default function TransactionsScreen() {
     typeFilters.length > 0 ||
     walletFilters.length > 0 ||
     categoryFilters.length > 0 ||
-    labelFilters.length > 0
+    labelFilters.length > 0 ||
+    currencyFilters.length > 0
   );
 
   function matchesTypeFilter(tx: Transaction, types: (TransactionType | 'transfer')[]) {
@@ -308,6 +337,7 @@ export default function TransactionsScreen() {
       if (walletFilters.length > 0 && !walletFilters.includes(tx.wallet_id)) return false;
       if (categoryFilters.length > 0 && !categoryFilters.includes(tx.category_id ?? '')) return false;
       if (labelFilters.length > 0 && !tx.labels?.some((l: Label) => labelFilters.includes(l.id))) return false;
+      if (currencyFilters.length > 0 && !currencyFilters.includes(((tx.wallet as any)?.currency ?? 'HUF') as Currency)) return false;
       if (q) {
         const inNotes = tx.notes?.toLowerCase().includes(q) ?? false;
         const inPayer = tx.payer?.toLowerCase().includes(q) ?? false;
@@ -315,7 +345,7 @@ export default function TransactionsScreen() {
       }
       return true;
     });
-  }, [transactions, search, typeFilters, walletFilters, categoryFilters, labelFilters]);
+  }, [transactions, search, typeFilters, walletFilters, categoryFilters, labelFilters, currencyFilters]);
 
   // Draft-filtered count (for filter button)
   const draftFilteredCount = useMemo(() => {
@@ -324,9 +354,10 @@ export default function TransactionsScreen() {
       if (draftWallets.length > 0 && !draftWallets.includes(tx.wallet_id)) return false;
       if (draftCategories.length > 0 && !draftCategories.includes(tx.category_id ?? '')) return false;
       if (draftLabels.length > 0 && !tx.labels?.some((l: Label) => draftLabels.includes(l.id))) return false;
+      if (draftCurrencies.length > 0 && !draftCurrencies.includes(((tx.wallet as any)?.currency ?? 'HUF') as Currency)) return false;
       return true;
     }).length;
-  }, [transactions, draftTypes, draftWallets, draftCategories, draftLabels]);
+  }, [transactions, draftTypes, draftWallets, draftCategories, draftLabels, draftCurrencies]);
 
   const txIds = useMemo(() => filtered.map(t => t.id), [filtered]);
   const allSelected = txIds.length > 0 && txIds.every(id => selectedIds.has(id));
@@ -399,7 +430,18 @@ export default function TransactionsScreen() {
     return `${draftLabels.length} selected`;
   }
 
-  const filterCount = typeFilters.length + walletFilters.length + categoryFilters.length + labelFilters.length;
+  function currencySummary() {
+    if (draftCurrencies.length === 0) return 'All';
+    return CURRENCY_ORDER.filter(c => draftCurrencies.includes(c)).join(', ');
+  }
+
+  // Only offer currencies the user has accounts in
+  const currencyOptions = useMemo(() => {
+    const used = new Set(wallets.map(w => w.currency ?? 'HUF'));
+    return CURRENCY_ORDER.filter(c => used.has(c));
+  }, [wallets]);
+
+  const filterCount = typeFilters.length + walletFilters.length + categoryFilters.length + labelFilters.length + currencyFilters.length;
 
   const renderItem = useCallback(({ item }: { item: ListItem }) => {
     if (item.kind === 'header') {
@@ -598,11 +640,24 @@ export default function TransactionsScreen() {
       />
 
       <BottomModal
-        visible={bulkEditVisible && bulkView !== 'category'}
+        visible={bulkEditVisible && bulkView !== 'category' && bulkView !== 'date'}
         onClose={() => { if (!bulkSaving) setBulkEditVisible(false); }}
-        title={bulkView === 'labels' ? 'Set labels' : `Edit ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}`}
-        rightAction={bulkView === 'labels' ? (
-          <TouchableOpacity onPress={() => setConfirmEditVisible(true)} disabled={bulkSaving}>
+        title={
+          bulkView === 'labels' ? 'Set labels' :
+          bulkView === 'note' ? 'Set note' :
+          bulkView === 'payee' ? 'Set payee' :
+          `Edit ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}`
+        }
+        rightAction={bulkView === 'labels' || bulkView === 'note' || bulkView === 'payee' ? (
+          <TouchableOpacity
+            onPress={() => {
+              if (bulkView !== 'labels') {
+                setPendingPatch({ [bulkView === 'note' ? 'notes' : 'payer']: bulkText.trim() || null });
+              }
+              setConfirmEditVisible(true);
+            }}
+            disabled={bulkSaving}
+          >
             <Text style={{ color: colors.accent, fontSize: 15, fontFamily: 'Nunito_600SemiBold' }}>Save</Text>
           </TouchableOpacity>
         ) : undefined}
@@ -634,6 +689,55 @@ export default function TransactionsScreen() {
               <Text style={[styles.bulkMenuLabel, { color: colors.text }]}>Set labels</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.muted} />
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkMenuItem, { borderBottomColor: colors.border }]}
+              activeOpacity={0.7}
+              onPress={() => setBulkView('date')}
+            >
+              <View style={[styles.bulkMenuIcon, { backgroundColor: colors.accent + '18' }]}>
+                <Ionicons name="calendar-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={[styles.bulkMenuLabel, { color: colors.text }]}>Change date</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkMenuItem, { borderBottomColor: colors.border }]}
+              activeOpacity={0.7}
+              onPress={() => { setBulkText(''); setBulkView('note'); }}
+            >
+              <View style={[styles.bulkMenuIcon, { backgroundColor: colors.accent + '18' }]}>
+                <Ionicons name="document-text-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={[styles.bulkMenuLabel, { color: colors.text }]}>Set note</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkMenuItem, { borderBottomColor: colors.border }]}
+              activeOpacity={0.7}
+              onPress={() => { setBulkText(''); setBulkView('payee'); }}
+            >
+              <View style={[styles.bulkMenuIcon, { backgroundColor: colors.accent + '18' }]}>
+                <Ionicons name="person-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={[styles.bulkMenuLabel, { color: colors.text }]}>Set payee</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {(bulkView === 'note' || bulkView === 'payee') && (
+          <View style={styles.bulkTextWrap}>
+            <AppInput
+              label={bulkView === 'note' ? 'Note' : 'Payee'}
+              value={bulkText}
+              onChangeText={setBulkText}
+              placeholder="Leave empty to clear"
+              multiline={bulkView === 'note'}
+              autoFocus
+            />
+            <Text style={[styles.bulkTextHint, { color: colors.muted }]}>
+              Replaces the {bulkView === 'note' ? 'note' : 'payee'} on every selected transaction.
+            </Text>
           </View>
         )}
 
@@ -660,14 +764,26 @@ export default function TransactionsScreen() {
         )}
       </BottomModal>
 
+      <DatePickerModal
+        visible={bulkEditVisible && bulkView === 'date'}
+        value={todayInputDate()}
+        onConfirm={(d) => { setPendingPatch({ date: d }); setConfirmEditVisible(true); }}
+        onClose={() => setBulkView('menu')}
+      />
+
       {/* Confirm edit */}
       <ConfirmModal
         visible={confirmEditVisible}
         title="Apply changes?"
         message={`This will update ${selectedIds.size} transaction${selectedIds.size !== 1 ? 's' : ''}. This cannot be undone.`}
         confirmLabel={bulkSaving ? 'Saving…' : 'Save'}
-        onConfirm={pendingCategoryId ? applyBulkCategory : applyBulkLabels}
-        onCancel={() => { if (!bulkSaving) setConfirmEditVisible(false); }}
+        onConfirm={pendingPatch ? applyBulkPatch : pendingCategoryId ? applyBulkCategory : applyBulkLabels}
+        onCancel={() => {
+          if (bulkSaving) return;
+          setConfirmEditVisible(false);
+          setPendingPatch(null);
+          setPendingCategoryId(null);
+        }}
       />
 
       {/* Confirm delete */}
@@ -709,7 +825,8 @@ export default function TransactionsScreen() {
                   {panelView === 'main' ? 'Filters' :
                     panelView === 'type' ? 'Type' :
                       panelView === 'account' ? 'Account' :
-                        panelView === 'category' ? 'Category' : 'Label'}
+                        panelView === 'category' ? 'Category' :
+                          panelView === 'currency' ? 'Currency' : 'Label'}
                 </Text>
                 <View style={{ width: 22 }} />
               </View>
@@ -770,6 +887,20 @@ export default function TransactionsScreen() {
                       </View>
                       <Text style={[styles.panelRowLabel, { color: colors.text }]}>Label</Text>
                       <Text style={[styles.panelRowValue, { color: colors.muted }]} numberOfLines={1}>{labelSummary()}</Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                    </TouchableOpacity>
+
+                    {/* Currency row */}
+                    <TouchableOpacity
+                      style={[styles.panelRow, { borderBottomColor: colors.border }]}
+                      onPress={() => setPanelView('currency')}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.panelRowIcon, { backgroundColor: colors.accent + '18' }]}>
+                        <Ionicons name="cash-outline" size={16} color={colors.accent} />
+                      </View>
+                      <Text style={[styles.panelRowLabel, { color: colors.text }]}>Currency</Text>
+                      <Text style={[styles.panelRowValue, { color: colors.muted }]} numberOfLines={1}>{currencySummary()}</Text>
                       <Ionicons name="chevron-forward" size={16} color={colors.muted} />
                     </TouchableOpacity>
                   </>
@@ -895,6 +1026,27 @@ export default function TransactionsScreen() {
                     </View>
                   );
                 })()}
+
+                {panelView === 'currency' && (
+                  <View>
+                    {currencyOptions.map((c) => {
+                      const sel = draftCurrencies.includes(c);
+                      return (
+                        <TouchableOpacity
+                          key={c}
+                          style={[styles.optionRow, { borderBottomColor: colors.border }, sel && { backgroundColor: colors.accent + '11' }]}
+                          onPress={() => setDraftCurrencies(prev => toggleItem(prev, c))}
+                        >
+                          <Text style={[styles.optionLabel, { color: sel ? colors.accent : colors.text }]}>{c}</Text>
+                          {sel && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                    {currencyOptions.length === 0 && (
+                      <Text style={[styles.optionLabel, { color: colors.muted, padding: 16 }]}>No accounts yet</Text>
+                    )}
+                  </View>
+                )}
 
                 {panelView === 'label' && (
                   <View>
@@ -1134,6 +1286,8 @@ const styles = StyleSheet.create({
   toolbarDivider: { width: StyleSheet.hairlineWidth, height: 36 },
 
   bulkMenuList: { paddingVertical: 8 },
+  bulkTextWrap: { paddingVertical: 8, gap: 8 },
+  bulkTextHint: { fontSize: 12, fontFamily: 'Nunito_400Regular' },
   bulkMenuItem: {
     flexDirection: 'row',
     alignItems: 'center',

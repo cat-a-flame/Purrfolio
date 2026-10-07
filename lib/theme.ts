@@ -24,7 +24,7 @@ export const lightColors = {
   accent3: '#0ea5c6',
   text: '#5f4c79',
   heading: '#2b1452',
-  muted: '#9a8cab',
+  muted: '#9284a4',
   faint: '#9a8fb2',
   danger: '#e0344a',
   dangerLight: '#fdecef',

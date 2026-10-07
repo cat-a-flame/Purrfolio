@@ -5,7 +5,10 @@ import {
   FlatList,
   StyleSheet,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useHideNumbers, NUMBER_MASK } from '@/lib/hideNumbers';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_HEIGHT, TabBarSpacer } from '@/components/CustomTabBar';
 import { useHideTabBarOnScroll } from '@/lib/tabBarVisibility';
@@ -68,6 +71,7 @@ function defaultPeriod(): PeriodValue {
 
 export default function DashboardScreen() {
   const baseCurrency = useBaseCurrency();
+  const [hideNumbers, setHideNumbers] = useHideNumbers();
   const colors = useTheme();
   const hideTabBarOnScroll = useHideTabBarOnScroll();
   const router = useRouter();
@@ -280,6 +284,19 @@ export default function DashboardScreen() {
                 <Rect width="100%" height="100%" fill="url(#orbPink)" />
               </Svg>
 
+              {/* Hide numbers toggle, top-right */}
+              <TouchableOpacity
+                style={styles.hideNumbersBtn}
+                onPress={() => setHideNumbers(!hideNumbers)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                accessibilityRole="button"
+                accessibilityLabel={hideNumbers ? 'Show numbers' : 'Hide numbers'}
+                accessibilityState={{ selected: hideNumbers }}
+              >
+                <Ionicons name={hideNumbers ? 'eye-off-outline' : 'eye-outline'} size={18} color="#ffffff" />
+              </TouchableOpacity>
+
               {/* Title pill */}
               <View style={styles.cashFlowTitlePill}>
                 <View style={styles.cashFlowDot} />
@@ -293,7 +310,7 @@ export default function DashboardScreen() {
                   {loading
                     ? <SkeletonBox style={{ height: 38, width: 170, borderRadius: 8, backgroundColor: '#ffffff30' }} />
                     : <Text style={styles.cashFlowNet} numberOfLines={1} adjustsFontSizeToFit>
-                      {net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(net), baseCurrency)}
+                      {hideNumbers ? NUMBER_MASK : `${net >= 0 ? '+' : '−'}${formatCurrency(Math.abs(net), baseCurrency)}`}
                     </Text>
                   }
                 </View>
@@ -302,7 +319,7 @@ export default function DashboardScreen() {
                     <Text style={styles.vsLabel}>vs previous</Text>
                     <View style={[styles.vsBadge, vsPct >= 0 ? styles.vsBadgePos : styles.vsBadgeNeg]}>
                       <Text style={[styles.vsText, { color: vsPct >= 0 ? '#c9ffe8' : '#ffe0e5' }]}>
-                        {vsPct >= 0 ? '↑' : '↓'} {Math.abs(vsPct)}%
+                        {hideNumbers ? NUMBER_MASK : `${vsPct >= 0 ? '↑' : '↓'} ${Math.abs(vsPct)}%`}
                       </Text>
                     </View>
                   </View>
@@ -315,7 +332,7 @@ export default function DashboardScreen() {
                   <Text style={styles.cashFlowLabel}>Income</Text>
                   {loading
                     ? <SkeletonBox style={{ height: 13, width: 90, borderRadius: 4, backgroundColor: '#ffffff30' }} />
-                    : <Text style={styles.cashFlowValue}>+{formatCurrency(income, baseCurrency)}</Text>
+                    : <Text style={styles.cashFlowValue}>{hideNumbers ? NUMBER_MASK : `+${formatCurrency(income, baseCurrency)}`}</Text>
                   }
                 </View>
                 <View style={styles.barTrack}>
@@ -334,7 +351,7 @@ export default function DashboardScreen() {
                   <Text style={styles.cashFlowLabel}>Expenses</Text>
                   {loading
                     ? <SkeletonBox style={{ height: 13, width: 90, borderRadius: 4, backgroundColor: '#ffffff30' }} />
-                    : <Text style={styles.cashFlowValue}>−{formatCurrency(expense, baseCurrency)}</Text>
+                    : <Text style={styles.cashFlowValue}>{hideNumbers ? NUMBER_MASK : `−${formatCurrency(expense, baseCurrency)}`}</Text>
                   }
                 </View>
                 <View style={styles.barTrack}>
@@ -409,6 +426,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.45,
     shadowRadius: 24,
     elevation: 10,
+  },
+  hideNumbersBtn: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    zIndex: 1,
   },
   cashFlowTitlePill: {
     flexDirection: 'row',

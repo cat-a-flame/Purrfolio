@@ -27,7 +27,7 @@ const FAB_RISE = 15;     // how far the add button pokes above the pill
 const EAR_SVG_H = 26;    // height of the cat-ears SVG canvas
 const EAR_OVERLAP = 16;  // how much the button overlaps (hides) the ear bases
 const PILL_INSET = 12;   // horizontal gap between the pill and the screen edges
-const PILL_R = 24;       // pill corner radius
+const PILL_R = 18;       // pill corner radius
 
 // ── Notch (the cut-out the add button sits in) ──
 const NOTCH_R = 36;      // notch radius — clearance around the add button
