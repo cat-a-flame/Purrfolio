@@ -12,7 +12,7 @@ import ConfirmModal from '@/components/ConfirmModal';
 import DeleteAccountModal from '@/components/DeleteAccountModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+import { supabase, verifyPassword } from '@/lib/supabase';
 import { disablePin } from '@/lib/security';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -27,6 +27,11 @@ export default function AccountScreen() {
   const [email, setEmail] = useState('');
   const [savingUsername, setSavingUsername] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
   const [deleteVisible, setDeleteVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -61,6 +66,40 @@ export default function AccountScreen() {
     } else {
       Alert.alert('Check your inbox', 'A confirmation link has been sent to your new email address.');
     }
+  }
+
+  async function handleChangePassword() {
+    setPasswordError('');
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Please fill in all password fields.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters.');
+      return;
+    }
+    setSavingPassword(true);
+    // Stops someone at an unlocked, signed-in phone from changing the password.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!(await verifyPassword(user?.email ?? '', currentPassword))) {
+      setSavingPassword(false);
+      setPasswordError('Current password is incorrect.');
+      return;
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setSavingPassword(false);
+    if (error) {
+      setPasswordError(error.message);
+      return;
+    }
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    Alert.alert('Saved', 'Password updated.');
   }
 
   function handleSignOut() {
@@ -147,6 +186,51 @@ export default function AccountScreen() {
                 style={[styles.saveButton, { borderColor: colors.accent }]}
               >
                 <Text style={[styles.saveButtonText, { color: colors.accent }]}>Save</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.muted }]}>CHANGE PASSWORD</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <AppInput
+              label="Current password"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="current-password"
+            />
+            <AppInput
+              label="New password"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="new-password"
+            />
+            <AppInput
+              label="Confirm new password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="new-password"
+              error={passwordError || undefined}
+            />
+            {savingPassword ? (
+              <ActivityIndicator color={colors.accent} style={{ alignSelf: 'flex-end' }} />
+            ) : (
+              <TouchableOpacity
+                onPress={handleChangePassword}
+                activeOpacity={0.7}
+                style={[styles.saveButton, { borderColor: colors.accent }]}
+              >
+                <Text style={[styles.saveButtonText, { color: colors.accent }]}>Update password</Text>
               </TouchableOpacity>
             )}
           </View>

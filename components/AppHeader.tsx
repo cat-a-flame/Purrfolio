@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
+import ReportBugModal from '@/components/ReportBugModal';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme, useDarkMode } from '@/lib/theme';
@@ -30,6 +31,8 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
   const colors = useTheme();
   const { isDark, setIsDark } = useDarkMode();
   const router = useRouter();
+  const pathname = usePathname();
+  const [bugVisible, setBugVisible] = useState(false);
   const { top, bottom } = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
@@ -68,12 +71,13 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
 
   function navigate(route: string) { closeDrawer(() => router.push(route as any)); }
 
-  const menuItems = [
+  const menuItems: { label: string; route?: string; onPress?: () => void; icon: string }[] = [
     { label: 'Accounts',   route: '/settings/accounts',   icon: 'wallet-outline'       },
     { label: 'Categories', route: '/settings/categories', icon: 'grid-outline'         },
     { label: 'Labels',     route: '/settings/labels',     icon: 'pricetag-outline'     },
     { label: 'Security',   route: '/settings/security',   icon: 'lock-closed-outline'  },
     { label: 'Export',     route: '/settings/export',     icon: 'download-outline'     },
+    { label: 'Report a bug', onPress: () => closeDrawer(() => setBugVisible(true)), icon: 'bug-outline' },
   ];
 
   const initial = (username || email || '?').charAt(0).toUpperCase();
@@ -139,9 +143,9 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
                 <Text style={[styles.sectionLabel, { color: colors.muted }]}>Menu</Text>
                 {menuItems.map((item) => (
                   <TouchableOpacity
-                    key={item.route}
+                    key={item.label}
                     style={styles.row}
-                    onPress={() => navigate(item.route)}
+                    onPress={item.onPress ?? (() => item.route && navigate(item.route))}
                     activeOpacity={0.7}
                   >
                     <View style={[styles.rowIcon, { backgroundColor: colors.accentLight }]}>
@@ -170,6 +174,8 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => closeDrawer()} />
         </View>
       </Modal>
+
+      <ReportBugModal visible={bugVisible} page={pathname} onClose={() => setBugVisible(false)} />
     </>
   );
 }
