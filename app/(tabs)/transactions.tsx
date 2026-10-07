@@ -28,7 +28,8 @@ import PeriodPicker, { PeriodValue } from '@/components/PeriodPicker';
 import { Ionicons } from '@expo/vector-icons';
 import type { Transaction, Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { groupByDate, formatDayHeader, formatCurrency } from '@/lib/utils';
-import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toHUF, type DailyRates } from '@/lib/exchange';
+import { getExchangeRatesForPeriod, getExchangeRates, getRatesForDate, toBase, type DailyRates } from '@/lib/exchange';
+import { useBaseCurrency } from '@/lib/baseCurrencyContext';
 import SkeletonBox from '@/components/SkeletonBox';
 import Toast from '@/components/Toast';
 import { Events } from '@/lib/events';
@@ -52,6 +53,7 @@ type PanelView = 'main' | 'type' | 'account' | 'category' | 'label';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 export default function TransactionsScreen() {
+  const baseCurrency = useBaseCurrency();
   const colors = useTheme();
   const router = useRouter();
   const { bottom, top } = useSafeAreaInsets();
@@ -196,16 +198,16 @@ export default function TransactionsScreen() {
     })));
 
     if (!silent) {
-      let periodRates = await getExchangeRatesForPeriod(period.from, period.to);
+      let periodRates = await getExchangeRatesForPeriod(period.from, period.to, baseCurrency);
       if (Object.keys(periodRates).length === 0) {
-        const current = await getExchangeRates();
+        const current = await getExchangeRates(baseCurrency);
         if (Object.keys(current).length > 0) periodRates = { [period.from]: current };
       }
       setDailyRates(periodRates);
     }
 
     setLoading(false);
-  }, [period.from, period.to]);
+  }, [period.from, period.to, baseCurrency]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -342,11 +344,11 @@ export default function TransactionsScreen() {
     for (const tx of filtered) {
       if (tx.transfer_group_id) continue;
       const rates = getRatesForDate(tx.date, dailyRates);
-      const huf = toHUF(tx.amount, (tx.wallet as any)?.currency, rates);
-      net += tx.type === 'income' ? huf : -huf;
+      const converted = toBase(tx.amount, (tx.wallet as any)?.currency, rates, baseCurrency);
+      net += tx.type === 'income' ? converted : -converted;
     }
     return { count: filtered.length, net };
-  }, [filtered, dailyRates]);
+  }, [filtered, dailyRates, baseCurrency]);
 
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
 
@@ -358,14 +360,14 @@ export default function TransactionsScreen() {
       let dayNet = 0;
       for (const tx of g.items) {
         if (tx.transfer_group_id) continue;
-        const huf = toHUF(tx.amount, (tx.wallet as any)?.currency, rates);
-        dayNet += tx.type === 'income' ? huf : -huf;
+        const converted = toBase(tx.amount, (tx.wallet as any)?.currency, rates, baseCurrency);
+        dayNet += tx.type === 'income' ? converted : -converted;
       }
       items.push({ kind: 'header', date: g.date, dayNet });
       for (const tx of g.items) items.push({ kind: 'tx', tx });
     }
     return items;
-  }, [groups, dailyRates]);
+  }, [groups, dailyRates, baseCurrency]);
 
   // Filter summary helpers
   function typeSummary() {
@@ -406,7 +408,7 @@ export default function TransactionsScreen() {
         <View style={styles.dayHeader}>
           <Text style={[styles.dateHeader, { color: colors.muted }]}>{formatDayHeader(item.date)}</Text>
           <Text style={[styles.dayNet, { color: positive ? colors.income : colors.expense }]}>
-            {positive ? '+' : '−'}{formatCurrency(Math.abs(item.dayNet), 'HUF')}
+            {positive ? '+' : '−'}{formatCurrency(Math.abs(item.dayNet), baseCurrency)}
           </Text>
         </View>
       );
@@ -504,7 +506,7 @@ export default function TransactionsScreen() {
                       {summary.count} transaction{summary.count !== 1 ? 's' : ''}
                     </Text>
                     <Text style={[styles.summaryTotal, { color: summary.net >= 0 ? colors.income : colors.expense }]}>
-                      {summary.net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(summary.net), 'HUF')}
+                      {summary.net >= 0 ? '+' : '−'}{formatCurrency(Math.abs(summary.net), baseCurrency)}
                     </Text>
                   </>
                 )}

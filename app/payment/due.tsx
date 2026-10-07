@@ -9,14 +9,16 @@ import type { RecurringPayment, Currency } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { isoDate } from '@/lib/recurringUtils';
 import { Events } from '@/lib/events';
+import { useBaseCurrency } from '@/lib/baseCurrencyContext';
 
 export default function DuePaymentScreen() {
+  const baseCurrency = useBaseCurrency();
   const colors = useTheme();
   const router = useRouter();
   const { paymentId, dueDate } = useLocalSearchParams<{ paymentId: string; dueDate: string }>();
 
   const [payment, setPayment] = useState<RecurringPayment | null>(null);
-  const [currency, setCurrency] = useState<Currency>('HUF');
+  const [currency, setCurrency] = useState<Currency>(baseCurrency);
   const [fetching, setFetching] = useState(true);
   const [loading, setLoading] = useState(false);
 

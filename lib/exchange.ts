@@ -1,27 +1,31 @@
 // Exchange rates via Frankfurter (ECB fixing).
+import { CURRENCIES } from './baseCurrency';
+import type { Currency } from './types';
 
-export type Rates = Record<string, number>; // e.g. { EUR: 390.5, USD: 357.25 }
+// Base currency per 1 unit of each foreign currency, e.g. with base HUF { EUR: 390.5, USD: 357.25 }.
+export type Rates = Record<string, number>;
 export type DailyRates = Record<string, Rates>; // YYYY-MM-DD → { EUR: ..., USD: ... }
 
 const BASE = 'https://api.frankfurter.app';
 
-/** Convert an amount in `currency` to HUF using the provided rates. */
-export function toHUF(amount: number, currency: string | undefined | null, rates: Rates): number {
-  if (!currency || currency === 'HUF') return amount;
+/** Convert an amount in `currency` to the base currency using the provided rates. */
+export function toBase(amount: number, currency: string | undefined | null, rates: Rates, base: Currency): number {
+  if (!currency || currency === base) return amount;
   const rate = rates[currency];
   return rate ? amount * rate : amount;
 }
 
-/** Like toHUF but prefers a stored per-transaction rate over a looked-up one. */
-export function txToHUF(
+/** Like toBase but prefers a stored per-transaction rate over a looked-up one. */
+export function txToBase(
   amount: number,
   currency: string | undefined | null,
   storedRate: number | null | undefined,
   rates: Rates,
+  base: Currency,
 ): number {
-  if (!currency || currency === 'HUF') return amount;
+  if (!currency || currency === base) return amount;
   if (storedRate != null) return amount * storedRate;
-  return toHUF(amount, currency, rates);
+  return toBase(amount, currency, rates, base);
 }
 
 /**
@@ -46,10 +50,12 @@ function fetchWithTimeout(url: string): Promise<Response> {
   return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
-/** Returns today's rates (EUR→HUF, USD→HUF). */
-export async function getExchangeRates(): Promise<Rates> {
+const othersOf = (base: Currency) => CURRENCIES.filter(c => c !== base).join(',');
+
+/** Returns today's rates (each other currency → base). */
+export async function getExchangeRates(base: Currency): Promise<Rates> {
   try {
-    const res = await fetchWithTimeout(`${BASE}/latest?from=HUF&to=EUR,USD`);
+    const res = await fetchWithTimeout(`${BASE}/latest?from=${base}&to=${othersOf(base)}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     return invertRates(json.rates ?? {});
@@ -61,12 +67,12 @@ export async function getExchangeRates(): Promise<Rates> {
 
 /**
  * Fetch rates for every day in [from, to].
- * Returns date → { EUR: HUF-rate, USD: HUF-rate } so each transaction
+ * Returns date → { <currency>: base-rate } so each transaction
  * can be converted using its own day's middle rate.
  */
-export async function getExchangeRatesForPeriod(from: string, to: string): Promise<DailyRates> {
+export async function getExchangeRatesForPeriod(from: string, to: string, base: Currency): Promise<DailyRates> {
   try {
-    const res = await fetchWithTimeout(`${BASE}/${from}..${to}?from=HUF&to=EUR,USD`);
+    const res = await fetchWithTimeout(`${BASE}/${from}..${to}?from=${base}&to=${othersOf(base)}`);
     if (res.status === 404) return {}; // no ECB data for this range (future / holiday-only)
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
@@ -89,8 +95,8 @@ export async function getExchangeRatesForPeriod(from: string, to: string): Promi
   }
 }
 
-// Frankfurter gives rates relative to HUF (1 HUF = 0.00254 EUR).
-// Invert to get how many HUF per 1 EUR.
+// Frankfurter gives rates relative to the base (with base HUF, 1 HUF = 0.00254 EUR).
+// Invert to get how many base units per 1 EUR.
 function invertRates(hufBased: Record<string, number>): Rates {
   const out: Rates = {};
   for (const [curr, rate] of Object.entries(hufBased)) {

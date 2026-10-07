@@ -15,6 +15,7 @@ import { TAB_BAR_HEIGHT, TabBarSpacer } from '@/components/CustomTabBar';
 import { useHideTabBarOnScroll } from '@/lib/tabBarVisibility';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { useBaseCurrency } from '@/lib/baseCurrencyContext';
 import AppHeader from '@/components/AppHeader';
 import { Ionicons } from '@expo/vector-icons';
 import type { RecurringPayment, RecurrenceFrequency, Wallet, Category } from '@/lib/types';
@@ -408,7 +409,8 @@ function DueCard({
   onPress: () => void;
   colors: any;
 }) {
-  const currency = payment.wallet?.currency ?? 'HUF';
+  const baseCurrency = useBaseCurrency();
+  const currency = payment.wallet?.currency ?? baseCurrency;
   const isOverdue = isoDate(dueDate) < isoDate(today);
   const isToday = isoDate(dueDate) === isoDate(today);
   const diff = Math.round((new Date(isoDate(dueDate) + 'T00:00:00').getTime() - new Date(isoDate(today) + 'T00:00:00').getTime()) / 86400000);
@@ -508,7 +510,8 @@ function PaymentRow({
   colors: any;
   onPress: () => void;
 }) {
-  const currency = payment.wallet?.currency ?? 'HUF';
+  const baseCurrency = useBaseCurrency();
+  const currency = payment.wallet?.currency ?? baseCurrency;
   const next = nextDueDate(payment);
   const subText = !payment.is_active
     ? 'Paused'
