@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase, verifyPassword } from '@/lib/supabase';
 import { disablePin } from '@/lib/security';
+import { useBaseCurrencyState } from '@/lib/baseCurrencyContext';
+import { Events } from '@/lib/events';
 import { useTheme } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import AppInput from '@/components/AppInput';
@@ -22,6 +24,7 @@ import AppButton from '@/components/AppButton';
 export default function AccountScreen() {
   const colors = useTheme();
   const router = useRouter();
+  const { setBaseCurrency } = useBaseCurrencyState();
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -33,7 +36,7 @@ export default function AccountScreen() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
-  const [deleteVisible, setDeleteVisible] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<'data' | 'account' | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
@@ -109,14 +112,32 @@ export default function AccountScreen() {
     });
   }
 
-  function openDelete() {
+  function openDelete(target: 'data' | 'account') {
     setDeleteError('');
-    setDeleteVisible(true);
+    setDeleteTarget(target);
   }
 
-  async function handleDeleteAccount() {
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
     setDeleting(true);
     setDeleteError('');
+
+    if (deleteTarget === 'data') {
+      const { error } = await supabase.rpc('delete_my_data');
+      if (error) {
+        setDeleting(false);
+        setDeleteError(error.message);
+        return;
+      }
+      // No accounts are left, so clearing the base currency sends the user back through
+      // onboarding to pick a new one (the root layout handles the redirect).
+      await setBaseCurrency(null);
+      Events.emit('wallet-saved');
+      setDeleting(false);
+      setDeleteTarget(null);
+      return;
+    }
+
     const { error } = await supabase.rpc('delete_my_account');
     if (error) {
       setDeleting(false);
@@ -128,7 +149,7 @@ export default function AccountScreen() {
     // The user no longer exists server-side, so only clear the local session.
     await supabase.auth.signOut({ scope: 'local' });
     setDeleting(false);
-    setDeleteVisible(false);
+    setDeleteTarget(null);
     router.replace('/(auth)/login');
   }
 
@@ -237,7 +258,7 @@ export default function AccountScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.muted }]}>DANGER ZONE</Text>
+          <Text style={[styles.sectionTitle, { color: colors.muted }]}>SESSION</Text>
           <TouchableOpacity
             style={[styles.signOutButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={handleSignOut}
@@ -245,16 +266,41 @@ export default function AccountScreen() {
           >
             <Text style={[styles.signOutText, { color: colors.danger }]}>Sign out</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.signOutButton, { backgroundColor: colors.dangerLight, borderColor: colors.dangerLight }]}
-            onPress={openDelete}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.signOutText, { color: colors.danger }]}>Delete account</Text>
-          </TouchableOpacity>
-          <Text style={[styles.hint, styles.dangerHint, { color: colors.muted }]}>
-            Permanently deletes your account and all of its data. This cannot be undone.
-          </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.danger }]}>DANGER ZONE</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.dangerLight }]}>
+            <View style={styles.dangerRow}>
+              <Text style={[styles.dangerRowTitle, { color: colors.text }]}>Delete all data</Text>
+              <Text style={[styles.hint, styles.dangerHint, { color: colors.muted }]}>
+                Permanently removes all your transactions, recurring payments, templates, accounts,
+                categories and labels. Your login stays, so you can start fresh.
+              </Text>
+              <TouchableOpacity
+                style={[styles.dangerButton, { backgroundColor: colors.dangerLight, borderColor: colors.dangerLight }]}
+                onPress={() => openDelete('data')}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.signOutText, { color: colors.danger }]}>Delete all data</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.dangerDivider, { backgroundColor: colors.border }]} />
+            <View style={styles.dangerRow}>
+              <Text style={[styles.dangerRowTitle, { color: colors.text }]}>Delete account</Text>
+              <Text style={[styles.hint, styles.dangerHint, { color: colors.muted }]}>
+                Permanently deletes your account and all of its data. You will be signed out and
+                will not be able to log in again with this account.
+              </Text>
+              <TouchableOpacity
+                style={[styles.dangerButton, { backgroundColor: colors.dangerLight, borderColor: colors.dangerLight }]}
+                onPress={() => openDelete('account')}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.signOutText, { color: colors.danger }]}>Delete account</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
       </ScrollView>
@@ -267,11 +313,18 @@ export default function AccountScreen() {
         onCancel={() => setConfirmAction(null)}
       />
       <DeleteAccountModal
-        visible={deleteVisible}
+        visible={!!deleteTarget}
+        title={deleteTarget === 'data' ? 'Delete all data?' : 'Delete your account?'}
+        intro={
+          deleteTarget === 'data'
+            ? 'All your transactions, recurring payments, templates, accounts, categories and labels will be permanently deleted. Your account and login will be kept.'
+            : 'Your account and all of its data (transactions, recurring payments, templates, accounts, categories and labels) will be permanently deleted, and you will be signed out.'
+        }
+        confirmLabel={deleteTarget === 'data' ? 'Delete all data' : 'Delete account'}
         loading={deleting}
         error={deleteError}
-        onConfirm={handleDeleteAccount}
-        onCancel={() => setDeleteVisible(false)}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
       />
     </SafeAreaView>
   );
@@ -301,7 +354,16 @@ const styles = StyleSheet.create({
   },
   dangerHint: {
     marginTop: 0,
-    paddingHorizontal: 4,
+    lineHeight: 17,
+  },
+  dangerRow: { gap: 8 },
+  dangerRowTitle: { fontSize: 16, fontFamily: 'Nunito_700Bold' },
+  dangerDivider: { height: 1 },
+  dangerButton: {
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   saveButton: {
     alignSelf: 'flex-end',

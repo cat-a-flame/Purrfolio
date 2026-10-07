@@ -16,13 +16,16 @@ const CONFIRM_WORD = 'DELETE';
 
 type Props = {
   visible: boolean;
+  title: string;
+  intro: string;
+  confirmLabel: string;
   loading: boolean;
   error?: string;
   onConfirm: () => void;
   onCancel: () => void;
 };
 
-export default function DeleteAccountModal({ visible, loading, error, onConfirm, onCancel }: Props) {
+export default function DeleteAccountModal({ visible, title, intro, confirmLabel, loading, error, onConfirm, onCancel }: Props) {
   const colors = useTheme();
   const [typed, setTyped] = useState('');
   const canConfirm = typed.trim() === CONFIRM_WORD && !loading;
@@ -45,11 +48,8 @@ export default function DeleteAccountModal({ visible, loading, error, onConfirm,
         style={[styles.overlay, { backgroundColor: colors.overlay }]}
       >
         <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.glassBorder, shadowColor: colors.shadow }]}>
-          <Text style={[styles.title, { color: colors.text }]}>Delete your account?</Text>
-          <Text style={[styles.body, { color: colors.muted }]}>
-            Your account and all of its data (transactions, recurring payments, templates, accounts,
-            categories and labels) will be permanently deleted, and you will be signed out.
-          </Text>
+          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+          <Text style={[styles.body, { color: colors.muted }]}>{intro}</Text>
 
           <View style={[styles.warning, { backgroundColor: colors.dangerLight }]}>
             <Text style={[styles.warningText, styles.warningStrong, { color: colors.danger }]}>
@@ -89,7 +89,7 @@ export default function DeleteAccountModal({ visible, loading, error, onConfirm,
               {loading ? (
                 <ActivityIndicator color={colors.danger} />
               ) : (
-                <Text style={[styles.btnText, { color: colors.danger }]}>Delete account</Text>
+                <Text style={[styles.btnText, { color: colors.danger }]}>{confirmLabel}</Text>
               )}
             </TouchableOpacity>
           </View>
