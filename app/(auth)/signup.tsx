@@ -6,10 +6,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TextInput,
   TouchableOpacity,
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
@@ -91,21 +93,15 @@ export default function SignupScreen() {
             autoComplete="email"
             placeholder="you@example.com"
           />
-          <AppInput
+          <PasswordField
             label="Password"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            placeholder="••••••••"
           />
-          <AppInput
+          <PasswordField
             label="Confirm password"
             value={confirm}
             onChangeText={setConfirm}
-            secureTextEntry
-            autoCapitalize="none"
-            placeholder="••••••••"
           />
           <AppButton onPress={handleSignup} loading={loading} fullWidth>
             Create account
@@ -122,7 +118,44 @@ export default function SignupScreen() {
   );
 }
 
+function PasswordField({ label, value, onChangeText }: { label: string; value: string; onChangeText: (v: string) => void }) {
+  const colors = useTheme();
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={styles.field}>
+      <Text style={[styles.fieldLabel, { color: colors.muted }]}>{label}</Text>
+      <View style={[styles.passwordField, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <TextInput
+          style={[styles.passwordInput, { color: colors.text }]}
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={!visible}
+          autoCapitalize="none"
+          autoComplete="new-password"
+          placeholder="••••••••"
+          placeholderTextColor={colors.placeholder}
+        />
+        <TouchableOpacity onPress={() => setVisible(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.muted} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  field: { gap: 4 },
+  fieldLabel: { fontSize: 13, fontFamily: 'Nunito_700Bold', marginBottom: 2 },
+  passwordField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 48,
+  },
+  passwordInput: { flex: 1, fontFamily: 'Nunito_500Medium', fontSize: 15, padding: 0 },
   flex: { flex: 1 },
   container: {
     flexGrow: 1,
