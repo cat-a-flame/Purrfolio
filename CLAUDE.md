@@ -1,7 +1,7 @@
 @AGENTS.md
 
 # Git workflow
-Always commit and push directly to the `main` branch. Do not create feature branches.
+Never push to `main`. Always create a new branch for each change, push it, and open a pull request against `main`.
 
 # Versioning
 Claude owns the app version. Follow semver (MAJOR.MINOR.PATCH) and bump it in the same commit as the change:
