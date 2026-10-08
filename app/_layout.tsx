@@ -40,6 +40,8 @@ export default function RootLayout() {
   // The base currency is only worked out once the session is fully signed in (no 2FA code pending).
   const baseCurrency = useBaseCurrencyResolver(session, !!session && mfaKnown && !mfaPending);
   const loading = !authReady || !minTimeReady || (!!session && !mfaCheck) || baseCurrency.status === 'checking';
+  // The animated loading screen is only for app start; after that, sign-in waits on the login screen.
+  const [booted, setBooted] = useState(false);
   const router = useRouter();
   const segments = useSegments();
 
@@ -54,6 +56,10 @@ export default function RootLayout() {
     Lora_600SemiBold,
     Lora_700Bold,
   });
+
+  useEffect(() => {
+    if (fontsLoaded && !loading) setBooted(true);
+  }, [fontsLoaded, loading]);
 
   // Hide the native splash immediately so the animated LoadingScreen takes over
   useEffect(() => {
@@ -117,7 +123,7 @@ export default function RootLayout() {
   }, [session, authReady, minTimeReady, mfaKnown, mfaPending, baseCurrency.status, pinRequired, unlocked, segments]);
 
   let content;
-  if (!fontsLoaded || loading) {
+  if (!fontsLoaded || (loading && !booted)) {
     content = <LoadingScreen />;
   } else if (pinRequired && !unlocked) {
     content = <UnlockScreen onUnlocked={() => setUnlocked(true)} />;
