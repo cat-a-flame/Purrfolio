@@ -186,6 +186,10 @@ export default function EditTransactionScreen() {
       setError('Please select a wallet.');
       return;
     }
+    if (form.type !== 'transfer' && !isTransfer && !form.category_id) {
+      setError('Please select a category.');
+      return;
+    }
     if (!form.date) {
       setError('Please select a date.');
       return;

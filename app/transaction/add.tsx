@@ -224,6 +224,10 @@ export default function AddTransactionScreen() {
         return;
       }
     }
+    if (form.type !== 'transfer' && !form.category_id) {
+      setError('Please select a category.');
+      return;
+    }
     if (!form.date) {
       setError('Please select a date.');
       return;
