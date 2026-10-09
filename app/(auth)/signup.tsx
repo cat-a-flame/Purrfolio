@@ -20,6 +20,7 @@ import AppButton from '@/components/AppButton';
 export default function SignupScreen() {
   const colors = useTheme();
   const router = useRouter();
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -28,7 +29,7 @@ export default function SignupScreen() {
   const [success, setSuccess] = useState(false);
 
   async function handleSignup() {
-    if (!email || !password || !confirm) {
+    if (!username.trim() || !email || !password || !confirm) {
       setError('Please fill in all fields.');
       return;
     }
@@ -42,7 +43,11 @@ export default function SignupScreen() {
     }
     setLoading(true);
     setError('');
-    const { error: err } = await supabase.auth.signUp({ email, password });
+    const { error: err } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name: username.trim() } },
+    });
     setLoading(false);
     if (err) {
       setError(err.message);
@@ -84,6 +89,14 @@ export default function SignupScreen() {
           {error ? (
             <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>
           ) : null}
+          <AppInput
+            label="Username"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            autoComplete="username-new"
+            placeholder="Enter a username"
+          />
           <AppInput
             label="Email"
             value={email}
