@@ -48,7 +48,10 @@ export default function AccountScreen() {
   }, []);
 
   async function handleSaveUsername() {
-    if (!username.trim()) return;
+    if (!username.trim()) {
+      Alert.alert('Error', 'Username cannot be blank.');
+      return;
+    }
     setSavingUsername(true);
     const { error } = await supabase.auth.updateUser({ data: { name: username.trim() } });
     setSavingUsername(false);

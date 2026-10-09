@@ -131,6 +131,7 @@ export default function AddPaymentScreen() {
   async function handleSave() {
     if (!form.name.trim()) { setFormError('Name is required.'); return; }
     if (!form.amount || isNaN(Number(form.amount))) { setFormError('Enter a valid amount.'); return; }
+    if (!form.category_id) { setFormError('Please select a category.'); return; }
 
     setSaving(true);
     setFormError('');
