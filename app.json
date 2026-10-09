@@ -2,7 +2,7 @@
   "expo": {
     "name": "Purrfolio",
     "slug": "purrfolio",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -16,7 +16,7 @@
         "backgroundColor": "#b5f0dc",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
-      "package": "com.purrfolio.app",
+      "package": "com.getpurrfolio.app",
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.USE_BIOMETRIC",
