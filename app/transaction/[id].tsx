@@ -21,6 +21,8 @@ import CategoryPickerModal from '@/components/CategoryPickerModal';
 import NumPad from '@/components/NumPad';
 import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
+import FieldError from '@/components/FieldError';
+import { useFieldErrors } from '@/lib/useFieldErrors';
 
 function formatAmountDisplay(raw: string): string {
   if (!raw) return '';
@@ -69,6 +71,12 @@ export default function EditTransactionScreen() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useFieldErrors({
+    amount: form.amount,
+    wallet: form.wallet_id,
+    category: form.category_id,
+    date: form.date,
+  });
   const [isTransfer, setIsTransfer] = useState(false);
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -178,25 +186,19 @@ export default function EditTransactionScreen() {
   }
 
   async function handleSave() {
-    if (!form.amount || isNaN(Number(form.amount))) {
-      setError('Please enter a valid amount.');
-      return;
-    }
-    if (!form.wallet_id) {
-      setError('Please select a wallet.');
-      return;
-    }
-    if (form.type !== 'transfer' && !isTransfer && !form.category_id) {
-      setError('Please select a category.');
-      return;
-    }
-    if (!form.date) {
-      setError('Please select a date.');
+    const found: typeof errors = {};
+    if (!form.amount || isNaN(Number(form.amount))) found.amount = 'Please enter a valid amount.';
+    if (!form.wallet_id) found.wallet = 'Please select a wallet.';
+    if (form.type !== 'transfer' && !isTransfer && !form.category_id) found.category = 'Please select a category.';
+    if (!form.date) found.date = 'Please select a date.';
+    if (Object.keys(found).length > 0) {
+      setErrors(found);
       return;
     }
 
     setLoading(true);
     setError('');
+    setErrors({});
 
     const { error: txErr } = await supabase
       .from('transactions')
@@ -303,22 +305,26 @@ export default function EditTransactionScreen() {
               </View>
             </View>
 
+            <FieldError message={errors.amount} center />
+
             {/* Date + Wallet */}
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowDatePicker(true)}>
+                <TouchableOpacity style={[styles.pickerBtn, { borderColor: errors.date ? colors.danger : colors.border, backgroundColor: colors.surface }]} onPress={() => setShowDatePicker(true)}>
                   <Ionicons name="calendar" size={15} color={colors.muted} style={{ marginRight: 6 }} />
                   <Text style={[styles.pickerBtnText, { color: form.date ? colors.text : colors.muted }]} numberOfLines={1}>
                     {form.date || 'Select date…'}
                   </Text>
                 </TouchableOpacity>
+                <FieldError message={errors.date} />
               </View>
               <View style={{ flex: 1 }}>
-                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
+                <TouchableOpacity style={[styles.pickerBtn, { borderColor: errors.wallet ? colors.danger : colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
                   <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
                     {selectedWallet ? `${selectedWallet.icon ?? ''}${selectedWallet.icon ? ' ' : ''}${selectedWallet.name}` : 'Select wallet…'}
                   </Text>
                 </TouchableOpacity>
+                <FieldError message={errors.wallet} />
               </View>
             </View>
 
@@ -379,30 +385,35 @@ export default function EditTransactionScreen() {
               </View>
             </View>
 
+            <FieldError message={errors.amount} center />
+
             {/* Category — full width */}
-            <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
+            <TouchableOpacity style={[styles.pickerBtn, { borderColor: errors.category ? colors.danger : colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
               <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
                 {selectedCategory ? `${selectedCategory.icon ?? ''}${selectedCategory.icon ? ' ' : ''}${selectedCategory.name}` : 'Add category'}
               </Text>
               <Ionicons name="chevron-forward" size={18} color={colors.muted} />
             </TouchableOpacity>
+            <FieldError message={errors.category} />
 
             {/* Date + Wallet side by side */}
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowDatePicker(true)}>
+                <TouchableOpacity style={[styles.pickerBtn, { borderColor: errors.date ? colors.danger : colors.border, backgroundColor: colors.surface }]} onPress={() => setShowDatePicker(true)}>
                   <Ionicons name="calendar" size={15} color={colors.muted} style={{ marginRight: 6 }} />
                   <Text style={[styles.pickerBtnText, { color: form.date ? colors.text : colors.muted }]} numberOfLines={1}>
                     {form.date || 'Select date…'}
                   </Text>
                 </TouchableOpacity>
+                <FieldError message={errors.date} />
               </View>
               <View style={{ flex: 1 }}>
-                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
+                <TouchableOpacity style={[styles.pickerBtn, { borderColor: errors.wallet ? colors.danger : colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
                   <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
                     {selectedWallet ? `${selectedWallet.icon ?? ''}${selectedWallet.icon ? ' ' : ''}${selectedWallet.name}` : 'Select wallet…'}
                   </Text>
                 </TouchableOpacity>
+                <FieldError message={errors.wallet} />
               </View>
             </View>
 
