@@ -5,7 +5,6 @@ import {
   TextInput,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
@@ -310,7 +309,7 @@ export default function EditPaymentScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
       >
         <ScrollView
           contentContainerStyle={[styles.form, { paddingBottom: 24 }]}

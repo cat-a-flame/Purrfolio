@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { useTheme } from '@/lib/theme';
 
@@ -35,7 +34,7 @@ export default function BottomModal({ visible, onClose, title, rightAction, chil
         onPress={onClose}
       />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.keyboardView}
       >
         <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.glassBorder }]}>

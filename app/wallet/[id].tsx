@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Switch,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -136,7 +135,7 @@ export default function WalletScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         <ScrollView
           contentContainerStyle={[styles.content, { paddingBottom: bottom + 32 }]}

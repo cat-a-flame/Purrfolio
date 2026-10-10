@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleProp,
   StyleSheet,
@@ -14,21 +13,16 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
-// Scrollable form that keeps the focused field above the keyboard.
-// Android is always edge-to-edge, so the system no longer resizes the window
-// and the view has to shrink itself. iOS scrolls the focused field into view
-// natively through automaticallyAdjustKeyboardInsets.
+// Scrollable form that keeps the focused field above the keyboard. Android is
+// edge-to-edge, so the system no longer resizes the window when the keyboard
+// opens and the view has to shrink itself; Android then scrolls the focused
+// field into view.
 export function KeyboardAwareScroll({ children, contentContainerStyle, style }: Props) {
   return (
-    <KeyboardAvoidingView
-      style={[styles.flex, style]}
-      behavior={Platform.OS === 'android' ? 'padding' : undefined}
-      enabled={Platform.OS === 'android'}
-    >
+    <KeyboardAvoidingView style={[styles.flex, style]} behavior="padding">
       <ScrollView
         contentContainerStyle={contentContainerStyle}
         keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
       >
         {children}
       </ScrollView>

@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
   Image,
 } from 'react-native';
@@ -61,7 +60,7 @@ export default function MfaScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.flex, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         {/* Same card as the login screen */}

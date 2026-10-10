@@ -74,7 +74,7 @@ export default function ReportBugModal({ visible, page, onClose }: Props) {
       onRequestClose={sending ? () => {} : onClose}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         style={[styles.overlay, { backgroundColor: colors.overlay }]}
       >
         <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.glassBorder, shadowColor: colors.shadow }]}>

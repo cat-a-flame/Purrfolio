@@ -5,7 +5,6 @@ import {
   TextInput,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
@@ -190,7 +189,7 @@ export default function AddPaymentScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
       >
         <ScrollView
           contentContainerStyle={[styles.form, { paddingBottom: 24 }]}
