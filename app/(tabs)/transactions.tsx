@@ -292,12 +292,19 @@ export default function TransactionsScreen() {
     }
   }
 
-  function resetDraft() {
+  // Clears the panel's options and the applied filters at once, so the list
+  // updates without having to press Filter.
+  function resetPanelFilters() {
     setDraftTypes([]);
     setDraftWallets([]);
     setDraftCategories([]);
     setDraftLabels([]);
     setDraftCurrencies([]);
+    setTypeFilters([]);
+    setWalletFilters([]);
+    setCategoryFilters([]);
+    setLabelFilters([]);
+    setCurrencyFilters([]);
   }
 
   function resetFilters() {
@@ -1073,7 +1080,7 @@ export default function TransactionsScreen() {
               {/* Footer */}
               <View style={[styles.panelFooter, { borderTopColor: colors.border }]}>
                 <TouchableOpacity
-                  onPress={resetDraft}
+                  onPress={resetPanelFilters}
                   style={[styles.resetAllBtn, { borderColor: colors.border }]}
                 >
                   <Text style={[styles.resetAllText, { color: colors.muted }]}>Reset all</Text>

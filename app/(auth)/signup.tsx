@@ -3,18 +3,17 @@ import {
   View,
   Text,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   TextInput,
   TouchableOpacity,
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
+import { KeyboardAwareScroll } from '@/components/KeyboardAwareScroll';
 import AppButton from '@/components/AppButton';
 
 export default function SignupScreen() {
@@ -46,7 +45,12 @@ export default function SignupScreen() {
     const { error: err } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name: username.trim() } },
+      options: {
+        data: { name: username.trim() },
+        // Send the confirmation link back into the app (purrfolio://login)
+        // instead of the web Site URL, so it opens the app on mobile.
+        emailRedirectTo: Linking.createURL('/login'),
+      },
     });
     setLoading(false);
     if (err) {
@@ -71,14 +75,7 @@ export default function SignupScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.flex, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-      >
+    <KeyboardAwareScroll style={[styles.flex, { backgroundColor: colors.bg }]} contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <Image source={require('@/assets/images/logo.png')} style={styles.logoImage} />
           <Text style={[styles.logo, { color: colors.heading }]}>Purrfolio</Text>
@@ -126,8 +123,7 @@ export default function SignupScreen() {
             Already have an account? Sign in
           </Text>
         </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScroll>
   );
 }
 

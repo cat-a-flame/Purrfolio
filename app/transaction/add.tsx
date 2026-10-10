@@ -21,6 +21,8 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, TransactionType } from '@/lib/types';
 import { todayInputDate } from '@/lib/utils';
 import { Events } from '@/lib/events';
+import FieldError from '@/components/FieldError';
+import { useFieldErrors } from '@/lib/useFieldErrors';
 
 function formatAmountDisplay(raw: string): string {
   if (!raw) return '';
@@ -78,6 +80,14 @@ export default function AddTransactionScreen() {
   const [labels, setLabels] = useState<Label[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useFieldErrors({
+    amount: form.amount,
+    to_amount: form.to_amount,
+    wallet: form.wallet_id,
+    to_wallet: `${form.wallet_id}|${form.to_wallet_id}`,
+    category: form.category_id,
+    date: form.date,
+  });
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showLabelModal, setShowLabelModal] = useState(false);
@@ -201,40 +211,28 @@ export default function AddTransactionScreen() {
   }
 
   async function handleSave() {
-    if (!form.amount || isNaN(Number(form.amount))) {
-      setError('Please enter a valid amount.');
-      return;
-    }
-    if (!form.wallet_id) {
-      setError('Please select a wallet.');
-      return;
-    }
-    if (form.type === 'transfer' && !form.to_wallet_id) {
-      setError('Please select a destination wallet.');
-      return;
-    }
-    if (form.type === 'transfer' && form.wallet_id === form.to_wallet_id) {
-      setError('Source and destination wallet must be different.');
-      return;
-    }
-    if (form.type === 'transfer' && !sameCurrency) {
-      const toAmt = Number(form.to_amount);
-      if (!form.to_amount || isNaN(toAmt) || toAmt <= 0) {
-        setError('Please enter a valid amount received.');
-        return;
+    const found: typeof errors = {};
+    if (!form.amount || isNaN(Number(form.amount))) found.amount = 'Please enter a valid amount.';
+    if (!form.wallet_id) found.wallet = 'Please select a wallet.';
+    if (form.type === 'transfer') {
+      if (!form.to_wallet_id) found.to_wallet = 'Please select a destination wallet.';
+      else if (form.wallet_id === form.to_wallet_id) found.to_wallet = 'Source and destination wallet must be different.';
+      if (!sameCurrency) {
+        const toAmt = Number(form.to_amount);
+        if (!form.to_amount || isNaN(toAmt) || toAmt <= 0) found.to_amount = 'Please enter a valid amount received.';
       }
+    } else if (!form.category_id) {
+      found.category = 'Please select a category.';
     }
-    if (form.type !== 'transfer' && !form.category_id) {
-      setError('Please select a category.');
-      return;
-    }
-    if (!form.date) {
-      setError('Please select a date.');
+    if (!form.date) found.date = 'Please select a date.';
+    if (Object.keys(found).length > 0) {
+      setErrors(found);
       return;
     }
 
     setLoading(true);
     setError('');
+    setErrors({});
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
@@ -413,12 +411,14 @@ export default function AddTransactionScreen() {
               )}
             </View>
 
+            <FieldError message={errors.amount ?? errors.to_amount} />
+
             {/* From / To wallets */}
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>From</Text>
                 <TouchableOpacity
-                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  style={[styles.pickerBtn, { borderColor: errors.wallet ? colors.danger : colors.border, backgroundColor: colors.surface }]}
                   onPress={() => setShowWalletModal(true)}
                 >
                   <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]} numberOfLines={1}>
@@ -426,11 +426,12 @@ export default function AddTransactionScreen() {
                   </Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.muted} />
                 </TouchableOpacity>
+                <FieldError message={errors.wallet} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>To</Text>
                 <TouchableOpacity
-                  style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  style={[styles.pickerBtn, { borderColor: errors.to_wallet ? colors.danger : colors.border, backgroundColor: colors.surface }]}
                   onPress={() => setShowToWalletModal(true)}
                 >
                   <Text style={[styles.pickerBtnText, { color: selectedToWallet ? colors.text : colors.muted }]} numberOfLines={1}>
@@ -438,6 +439,7 @@ export default function AddTransactionScreen() {
                   </Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.muted} />
                 </TouchableOpacity>
+                <FieldError message={errors.to_wallet} />
               </View>
             </View>
 
@@ -446,6 +448,7 @@ export default function AddTransactionScreen() {
               <Ionicons name="calendar" size={13} color={colors.muted} />
               <Text style={[styles.pickerBtnInlineText, { color: colors.text }]}>{dateLabel}</Text>
             </TouchableOpacity>
+            <FieldError message={errors.date} />
 
             {/* More options */}
             <TouchableOpacity
@@ -486,28 +489,33 @@ export default function AddTransactionScreen() {
               </View>
             </View>
 
+            <FieldError message={errors.amount} center />
+
             {/* Category — full width */}
-            <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
+            <TouchableOpacity style={[styles.pickerBtn, { borderColor: errors.category ? colors.danger : colors.border, backgroundColor: colors.surface }]} onPress={() => setShowCategoryModal(true)}>
               <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
                 {selectedCategory ? `${selectedCategory.icon ?? ''}${selectedCategory.icon ? ' ' : ''}${selectedCategory.name}` : 'Add category'}
               </Text>
               <Ionicons name="chevron-forward" size={18} color={colors.muted} />
             </TouchableOpacity>
+            <FieldError message={errors.category} />
 
             {/* Account + Date side by side */}
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowDatePicker(true)}>
+                <TouchableOpacity style={[styles.pickerBtn, { borderColor: errors.date ? colors.danger : colors.border, backgroundColor: colors.surface }]} onPress={() => setShowDatePicker(true)}>
                   <Ionicons name="calendar" size={15} color={colors.muted} style={{ marginRight: 6 }} />
                   <Text style={[styles.pickerBtnText, { color: colors.text }]} numberOfLines={1}>{dateLabel}</Text>
                 </TouchableOpacity>
+                <FieldError message={errors.date} />
               </View>
               <View style={{ flex: 1 }}>
-                <TouchableOpacity style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
+                <TouchableOpacity style={[styles.pickerBtn, { borderColor: errors.wallet ? colors.danger : colors.border, backgroundColor: colors.surface }]} onPress={() => setShowWalletModal(true)}>
                   <Text style={[styles.pickerBtnText, { color: selectedWallet ? colors.text : colors.muted }]} numberOfLines={1} ellipsizeMode="tail">
                     {selectedWallet ? `${selectedWallet.icon ?? ''}${selectedWallet.icon ? ' ' : ''}${selectedWallet.name}` : 'Select wallet…'}
                   </Text>
                 </TouchableOpacity>
+                <FieldError message={errors.wallet} />
               </View>
             </View>
 

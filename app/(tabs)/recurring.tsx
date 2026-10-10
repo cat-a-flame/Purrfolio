@@ -24,6 +24,7 @@ import { generateDueDates, nextDueDate, frequencyLabel, isoDate, monthBounds } f
 import { useRecurring } from '@/lib/recurringContext';
 import { Events } from '@/lib/events';
 import Toast from '@/components/Toast';
+import DuePaymentDialog from '@/components/DuePaymentDialog';
 
 export default function RecurringScreen() {
   const colors = useTheme();
@@ -226,6 +227,8 @@ export default function RecurringScreen() {
     load();
   }
 
+  const [dueDialog, setDueDialog] = useState<{ payment: RecurringPayment; dueDate: Date } | null>(null);
+
   const [activeTab, setActiveTab] = useState<'due' | 'recurring'>('due');
   const hideTabBarOnScroll = useHideTabBarOnScroll(activeTab);
 
@@ -301,7 +304,7 @@ export default function RecurringScreen() {
                     payment={payment}
                     dueDate={dueDate}
                     today={today}
-                    onPress={() => router.push({ pathname: '/payment/due', params: { paymentId: payment.id, dueDate: isoDate(dueDate) } })}
+                    onPress={() => setDueDialog({ payment, dueDate })}
                     colors={colors}
                   />
                 );
@@ -320,7 +323,7 @@ export default function RecurringScreen() {
                     payment={payment}
                     dueDate={dueDate}
                     today={today}
-                    onPress={() => router.push({ pathname: '/payment/due', params: { paymentId: payment.id, dueDate: isoDate(dueDate) } })}
+                    onPress={() => setDueDialog({ payment, dueDate })}
                     colors={colors}
                   />
                 );
@@ -341,7 +344,7 @@ export default function RecurringScreen() {
                     payment={payment}
                     dueDate={dueDate}
                     today={today}
-                    onPress={() => router.push({ pathname: '/payment/due', params: { paymentId: payment.id, dueDate: isoDate(dueDate) } })}
+                    onPress={() => setDueDialog({ payment, dueDate })}
                     colors={colors}
                     onSwipePay={() => handlePay(payment, dueDate)}
                     onSwipeSkip={() => handleSkip(payment, dueDate)}
@@ -386,6 +389,13 @@ export default function RecurringScreen() {
           <TabBarSpacer extra={6} />
         </ScrollView>
       )}
+
+      <DuePaymentDialog
+        due={dueDialog}
+        onPay={() => { if (dueDialog) handlePay(dueDialog.payment, dueDialog.dueDate); setDueDialog(null); }}
+        onSkip={() => { if (dueDialog) handleSkip(dueDialog.payment, dueDialog.dueDate); setDueDialog(null); }}
+        onClose={() => setDueDialog(null)}
+      />
 
       <Toast
         visible={toast.visible}

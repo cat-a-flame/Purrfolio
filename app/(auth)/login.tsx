@@ -4,9 +4,6 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   TouchableOpacity,
   Image,
 } from 'react-native';
@@ -16,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AppInput from '@/components/AppInput';
+import { KeyboardAwareScroll } from '@/components/KeyboardAwareScroll';
 import AppButton from '@/components/AppButton';
 
 export default function LoginScreen() {
@@ -45,14 +43,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.flex, { backgroundColor: colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-      >
+    <KeyboardAwareScroll style={[styles.flex, { backgroundColor: colors.bg }]} contentContainerStyle={styles.container}>
         {/* Mirrors PurrfolioWeb's login card: brand header, form and sign-up
             link in one glass card framed by a gradient ring. */}
         <LinearGradient
@@ -129,8 +120,7 @@ export default function LoginScreen() {
             </Text>
           </View>
         </LinearGradient>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScroll>
   );
 }
 

@@ -5,7 +5,6 @@ import {
   TextInput,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
@@ -23,6 +22,8 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Wallet, Category, Label, RecurrenceFrequency } from '@/lib/types';
 import { frequencyLabel, isoDate } from '@/lib/recurringUtils';
 import { Events } from '@/lib/events';
+import FieldError from '@/components/FieldError';
+import { useFieldErrors } from '@/lib/useFieldErrors';
 
 function formatAmountDisplay(raw: string): string {
   if (!raw) return '';
@@ -66,6 +67,11 @@ export default function AddPaymentScreen() {
 
   const [form, setForm] = useState<EditForm>(EMPTY_FORM);
   const [formError, setFormError] = useState('');
+  const [errors, setErrors] = useFieldErrors({
+    name: form.name,
+    amount: form.amount,
+    category: form.category_id,
+  });
   const [saving, setSaving] = useState(false);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -129,12 +135,18 @@ export default function AddPaymentScreen() {
   }
 
   async function handleSave() {
-    if (!form.name.trim()) { setFormError('Name is required.'); return; }
-    if (!form.amount || isNaN(Number(form.amount))) { setFormError('Enter a valid amount.'); return; }
-    if (!form.category_id) { setFormError('Please select a category.'); return; }
+    const found: typeof errors = {};
+    if (!form.name.trim()) found.name = 'Name is required.';
+    if (!form.amount || isNaN(Number(form.amount))) found.amount = 'Enter a valid amount.';
+    if (!form.category_id) found.category = 'Please select a category.';
+    if (Object.keys(found).length > 0) {
+      setErrors(found);
+      return;
+    }
 
     setSaving(true);
     setFormError('');
+    setErrors({});
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
@@ -190,7 +202,7 @@ export default function AddPaymentScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
       >
         <ScrollView
           contentContainerStyle={[styles.form, { paddingBottom: 24 }]}
@@ -237,12 +249,15 @@ export default function AddPaymentScreen() {
             </TouchableOpacity>
           </View>
 
+          <FieldError message={errors.amount} center />
+
           {/* Name */}
           <AppInput
             label="Name"
             value={form.name}
             onChangeText={(v) => setField('name', v)}
             placeholder="e.g. Netflix"
+            error={errors.name}
           />
 
           {/* Wallet + Category side by side */}
@@ -262,7 +277,7 @@ export default function AddPaymentScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.fieldLabel, { color: colors.muted }]}>Category</Text>
               <TouchableOpacity
-                style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                style={[styles.pickerBtn, { borderColor: errors.category ? colors.danger : colors.border, backgroundColor: colors.surface }]}
                 onPress={() => setShowCategoryModal(true)}
               >
                 <Text style={[styles.pickerBtnText, { color: selectedCategory ? colors.text : colors.muted }]} numberOfLines={1}>
@@ -270,6 +285,7 @@ export default function AddPaymentScreen() {
                 </Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.muted} />
               </TouchableOpacity>
+              <FieldError message={errors.category} />
             </View>
           </View>
 
