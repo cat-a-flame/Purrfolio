@@ -11,6 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -46,7 +47,12 @@ export default function SignupScreen() {
     const { error: err } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name: username.trim() } },
+      options: {
+        data: { name: username.trim() },
+        // Send the confirmation link back into the app (purrfolio://login)
+        // instead of the web Site URL, so it opens the app on mobile.
+        emailRedirectTo: Linking.createURL('/login'),
+      },
     });
     setLoading(false);
     if (err) {
