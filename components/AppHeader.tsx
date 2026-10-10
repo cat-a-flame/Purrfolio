@@ -16,6 +16,7 @@ import { useRouter, usePathname } from 'expo-router';
 import ReportBugModal from '@/components/ReportBugModal';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
+import Constants from 'expo-constants';
 import { useTheme, useDarkMode } from '@/lib/theme';
 
 interface Props {
@@ -37,6 +38,7 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -44,6 +46,8 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
     supabase.auth.getUser().then(({ data: { user } }) => {
       setEmail(user?.email ?? null);
       setUsername(user?.user_metadata?.name ?? user?.user_metadata?.full_name ?? null);
+      // app_metadata can only be changed server-side (unlike user_metadata)
+      setIsAdmin(user?.app_metadata?.role === 'admin');
     });
   }, []);
 
@@ -158,6 +162,12 @@ export default function AppHeader({ title, rightAction, showBack, onBack }: Prop
 
               </ScrollView>
 
+              {isAdmin && (
+                <Text style={[styles.version, { color: colors.muted }]}>
+                  Version {Constants.expoConfig?.version ?? '–'}
+                </Text>
+              )}
+
               {/* Light/Dark mode toggle pinned to bottom */}
               <View style={[styles.darkRow, { borderTopColor: colors.border, paddingBottom: bottom || 16 }]}>
                 <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={18} color={colors.muted} />
@@ -263,6 +273,7 @@ const styles = StyleSheet.create({
   },
   rowText: { flex: 1, fontSize: 16, fontFamily: 'Nunito_700Bold' },
 
+  version: { fontSize: 12, fontFamily: 'Nunito_600SemiBold', paddingHorizontal: 20, paddingBottom: 10 },
   darkRow: {
     flexDirection: 'row',
     alignItems: 'center',
