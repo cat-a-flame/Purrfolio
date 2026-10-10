@@ -235,9 +235,10 @@ function EmptyHint({ icon, text, colors }: { icon: string; text: string; colors:
   );
 }
 
-function PredictionPanel({ variant, title, items, loading, colors }: {
+function PredictionPanel({ variant, title, subtitle, items, loading, colors }: {
   variant: 'income' | 'expense';
   title: string;
+  subtitle: string;
   items: PredictionItem[];
   loading: boolean;
   colors: Colors;
@@ -247,18 +248,16 @@ function PredictionPanel({ variant, title, items, loading, colors }: {
   const sign = isIncome ? '+' : '−';
   const tone = isIncome ? colors.income : colors.expense;
   return (
-    <Card colors={colors} style={{ padding: 0, overflow: 'hidden' }}>
-      <View style={[styles.predBanner, { backgroundColor: isIncome ? colors.incomeLight : colors.expenseLight }]}>
-        <View style={[styles.predBannerIcon, { backgroundColor: tone }]}>
-          <Ionicons name={isIncome ? 'arrow-up' : 'arrow-down'} size={18} color="#fff" />
-        </View>
-        <Text style={[styles.predBannerTitle, { color: colors.text }]}>{title}</Text>
+    <Card colors={colors} style={styles.listCard}>
+      <View>
+        <Text style={[styles.cardTitle, { color: colors.heading }]}>{title}</Text>
+        <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{subtitle}</Text>
       </View>
       <View style={styles.predBody}>
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => <SkeletonBox key={i} style={{ height: 54, borderRadius: 8 }} />)
         ) : items.length === 0 ? (
-          <EmptyHint icon={isIncome ? '💰' : '🧾'} text={`No recurring ${variant} pattern found yet.`} colors={colors} />
+          <EmptyHint icon={isIncome ? '💰' : '🧾'} text={`Not enough history yet. ${isIncome ? 'Income' : 'Expenses'} appear here once a category shows up in at least ${MIN_BUCKETS_SEEN} of the last ${HISTORY_MONTHS} months.`} colors={colors} />
         ) : (
           items.map(item => (
             <View key={item.key} style={styles.predRow}>
@@ -586,6 +585,7 @@ export default function StatsScreen() {
 
   const prevLabel = period.tab === 'months' ? 'previous month' : period.tab === 'years' ? 'previous year' : period.tab === 'weeks' ? 'previous week' : 'previous period';
   const prevName = prevPeriodName(period, prevLabel);
+  const predictionSubtitle = `${period.label} · based on the last ${HISTORY_MONTHS} months`;
 
   // ── render helpers ─────────────────────────────────────────────────────
   function renderSummary() {
@@ -843,8 +843,8 @@ export default function StatsScreen() {
         {renderCategories()}
         {renderComparison()}
 
-        <PredictionPanel variant="expense" title="Expected expenses" items={predictions.expense} loading={loading} colors={colors} />
-        <PredictionPanel variant="income" title="Expected income" items={predictions.income} loading={loading} colors={colors} />
+        <PredictionPanel variant="expense" title="Expected expenses" subtitle={predictionSubtitle} items={predictions.expense} loading={loading} colors={colors} />
+        <PredictionPanel variant="income" title="Expected income" subtitle={predictionSubtitle} items={predictions.income} loading={loading} colors={colors} />
         {/* container gap supplies the extra 16px */}
         <TabBarSpacer extra={0} />
       </ScrollView>
@@ -937,10 +937,7 @@ const styles = StyleSheet.create({
   compTotalPrev: { fontSize: 12, fontFamily: 'Nunito_600SemiBold' },
 
   // Predictions
-  predBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
-  predBannerIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  predBannerTitle: { fontSize: 17, fontFamily: 'Lora_700Bold', letterSpacing: -0.3 },
-  predBody: { padding: 16, gap: 24 },
+  predBody: { gap: 24 },
   predRow: { gap: 8 },
   predTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   predMain: { flex: 1, minWidth: 0, gap: 2 },
